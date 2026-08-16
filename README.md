@@ -2,8 +2,8 @@
 
 Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
 
-> **Status: under utvikling (uke 0–1 av åtte).** K1–K6 og K8a virker.
-> K7 (TFM-master), K9 (MMI) og BCF-eksport er ikke implementert ennå.
+> **Status: under utvikling (uke 0–1 av åtte).** K1–K7 og K8a virker.
+> K9 (MMI) og BCF-eksport er ikke implementert ennå.
 > Hypotesen bak verktøyet er ikke validert — se §11 i spesifikasjonen.
 
 ---
@@ -46,7 +46,7 @@ Nisjen er norsk-spesifikk, relasjonell, gratis og kjørbar i CI.
 | K4 | Systemkoden er angitt så spesifikt som mulig (PA 0805) | advarsel | ✅ |
 | K5 | Komponentkoden finnes i NS 3457-8 | feil | ✅ |
 | K6 | Komponentforekomster er unike, også på tvers av fagmodeller | feil | ✅ |
-| K7 | Systemer og typer finnes i prosjektets TFM-master (SIMBA) | feil | ⬜ uke 5 |
+| K7 | Systemer og typer finnes i prosjektets TFM-master (SIMBA) | feil | ✅ |
 | K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | feil | 🟡 delvis |
 | K9 | MMI/prosesstatus satt og konsistent | info | ⬜ valgfri |
 
@@ -63,6 +63,7 @@ uv sync          # utvikling
 tfm-sjekk sjekk rie.ifc riv.ifc \
     --systemtabell min-ns3451.csv \
     --komponenttabell min-ns3457-8.csv \
+    --master tfm-master.xlsx \
     --config tfm-sjekk.toml \
     --ut rapport/
 ```
@@ -77,7 +78,8 @@ Prøv det med demomodellene:
 uv run python eksempler/lag_demomodell.py
 uv run tfm-sjekk sjekk eksempler/demo-*.ifc \
     --systemtabell eksempler/FIKTIV-systemkoder.csv \
-    --komponenttabell eksempler/FIKTIV-komponentkoder.csv
+    --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
+    --master eksempler/FIKTIV-tfm-master.csv
 ```
 
 `tfm-sjekk kontroller` lister kontrollene og statusen deres.
@@ -99,6 +101,29 @@ testene og demoen skal kunne kjøre.
 
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.
+
+## TFM-mastera
+
+`--master` tar prosjektets egen TFM-master som XLSX eller CSV. Formatet er ikke
+standardisert, så verktøyet gjenkjenner **kolonneoverskrifter**, ikke arknavn: alle
+ark leses, og ark uten en kjent kolonne hoppes over. Overskriftsraden trenger ikke
+stå øverst — logo og revisjonstabell over tabellen er greit.
+
+```
+systemforekomst;komponenttype
+3600.001.04;JVZ.001.008
+```
+
+Prefikser folk skriver av gammel vane (`=3600.001.04`, `++115080=3600.001.04`)
+normaliseres bort, så mastera og modellen trenger bare være enige om innholdet.
+Heter kolonnene noe annet hos deg, settes navnene under `[master]` i
+`tfm-sjekk.toml`.
+
+K7 går begge veier. Et system eller en komponenttype modellen bruker uten at det
+står i mastera er en **feil**. Oppføringer i mastera som ikke er modellert
+rapporteres som **info** og teller ikke mot exit-koden — de kan like gjerne være
+prosjektert men ikke tegnet ennå, og å skille det fra utgåtte oppføringer krever
+prosesstatus (K9).
 
 ## Avgrensning
 

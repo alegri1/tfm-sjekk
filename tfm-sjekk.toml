@@ -37,6 +37,18 @@ ifc_klasser = [
     "IfcDistributionFlowElement",
 ]
 
+[master]
+# Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).
+# Det er kolonneoverskriftene som gjenkjennes, ikke arknavnene: alle ark i
+# XLSX-en leses, og ark uten en gjenkjennelig kolonne hoppes over.
+kolonne_system = ["systemforekomst", "system", "systemid", "tfm-system"]
+kolonne_komponenttype = ["komponenttype", "type", "typeid", "tfm-type"]
+kolonne_komponentforekomst = ["komponentforekomst", "forekomst", "komponent"]
+
+# Ekte mastere har gjerne logo, prosjektnavn og revisjonstabell over selve
+# tabellen. Så mange rader letes det i etter overskriftsraden.
+maks_overskriftsrader = 10
+
 # Slå av kontroller eller endre alvorlighetsgrad per kontroll.
 # Gyldige grader: "feil", "advarsel", "info".
 [kontroller.K4]

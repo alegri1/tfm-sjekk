@@ -7,6 +7,6 @@ Brukeren peker på sin egen CSV med ``--kodetabell``. Filene under
 """
 
 from tfm_sjekk.tabeller.kodetabell import Kodetabell, les_kodetabell
-from tfm_sjekk.tabeller.master import TfmMaster, les_master
+from tfm_sjekk.tabeller.master import TfmMaster, les_master, normaliser
 
-__all__ = ["Kodetabell", "TfmMaster", "les_kodetabell", "les_master"]
+__all__ = ["Kodetabell", "TfmMaster", "les_kodetabell", "les_master", "normaliser"]

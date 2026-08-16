@@ -3,7 +3,8 @@
     uv run python eksempler/lag_demomodell.py
     uv run tfm-sjekk eksempler/demo-rie.ifc eksempler/demo-riv.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
-        --komponenttabell eksempler/FIKTIV-komponentkoder.csv
+        --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
+        --master eksempler/FIKTIV-tfm-master.csv
 
 Modellene inneholder kun oppdiktede verdier. Se eksempler/LES-MEG.md.
 """
@@ -21,8 +22,8 @@ HER = Path(__file__).parent
 
 RIE = [
     ("IfcFlowTerminal", "++115080=4310.001.12-QLF001"),  # ok
-    ("IfcFlowTerminal", "++115080=4310.001.00-QLF002"),  # K8: kursnummer mangler
-    ("IfcFlowTerminal", "++115080=9999.001.12-QLF003"),  # K3: ukjent systemkode
+    ("IfcFlowTerminal", "++115080=4310.001.00-QLF002"),  # K8: kursnummer mangler (+ K7)
+    ("IfcFlowTerminal", "++115080=9999.001.12-QLF003"),  # K3: ukjent systemkode (+ K7)
     ("IfcFlowTerminal", "++115080=2300.001.12-QLF004"),  # K4: overordnet kode
     ("IfcFlowTerminal", "++11508=4310.001.12-QLF005"),  # K2: for få siffer
     ("IfcFlowTerminal", None),  # K1: ingen TFM

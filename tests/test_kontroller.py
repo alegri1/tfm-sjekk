@@ -117,6 +117,71 @@ def test_k6_godtar_samme_lopenummer_i_ulike_bygg(config):
     assert funn_for("K6", k) == []
 
 
+def test_k7_flagger_system_som_ikke_star_i_mastera(config, master):
+    k = Kontekst.bygg([objekt(tfm="++115080=9100.001.04-JVZ001")], config, master=master)
+    funn = funn_for("K7", k)
+    feil = [f for f in funn if f.alvorlighet is Alvorlighet.FEIL]
+    assert len(feil) == 1
+    assert "9100.001.04" in feil[0].melding
+
+
+def test_k7_flagger_komponenttype_som_ikke_star_i_mastera(config, master):
+    k = Kontekst.bygg(
+        [objekt(tfm="++115080=3600.001.04-JVZ001%XXX.001.008")], config, master=master
+    )
+    feil = [f for f in funn_for("K7", k) if f.alvorlighet is Alvorlighet.FEIL]
+    assert len(feil) == 1
+    assert "XXX.001.008" in feil[0].melding
+
+
+def test_k7_er_stille_nar_modellen_stemmer_med_mastera(config, master):
+    k = Kontekst.bygg([objekt()], config, master=master)
+    assert funn_for("K7", k) == []
+
+
+def test_k7_sjekker_ikke_en_liste_mastera_ikke_forer(config):
+    """En master med bare systemliste skal ikke flagge alle komponenttyper."""
+    from tfm_sjekk.tabeller import TfmMaster
+
+    bare_systemer = TfmMaster(kilde="delvis.csv", systemer={"3600.001.04"})
+    k = Kontekst.bygg([objekt()], config, master=bare_systemer)
+    assert funn_for("K7", k) == []
+
+
+def test_k7_melder_umodellerte_oppforinger_som_info(config):
+    """Motsatt retning (§4). Info, ikke feil — se modulens docstring."""
+    from tfm_sjekk.tabeller import TfmMaster
+
+    stor_master = TfmMaster(
+        kilde="master.csv",
+        systemer={"3600.001.04", "4310.001.12", "5600.001.01"},
+        komponenttyper={"JVZ.001.008"},
+    )
+    k = Kontekst.bygg([objekt()], config, master=stor_master)
+    funn = funn_for("K7", k)
+    assert len(funn) == 1
+    assert funn[0].alvorlighet is Alvorlighet.INFO
+    assert "2 systemer" in funn[0].melding
+    assert "4310.001.12" in funn[0].melding and "5600.001.01" in funn[0].melding
+    assert funn[0].global_id is None
+
+
+def test_k7_umodellert_forblir_info_selv_om_graden_overstyres(config):
+    """Retningen skal aldri kunne bryte et CI-bygg. Se §5 og modulens docstring."""
+    from tfm_sjekk.config import KontrollOppsett
+    from tfm_sjekk.tabeller import TfmMaster
+
+    config.kontroller["K7"] = KontrollOppsett(alvorlighet=Alvorlighet.FEIL)
+    master = TfmMaster(kilde="master.csv", systemer={"3600.001.04", "4310.001.12"})
+    k = Kontekst.bygg([objekt()], config, master=master)
+    assert funn_for("K7", k)[0].alvorlighet is Alvorlighet.INFO
+
+
+def test_k7_hoppes_over_uten_master(config):
+    _, hoppet_over = kjor_alle(Kontekst.bygg([objekt()], config))
+    assert "K7" in {k.id for k in hoppet_over}
+
+
 def test_k8_krever_kursnummer_pa_elektro(config):
     k = Kontekst.bygg([objekt(tfm="++115080=4300.001.00-QLF001")], config)
     funn = funn_for("K8", k)
@@ -129,9 +194,9 @@ def test_k8_ignorerer_ikke_elektro(config):
     assert funn_for("K8", k) == []
 
 
-def test_k7_og_k9_hoppes_over_inntil_de_er_implementert(config):
+def test_k9_hoppes_over_inntil_den_er_implementert(config):
     _, hoppet_over = kjor_alle(Kontekst.bygg([objekt()], config))
-    assert {k.id for k in hoppet_over} >= {"K7", "K9"}
+    assert "K9" in {k.id for k in hoppet_over}
 
 
 def test_kontroll_kan_slas_av(config):
@@ -158,12 +223,13 @@ def test_funn_kommer_i_deterministisk_rekkefolge(config):
     assert [f.sorteringsnokkel() for f in funn_a] == [f.sorteringsnokkel() for f in funn_b]
 
 
-def test_gyldig_modell_gir_ingen_funn(config, systemtabell, komponenttabell):
+def test_gyldig_modell_gir_ingen_funn(config, systemtabell, komponenttabell, master):
     k = Kontekst.bygg(
         [objekt(tfm=GYLDIG)],
         config,
         systemtabell=systemtabell,
         komponenttabell=komponenttabell,
+        master=master,
     )
     funn, _ = kjor_alle(k)
     assert funn == []

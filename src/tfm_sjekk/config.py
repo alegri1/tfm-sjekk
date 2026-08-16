@@ -48,6 +48,32 @@ class PsetOppsett(BaseModel):
     egenskapsnavn_mmi: list[str] = ["MMI", "Prosesstatus"]
 
 
+class MasterOppsett(BaseModel):
+    """Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).
+
+    Formatet er ikke standardisert — hvert prosjekt lager sin egen mal — så
+    kolonnenavnene må være data (§14). Listene er kandidater: første kolonne
+    som matcher vinner.
+
+    Merk at det er *kolonnenavnene* som styrer, ikke arknavnene. Alle ark i
+    en XLSX leses, og de som ikke har noen gjenkjennelig kolonne hoppes over.
+    Det tåler «Ark1» og «Systemliste rev. C» like godt, og et prosjekt som
+    legger systemer og komponenttyper side om side i samme ark fungerer også.
+    """
+
+    kolonne_system: list[str] = ["systemforekomst", "system", "systemid", "tfm-system"]
+    kolonne_komponenttype: list[str] = ["komponenttype", "type", "typeid", "tfm-type"]
+    kolonne_komponentforekomst: list[str] = ["komponentforekomst", "forekomst", "komponent"]
+
+    maks_overskriftsrader: int = Field(
+        default=10,
+        description=(
+            "Hvor mange rader det letes etter overskriftsraden i. Ekte mastere "
+            "har ofte logo, prosjektnavn og revisjonstabell over selve tabellen."
+        ),
+    )
+
+
 class KontrollOppsett(BaseModel):
     aktiv: bool = True
     alvorlighet: Alvorlighet | None = Field(
@@ -58,6 +84,7 @@ class KontrollOppsett(BaseModel):
 class Konfigurasjon(BaseModel):
     grammatikk: Grammatikk = Grammatikk()
     pset: PsetOppsett = PsetOppsett()
+    master: MasterOppsett = MasterOppsett()
 
     ifc_klasser: list[str] = Field(
         default=[

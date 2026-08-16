@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from tfm_sjekk.config import Konfigurasjon
 from tfm_sjekk.modell import IfcObjekt
-from tfm_sjekk.tabeller import Kodetabell
+from tfm_sjekk.tabeller import Kodetabell, TfmMaster
 
 GYLDIG = "++115080=3600.001.04-JVZ001%JVZ.001.008"
 
@@ -40,6 +40,20 @@ def systemtabell() -> Kodetabell:
 @pytest.fixture
 def komponenttabell() -> Kodetabell:
     return Kodetabell(navn="fiktiv komponenttabell", koder={"JVZ": "Fiktiv vifte", "QLF": "Fiktiv"})
+
+
+@pytest.fixture
+def master() -> TfmMaster:
+    """Fiktiv TFM-master som akkurat dekker GYLDIG — verken mer eller mindre.
+
+    At den er nøyaktig dekkende er poenget: da gir en modell som bare bruker
+    GYLDIG hverken funn i retning modell → master eller master → modell.
+    """
+    return TfmMaster(
+        kilde="FIKTIV-tfm-master.csv",
+        systemer={"3600.001.04"},
+        komponenttyper={"JVZ.001.008"},
+    )
 
 
 def objekt(

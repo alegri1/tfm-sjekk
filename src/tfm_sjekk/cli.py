@@ -65,7 +65,7 @@ def sjekk(
         oppsett,
         systemtabell=les_kodetabell(systemtabell, "NS 3451 tabell 8") if systemtabell else None,
         komponenttabell=les_kodetabell(komponenttabell, "NS 3457-8") if komponenttabell else None,
-        master=les_master(master) if master else None,
+        master=les_master(master, oppsett.master) if master else None,
     )
 
     funn, hoppet_over = kjor_alle(kontekst)
