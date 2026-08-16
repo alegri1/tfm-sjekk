@@ -2,8 +2,8 @@
 
 Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
 
-> **Status: under utvikling (uke 0–1 av åtte).** Alle kontrollene K1–K9 virker.
-> BCF-eksport er ikke implementert ennå.
+> **Status: under utvikling.** Alle kontrollene K1–K9 virker, og rapportene
+> (BCF 2.1, HTML, CSV) er på plass. BCF-fila er ikke prøvd i en ekte viewer ennå.
 > Hypotesen bak verktøyet er ikke validert — se §11 i spesifikasjonen.
 
 ---
@@ -72,6 +72,14 @@ Flere filer federeres og kontrolleres samlet — det er slik K6 finner duplikate
 på tvers av fagmodeller. Exit-kode 0 ved ingen feil, 1 ved feil, slik at verktøyet
 kan stå som port i en leveranseprosess.
 
+Hver kjøring skriver tre filer til `--ut`:
+
+| Fil | Til hva |
+|---|---|
+| `funn.bcfzip` | BCF 2.1 — åpnes i Solibri, Catenda, Dalux, BIMcollab |
+| `rapport.html` | Én selvstendig fil med sorterbar tabell, til deling |
+| `funn.csv` | Semikolonseparert, for videre analyse i Excel |
+
 Prøv det med demomodellene:
 
 ```bash
@@ -124,6 +132,23 @@ slik at en underfordeling blir sin egen rot.
 K8c trenger at kursene er gruppert i modellen (`IfcDistributionCircuit` /
 `IfcElectricalCircuit`). Mangler de, sier verktøyet fra én gang framfor å gjette.
 Klassenavnene ligger under `[elektro]` i `tfm-sjekk.toml`.
+
+## BCF-fila
+
+BCF er forskjellen mellom «interessant skript» og «noe vi tar i bruk»: funnene
+åpnes i verktøyene folk allerede sitter i, og hvert emne har et viewpoint som
+velger objektet det gjelder. Kontroll-ID-en ligger både i tittelen og som
+`Labels`, så det er lett å filtrere per kontroll i viewer-en. Samlefunn som
+peker på modellen som helhet (K7 og K8c) får emne uten viewpoint — det er
+ingenting å zoome til.
+
+Fila skrives direkte som zip + XML, uten BCF-bibliotek. Formatet er lite nok
+til at avhengigheten ikke lønner seg, og det holder PyInstaller-binæren mindre.
+
+**Utdata er deterministisk.** Emne-GUID-ene er utledet fra innholdet i funnet,
+ikke trukket tilfeldig, og zip-oppføringene har fast tidsstempel. Samme modell
+gir byte-identisk fil, så den kan brukes som golden file i CI, og et emne som
+allerede er importert i en viewer beholder identiteten sin mellom kjøringer.
 
 ## Prosesstatus (K9)
 

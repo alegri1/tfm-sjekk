@@ -19,7 +19,7 @@ from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import alle_kontroller, kjor_alle
 from tfm_sjekk.modell import Alvorlighet
-from tfm_sjekk.rapport import skriv_csv, skriv_html
+from tfm_sjekk.rapport import skriv_bcf, skriv_csv, skriv_html
 from tfm_sjekk.tabeller import les_kodetabell, les_master
 
 app = typer.Typer(
@@ -80,8 +80,11 @@ def sjekk(
     tittel = ", ".join(m.name for m in modeller)
     skriv_html(funn, ut / "rapport.html", tittel, len(objekter), [k.id for k in hoppet_over])
     skriv_csv(funn, ut / "funn.csv")
+    skriv_bcf(funn, ut / "funn.bcfzip")
 
-    typer.echo(f"\n{antall_feil} feil, {antall_advarsler} advarsler → {ut}/rapport.html")
+    typer.echo(
+        f"\n{antall_feil} feil, {antall_advarsler} advarsler → {ut}/rapport.html, {ut}/funn.bcfzip"
+    )
     raise typer.Exit(code=1 if antall_feil else 0)
 
 
