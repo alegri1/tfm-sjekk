@@ -37,6 +37,15 @@ ifc_klasser = [
     "IfcDistributionFlowElement",
 ]
 
+[mmi]
+# Prosesstatus/MMI (K9). Skalaen varierer mellom byggherrer; verdiene under
+# er den vanlige norske. Tom liste slår av verdisjekken.
+gyldige_verdier = ["100", "200", "300", "350", "400", "500"]
+
+# Uten dette sier K9 bare fra om manglende MMI i modeller som ellers bruker
+# MMI. Sett true hvis prosjektet krever prosesstatus på alle objekter.
+krev_pa_alle = false
+
 [elektro]
 # Hva som er en fordeling og hva som er en kurs (K8b/K8c). Klassenavnene
 # skiller seg mellom IFC 2x3 og IFC4, så begge står her; navn som ikke finnes

@@ -64,6 +64,7 @@ def objekt(
     navn: str | None = None,
     tilkoblet: list[str] | None = None,
     kretser: list[str] | None = None,
+    mmi: str | None = None,
 ) -> IfcObjekt:
     """`kretser` oppgis som navn; GlobalId-en er navnet, siden identiteten
     bare brukes til å skille kurser fra hverandre (K8c)."""
@@ -74,6 +75,7 @@ def objekt(
         kildefil=kildefil,
         navn=navn,
         tfm_forekomst=tfm,
+        mmi=mmi,
         tilkoblet=tilkoblet or [],
         kretser=[Krets(global_id=navn_, navn=navn_) for navn_ in kretser or []],
     )

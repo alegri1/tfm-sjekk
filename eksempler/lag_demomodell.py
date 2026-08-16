@@ -42,15 +42,42 @@ ELEKTRO = [
     {
         "navn": "Fordeling 1",
         "tfm": "++115080=4310.001.00-QLF100",
+        "mmi": "300",
         "objekter": [
             # ok: samme system som tavla, hver sin kurs
-            {"klasse": "IfcLamp", "tfm": "++115080=4310.001.12-QLF101", "kurs": "Kurs 12"},
-            {"klasse": "IfcLamp", "tfm": "++115080=4310.001.13-QLF102", "kurs": "Kurs 13"},
+            {
+                "klasse": "IfcLamp",
+                "tfm": "++115080=4310.001.12-QLF101",
+                "kurs": "Kurs 12",
+                "mmi": "300",
+            },
+            {
+                "klasse": "IfcLamp",
+                "tfm": "++115080=4310.001.13-QLF102",
+                "kurs": "Kurs 13",
+                "mmi": "300",
+            },
             # K8b: hører til et annet system enn fordelingen
-            {"klasse": "IfcLamp", "tfm": "++115080=4320.001.12-QLF103", "kurs": "Kurs 12"},
+            {
+                "klasse": "IfcLamp",
+                "tfm": "++115080=4320.001.12-QLF103",
+                "kurs": "Kurs 12",
+                "mmi": "300",
+            },
             # K8c: ny kurs, men gjenbruker kursnummer 14 fra Kurs 14
-            {"klasse": "IfcOutlet", "tfm": "++115080=4310.001.14-QLF104", "kurs": "Kurs 14"},
-            {"klasse": "IfcOutlet", "tfm": "++115080=4310.001.14-QLF105", "kurs": "Kurs 14B"},
+            {
+                "klasse": "IfcOutlet",
+                "tfm": "++115080=4310.001.14-QLF104",
+                "kurs": "Kurs 14",
+                "mmi": "300",
+            },
+            # K9: ligger igjen på 200 mens resten av systemet er på 300
+            {
+                "klasse": "IfcOutlet",
+                "tfm": "++115080=4310.001.14-QLF105",
+                "kurs": "Kurs 14B",
+                "mmi": "200",
+            },
         ],
     }
 ]

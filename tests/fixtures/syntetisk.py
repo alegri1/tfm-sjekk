@@ -66,8 +66,9 @@ def lag_elektromodell(
     Hver fordeling er en dict::
 
         {"navn": "Fordeling 1", "tfm": "++115080=4310.001.00-QLF001",
-         "klasse": "IfcElectricDistributionBoard",
-         "objekter": [{"klasse": "IfcLamp", "tfm": "...", "kurs": "Kurs 12"}]}
+         "klasse": "IfcElectricDistributionBoard", "mmi": "300",
+         "objekter": [{"klasse": "IfcLamp", "tfm": "...", "kurs": "Kurs 12",
+                       "mmi": "300"}]}
 
     Objektene kobles til fordelingen slik en ekte eksport gjør det: hver ende
     har en `IfcDistributionPort` festet med `IfcRelNests`, og portene knyttes
@@ -77,23 +78,28 @@ def lag_elektromodell(
     f = ifcopenshell.file(schema=schema)
     kretser: dict[str, list] = {}
 
-    def lag(klasse: str, navn: str, tfm: str | None):
+    def sett_pset(element, sett_navn: str, felt: str, verdi: str) -> None:
+        egenskap = f.create_entity(
+            "IfcPropertySingleValue",
+            Name=felt,
+            NominalValue=f.create_entity("IfcLabel", verdi),
+        )
+        pset = f.create_entity(
+            "IfcPropertySet", GlobalId=guid.new(), Name=sett_navn, HasProperties=[egenskap]
+        )
+        f.create_entity(
+            "IfcRelDefinesByProperties",
+            GlobalId=guid.new(),
+            RelatedObjects=[element],
+            RelatingPropertyDefinition=pset,
+        )
+
+    def lag(klasse: str, navn: str, tfm: str | None, mmi: str | None = None):
         element = f.create_entity(klasse, GlobalId=guid.new(), Name=navn)
         if tfm is not None:
-            egenskap = f.create_entity(
-                "IfcPropertySingleValue",
-                Name=egenskapsnavn,
-                NominalValue=f.create_entity("IfcLabel", tfm),
-            )
-            pset = f.create_entity(
-                "IfcPropertySet", GlobalId=guid.new(), Name=pset_navn, HasProperties=[egenskap]
-            )
-            f.create_entity(
-                "IfcRelDefinesByProperties",
-                GlobalId=guid.new(),
-                RelatedObjects=[element],
-                RelatingPropertyDefinition=pset,
-            )
+            sett_pset(element, pset_navn, egenskapsnavn, tfm)
+        if mmi is not None:
+            sett_pset(element, "MMI", "MMI", mmi)
         return element
 
     def port_for(element):
@@ -108,12 +114,14 @@ def lag_elektromodell(
             spesifikasjon.get("klasse", "IfcElectricDistributionBoard"),
             spesifikasjon.get("navn", f"Fordeling {nummer}"),
             spesifikasjon.get("tfm"),
+            spesifikasjon.get("mmi"),
         )
         for indeks, objekt_spek in enumerate(spesifikasjon.get("objekter", []), start=1):
             objekt = lag(
                 objekt_spek.get("klasse", "IfcFlowTerminal"),
                 objekt_spek.get("navn", f"Objekt {nummer}.{indeks}"),
                 objekt_spek.get("tfm"),
+                objekt_spek.get("mmi"),
             )
             f.create_entity(
                 "IfcRelConnectsPorts",

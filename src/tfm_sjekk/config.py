@@ -48,6 +48,26 @@ class PsetOppsett(BaseModel):
     egenskapsnavn_mmi: list[str] = ["MMI", "Prosesstatus"]
 
 
+class MmiOppsett(BaseModel):
+    """Prosesstatus/MMI (K9).
+
+    Skalaen varierer mellom prosjekter og byggherrer, så den er data (§14).
+    Standardverdiene er den vanlige norske MMI-skalaen; bruker prosjektet en
+    annen, settes den her. Tom liste slår av verdisjekken helt.
+    """
+
+    gyldige_verdier: list[str] = ["100", "200", "300", "350", "400", "500"]
+
+    krev_pa_alle: bool = Field(
+        default=False,
+        description=(
+            "Om MMI kreves på alle objekter i omfanget. Uten dette sier K9 bare "
+            "fra om manglende MMI i modeller som ellers bruker MMI — en modell "
+            "der ingen har satt det er antatt å ikke bruke MMI i det hele tatt."
+        ),
+    )
+
+
 class ElektroOppsett(BaseModel):
     """Hva som er en fordeling og hva som er en kurs (K8b/K8c).
 
@@ -106,6 +126,7 @@ class Konfigurasjon(BaseModel):
     pset: PsetOppsett = PsetOppsett()
     master: MasterOppsett = MasterOppsett()
     elektro: ElektroOppsett = ElektroOppsett()
+    mmi: MmiOppsett = MmiOppsett()
 
     ifc_klasser: list[str] = Field(
         default=[

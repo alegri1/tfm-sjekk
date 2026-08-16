@@ -288,9 +288,107 @@ def test_k8c_er_stille_uten_fordelinger(config):
     assert funn_for("K8", k) == []
 
 
-def test_k9_hoppes_over_inntil_den_er_implementert(config):
-    _, hoppet_over = kjor_alle(Kontekst.bygg([objekt()], config))
-    assert "K9" in {k.id for k in hoppet_over}
+def test_k9_er_stille_nar_modellen_ikke_bruker_mmi(config):
+    """Ingen har MMI = prosjektet bruker det ikke. Ikke ett funn per objekt."""
+    k = Kontekst.bygg([objekt(global_id="a"), objekt(global_id="b")], config)
+    assert funn_for("K9", k) == []
+
+
+def test_k9_flagger_manglende_mmi_nar_feltet_er_i_bruk(config):
+    k = Kontekst.bygg(
+        [objekt(global_id="a", mmi="300"), objekt(global_id="b")],
+        config,
+    )
+    funn = funn_for("K9", k)
+    assert [f.global_id for f in funn] == ["b"]
+
+
+def test_k9_vurderer_mmi_bruk_per_fagmodell(config):
+    """RIE kan ha kommet til 300 mens RIV ikke har begynt (§3, federering)."""
+    k = Kontekst.bygg(
+        [
+            objekt(global_id="a", kildefil="rie.ifc", mmi="300"),
+            objekt(global_id="b", kildefil="rie.ifc"),
+            objekt(global_id="c", kildefil="riv.ifc"),
+        ],
+        config,
+    )
+    mangler = [f for f in funn_for("K9", k) if "mangler" in f.melding]
+    assert [f.global_id for f in mangler] == ["b"]
+
+
+def test_k9_kan_kreve_mmi_pa_alle(config):
+    config.mmi.krev_pa_alle = True
+    k = Kontekst.bygg([objekt(global_id="a"), objekt(global_id="b")], config)
+    funn = funn_for("K9", k)
+    assert len(funn) == 1  # ett samlet funn, ikke ett per objekt
+    assert "Ingen av de 2" in funn[0].melding
+
+
+def test_k9_flagger_verdi_utenfor_skalaen(config):
+    k = Kontekst.bygg([objekt(mmi="275")], config)
+    funn = funn_for("K9", k)
+    assert len(funn) == 1
+    assert "275" in funn[0].melding
+
+
+def test_k9_godtar_skrivemater_av_samme_niva(config):
+    """«MMI 300» og «300» er samme nivå."""
+    k = Kontekst.bygg(
+        [
+            objekt(global_id="a", mmi="MMI 300"),
+            objekt(global_id="b", mmi="mmi300"),
+            objekt(global_id="c", mmi="300"),
+        ],
+        config,
+    )
+    assert funn_for("K9", k) == []
+
+
+def test_k9_flagger_sprik_innenfor_systemet(config):
+    """Avviket rapporteres, ikke flertallet."""
+    k = Kontekst.bygg(
+        [
+            objekt(global_id="a", mmi="300"),
+            objekt(global_id="b", mmi="300"),
+            objekt(global_id="c", mmi="400"),
+        ],
+        config,
+    )
+    funn = funn_for("K9", k)
+    assert [f.global_id for f in funn] == ["c"]
+    assert "300" in funn[0].melding and "400" in funn[0].melding
+
+
+def test_k9_skiller_mellom_systemer(config):
+    """Ulik MMI i to ulike systemer er ikke et sprik."""
+    k = Kontekst.bygg(
+        [
+            objekt(global_id="a", tfm="++115080=3600.001.04-JVZ001", mmi="300"),
+            objekt(global_id="b", tfm="++115080=4310.001.12-QLF001", mmi="400"),
+        ],
+        config,
+    )
+    assert funn_for("K9", k) == []
+
+
+def test_k9_har_info_som_standardgrad(config):
+    k = Kontekst.bygg([objekt(mmi="275")], config)
+    assert funn_for("K9", k)[0].alvorlighet is Alvorlighet.INFO
+
+
+def test_k9_skalaen_kan_konfigureres(config):
+    """Egne systemer på de to, ellers ville K9c slått ut på spriket i tillegg."""
+    config.mmi.gyldige_verdier = ["A", "B"]
+    k = Kontekst.bygg(
+        [
+            objekt(global_id="a", tfm="++115080=3600.001.04-JVZ001", mmi="A"),
+            objekt(global_id="b", tfm="++115080=4310.001.12-QLF001", mmi="300"),
+        ],
+        config,
+    )
+    funn = funn_for("K9", k)
+    assert [f.global_id for f in funn] == ["b"]
 
 
 def test_kontroll_kan_slas_av(config):

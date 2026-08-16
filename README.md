@@ -2,8 +2,8 @@
 
 Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
 
-> **Status: under utvikling (uke 0–1 av åtte).** K1–K8 virker.
-> K9 (MMI) og BCF-eksport er ikke implementert ennå.
+> **Status: under utvikling (uke 0–1 av åtte).** Alle kontrollene K1–K9 virker.
+> BCF-eksport er ikke implementert ennå.
 > Hypotesen bak verktøyet er ikke validert — se §11 i spesifikasjonen.
 
 ---
@@ -48,7 +48,7 @@ Nisjen er norsk-spesifikk, relasjonell, gratis og kjørbar i CI.
 | K6 | Komponentforekomster er unike, også på tvers av fagmodeller | feil | ✅ |
 | K7 | Systemer og typer finnes i prosjektets TFM-master (SIMBA) | feil | ✅ |
 | K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | feil | ✅ |
-| K9 | MMI/prosesstatus satt og konsistent | info | ⬜ valgfri |
+| K9 | MMI/prosesstatus satt og konsistent | info | ✅ |
 
 ## Installasjon
 
@@ -124,6 +124,21 @@ slik at en underfordeling blir sin egen rot.
 K8c trenger at kursene er gruppert i modellen (`IfcDistributionCircuit` /
 `IfcElectricalCircuit`). Mangler de, sier verktøyet fra én gang framfor å gjette.
 Klassenavnene ligger under `[elektro]` i `tfm-sjekk.toml`.
+
+## Prosesstatus (K9)
+
+MMI-skalaen varierer mellom byggherrer, så den ligger under `[mmi]` i
+`tfm-sjekk.toml`. «MMI 300», «mmi300» og «300» leses som samme nivå.
+
+K9 spør om MMI er satt, om verdien er i skalaen, og om den er konsistent
+innenfor systemet (`4310.001` — ikke per kurs; en modenhetsgrad hører til
+systemet som helhet). Sprikende MMI rapporteres mot flertallet i systemet, så
+meldingen peker på de få objektene som er glemt.
+
+Graden er **info**, ikke feil: et system *skal* ha objekter på ulike nivåer
+midt i en prosjekteringsfase. En modell der ingen objekter har MMI antas å ikke
+bruke MMI, og gir ingen funn — sett `krev_pa_alle = true` hvis prosjektet
+krever det på alt.
 
 ## TFM-mastera
 
