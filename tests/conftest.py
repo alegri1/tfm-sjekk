@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from tfm_sjekk.config import Konfigurasjon
+from tfm_sjekk.modell import IfcObjekt
+from tfm_sjekk.tabeller import Kodetabell
+
+GYLDIG = "++115080=3600.001.04-JVZ001%JVZ.001.008"
+
+
+@pytest.fixture
+def config() -> Konfigurasjon:
+    return Konfigurasjon()
+
+
+@pytest.fixture
+def systemtabell() -> Kodetabell:
+    """Fiktiv tabell — ikke normativ. Se §8.
+
+    «2300» har barn (2310/2320) og skal derfor utløse K4.
+    """
+    return Kodetabell(
+        navn="fiktiv systemtabell",
+        koder={
+            "3600": "Fiktivt luftbehandlingssystem",
+            "2300": "Fiktivt overordnet system",
+            "2310": "Fiktivt underordnet system",
+            "2320": "Fiktivt underordnet system 2",
+            "4300": "Fiktivt elkraftsystem",
+        },
+    )
+
+
+@pytest.fixture
+def komponenttabell() -> Kodetabell:
+    return Kodetabell(navn="fiktiv komponenttabell", koder={"JVZ": "Fiktiv vifte", "QLF": "Fiktiv"})
+
+
+def objekt(
+    tfm: str | None = GYLDIG,
+    global_id: str = "0001",
+    klasse: str = "IfcFlowTerminal",
+    kildefil: str = "test.ifc",
+) -> IfcObjekt:
+    return IfcObjekt(
+        global_id=global_id,
+        ifc_klasse=klasse,
+        ifc_supertyper=["IfcDistributionFlowElement", "IfcDistributionElement", "IfcProduct"],
+        kildefil=kildefil,
+        tfm_forekomst=tfm,
+    )

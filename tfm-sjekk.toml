@@ -1,0 +1,46 @@
+# Eksempelkonfigurasjon for tfm-sjekk.
+#
+# Alle verdier under er standardverdier — fila trengs bare der prosjektet
+# avviker. §14: TFM-tolkningene varierer, så regelsettet leveres som data.
+
+[grammatikk]
+plassering_siffer = 6
+systemkode_siffer = 4
+system_lopenummer_siffer = 3
+undernummer_siffer_min = 2
+undernummer_siffer_maks = 3
+komponentkode_bokstaver = 3
+komponent_lopenummer_siffer = 3
+# Sett true hvis prosjektet krever %-delen (komponenttype) på alle objekter.
+krev_komponenttype = false
+
+[pset]
+# Egenskapssettene TFM-verdiene ligger i. De vanlige i norske Revit-maler
+# står først; legg til prosjektets egne foran dem ved behov.
+forekomst = ["TFM11_Forekomst"]
+type = ["TFM11_Type"]
+mmi = ["MMI", "Prosesstatus"]
+
+# Egenskapsnavnet inne i settet. Finner ikke verktøyet noen av disse, tar det
+# første ikke-tomme verdi i settet.
+egenskapsnavn_forekomst = ["TFM", "TFMForekomst", "Forekomst"]
+egenskapsnavn_type = ["TFM", "TFMType", "Type"]
+
+# Klassene K1 krever TFM på. Matches mot hele arvekjeden, så
+# «IfcFlowTerminal» dekker også IfcAirTerminal, IfcLamp, IfcOutlet osv.
+ifc_klasser = [
+    "IfcDistributionElement",
+    "IfcFlowTerminal",
+    "IfcFlowController",
+    "IfcFlowMovingDevice",
+    "IfcEnergyConversionDevice",
+    "IfcDistributionFlowElement",
+]
+
+# Slå av kontroller eller endre alvorlighetsgrad per kontroll.
+# Gyldige grader: "feil", "advarsel", "info".
+[kontroller.K4]
+alvorlighet = "advarsel"
+
+# [kontroller.K8]
+# aktiv = false

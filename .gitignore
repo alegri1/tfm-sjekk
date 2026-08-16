@@ -1,0 +1,39 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv
+
+# Editor- og verktøyoppsett (maskinlokalt)
+.idea/
+.vscode/
+.mcp.json
+
+# Rapporter
+rapport/
+*.bcf
+*.bcfzip
+
+# Genererte demomodeller (lages av eksempler/lag_demomodell.py)
+eksempler/demo-*.ifc
+
+# JURIDISK (§8): kodetabellene fra NS 3451 / NS 3457-serien er betalt
+# materiale fra Standard Norge og skal ALDRI i dette repoet. Bare filer
+# med FIKTIV-prefiks er lov. Alt annet ignoreres for å hindre uhell.
+*.ifc
+!eksempler/FIKTIV-*.csv
+ns3451*.csv
+ns3457*.csv
+tfm-master*.xlsx
+tfm-master*.csv
+kodetabell*.csv

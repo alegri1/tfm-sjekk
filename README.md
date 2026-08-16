@@ -1,0 +1,127 @@
+# tfm-sjekk
+
+Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
+
+> **Status: under utvikling (uke 0–1 av åtte).** K1–K6 og K8a virker.
+> K7 (TFM-master), K9 (MMI) og BCF-eksport er ikke implementert ennå.
+> Hypotesen bak verktøyet er ikke validert — se §11 i spesifikasjonen.
+
+---
+
+## Problemet
+
+Norske byggeprosjekter krever tverrfaglig merking (TFM) av objekter i BIM-modellene,
+men i praksis er merkingen inkonsistent. Feil oppdages ofte først ved modelleveranse
+til arkiv eller ved overlevering til FDV — altså for sent og for dyrt.
+
+En TFM-ID ser slik ut:
+
+```
+++115080=3600.001.04-JVZ001%JVZ.001.008
+```
+
+Skriv `4310` der `4310.001.00` mangler kursnummer, eller gjenbruk `QLF001` i to
+fagmodeller, og ingen oppdager det før i FDV-fasen.
+
+## Hvorfor ikke bare IDS eller Solibri?
+
+**IDS** er per design begrenset til det som kan avgjøres på ett objekt om gangen.
+Det dekker K1–K5. Men det kan ikke uttrykke at ingen to objekter deler
+komponentforekomst-ID, at et system finnes i prosjektets master, eller at et
+kursnummer stemmer med fordelingen objektet er tilkoblet.
+
+**Solibri** gjør relasjonssjekker, men regelsettet er internasjonalt og generisk —
+det kan ikke NS 3451-tabellen, NS 3457-8-kodene eller PA 0805s regler, og det koster
+lisens.
+
+Nisjen er norsk-spesifikk, relasjonell, gratis og kjørbar i CI.
+
+## Kontrollene
+
+| # | Kontroll | Grad | Status |
+|---|---|---|---|
+| K1 | Alle objekter i konfigurerte IFC-klasser har en TFM-verdi | feil | ✅ |
+| K2 | TFM-ID-en parser mot grammatikken | feil | ✅ |
+| K3 | Systemkoden finnes i NS 3451 tabell 8 | feil | ✅ |
+| K4 | Systemkoden er angitt så spesifikt som mulig (PA 0805) | advarsel | ✅ |
+| K5 | Komponentkoden finnes i NS 3457-8 | feil | ✅ |
+| K6 | Komponentforekomster er unike, også på tvers av fagmodeller | feil | ✅ |
+| K7 | Systemer og typer finnes i prosjektets TFM-master (SIMBA) | feil | ⬜ uke 5 |
+| K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | feil | 🟡 delvis |
+| K9 | MMI/prosesstatus satt og konsistent | info | ⬜ valgfri |
+
+## Installasjon
+
+```bash
+uv sync          # utvikling
+# pipx install tfm-sjekk   (når v1 er publisert)
+```
+
+## Bruk
+
+```bash
+tfm-sjekk sjekk rie.ifc riv.ifc \
+    --systemtabell min-ns3451.csv \
+    --komponenttabell min-ns3457-8.csv \
+    --config tfm-sjekk.toml \
+    --ut rapport/
+```
+
+Flere filer federeres og kontrolleres samlet — det er slik K6 finner duplikater
+på tvers av fagmodeller. Exit-kode 0 ved ingen feil, 1 ved feil, slik at verktøyet
+kan stå som port i en leveranseprosess.
+
+Prøv det med demomodellene:
+
+```bash
+uv run python eksempler/lag_demomodell.py
+uv run tfm-sjekk sjekk eksempler/demo-*.ifc \
+    --systemtabell eksempler/FIKTIV-systemkoder.csv \
+    --komponenttabell eksempler/FIKTIV-komponentkoder.csv
+```
+
+`tfm-sjekk kontroller` lister kontrollene og statusen deres.
+
+## Om standardene og kodetabellene
+
+**NS 3451 og NS 3457-serien er betalte standarder fra Standard Norge. Kodetabellene
+følger ikke med dette verktøyet, og de skal ikke legges i dette repoet.**
+
+Du peker på dine egne CSV-filer med `--systemtabell` og `--komponenttabell`:
+
+```
+kode;beskrivelse
+2310;<beskrivelse fra standarden>
+```
+
+Filene under `eksempler/` er oppdiktede og ikke-normative — de finnes bare for at
+testene og demoen skal kunne kjøre.
+
+Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
+eget kodeverk kan bruke det med sin egen tabell.
+
+## Avgrensning
+
+Ingen GUI, ingen 3D-visning, ingen Revit-plugin, ingen webapp, ingen skriving tilbake
+til modellen, ingen støtte for samferdsel. Se §3 og §10 i spesifikasjonen.
+
+## Utvikling
+
+```bash
+uv sync
+uv run pytest
+uv run ruff check .
+```
+
+Arkitekturen i korthet: `tfm_sjekk.ifc` er eneste modul som importerer
+`ifcopenshell` og returnerer ren, picklebar data. Alt derfra — parser, kontroller,
+rapporter — jobber mot `Kontekst`, som holder hele den federerte modellen. Hver
+kontroll er en ren funksjon `Kontekst -> list[Funn]`. Det er den grensen som gjør
+K6–K8 mulige, og som lar kontrollene testes uten en eneste IFC-fil.
+
+Full spesifikasjon: [`specification/tfm-sjekk-spesifikasjon.md`](specification/tfm-sjekk-spesifikasjon.md).
+Paragrafhenvisninger i koden (§4, §8, …) peker dit.
+
+## Lisens
+
+MIT.

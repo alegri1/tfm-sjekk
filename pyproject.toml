@@ -1,0 +1,56 @@
+[project]
+name = "tfm-sjekk"
+version = "0.1.0"
+description = "Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = ["ifc", "bim", "tfm", "ns3451", "ns3457", "buildingsmart"]
+authors = [
+    { name = "grigr", email = "offline.broker199@passinbox.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Other Audience",
+    "Natural Language :: Norwegian",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "ifcopenshell>=0.8.5",
+    "jinja2>=3.1.6",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.13.4",
+    "typer>=0.27.1",
+]
+
+[project.scripts]
+tfm-sjekk = "tfm_sjekk.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.165.9",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# RUF001/002/003: norske tegn (æøå) i strenger og docstrings er tilsiktet.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.coverage.run]
+source = ["tfm_sjekk"]
