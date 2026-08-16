@@ -2,7 +2,7 @@
 
 Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
 
-> **Status: under utvikling (uke 0–1 av åtte).** K1–K7 og K8a virker.
+> **Status: under utvikling (uke 0–1 av åtte).** K1–K8 virker.
 > K9 (MMI) og BCF-eksport er ikke implementert ennå.
 > Hypotesen bak verktøyet er ikke validert — se §11 i spesifikasjonen.
 
@@ -47,7 +47,7 @@ Nisjen er norsk-spesifikk, relasjonell, gratis og kjørbar i CI.
 | K5 | Komponentkoden finnes i NS 3457-8 | feil | ✅ |
 | K6 | Komponentforekomster er unike, også på tvers av fagmodeller | feil | ✅ |
 | K7 | Systemer og typer finnes i prosjektets TFM-master (SIMBA) | feil | ✅ |
-| K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | feil | 🟡 delvis |
+| K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | feil | ✅ |
 | K9 | MMI/prosesstatus satt og konsistent | info | ⬜ valgfri |
 
 ## Installasjon
@@ -76,7 +76,7 @@ Prøv det med demomodellene:
 
 ```bash
 uv run python eksempler/lag_demomodell.py
-uv run tfm-sjekk sjekk eksempler/demo-*.ifc \
+uv run tfm-sjekk sjekk eksempler/demo-rie.ifc eksempler/demo-riv.ifc eksempler/demo-elektro.ifc \
     --systemtabell eksempler/FIKTIV-systemkoder.csv \
     --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
     --master eksempler/FIKTIV-tfm-master.csv
@@ -101,6 +101,29 @@ testene og demoen skal kunne kjøre.
 
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.
+
+## Elektrokontrollene (K8)
+
+Dette er kontrollen som krever at man forstår både IFC og et kursopplegg, og
+den går i tre trinn:
+
+- **K8a** — for NS 3451 kapittel 4 og 5 skal undernummeret være utfylt; det er
+  kurs-/sløyfenummeret. Fordelinger er unntatt: tavla er roten kursene går ut
+  fra, ikke noe som selv ligger på en kurs, så `=4310.001.00` er riktig der.
+- **K8b** — alt som mates fra en fordeling skal tilhøre fordelingens system.
+  Sammenligningen går på systemet (`4310.001`), ikke på systemforekomsten
+  (`4310.001.12`) — undernummeret er nettopp det som skal variere.
+- **K8c** — to *ulike* kurser på samme fordeling skal ikke ha samme kursnummer.
+  At ti armaturer deler kurs 12 er normalt; at kurs 12 finnes to ganger er ikke.
+
+Fordelingen finnes ved IFC-klasse (`IfcElectricDistributionBoard` i IFC4,
+`IfcElectricDistributionPoint` i 2x3) og hva som henger på den ved å følge
+koblingene mellom `IfcDistributionPort`-ene. Søket stopper i neste fordeling,
+slik at en underfordeling blir sin egen rot.
+
+K8c trenger at kursene er gruppert i modellen (`IfcDistributionCircuit` /
+`IfcElectricalCircuit`). Mangler de, sier verktøyet fra én gang framfor å gjette.
+Klassenavnene ligger under `[elektro]` i `tfm-sjekk.toml`.
 
 ## TFM-mastera
 
@@ -143,6 +166,10 @@ Arkitekturen i korthet: `tfm_sjekk.ifc` er eneste modul som importerer
 rapporter — jobber mot `Kontekst`, som holder hele den federerte modellen. Hver
 kontroll er en ren funksjon `Kontekst -> list[Funn]`. Det er den grensen som gjør
 K6–K8 mulige, og som lar kontrollene testes uten en eneste IFC-fil.
+
+Koblingsgrafen følger samme regel: portene i IFC leses i `loader.py` og legges
+igjen der som `IfcObjekt.tilkoblet` — en liste med GlobalId-er. Kontrollene ser
+en graf av rene strenger og har aldri hørt om `IfcDistributionPort`.
 
 Full spesifikasjon: [`specification/tfm-sjekk-spesifikasjon.md`](specification/tfm-sjekk-spesifikasjon.md).
 Paragrafhenvisninger i koden (§4, §8, …) peker dit.

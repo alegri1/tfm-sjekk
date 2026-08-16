@@ -48,6 +48,26 @@ class PsetOppsett(BaseModel):
     egenskapsnavn_mmi: list[str] = ["MMI", "Prosesstatus"]
 
 
+class ElektroOppsett(BaseModel):
+    """Hva som er en fordeling og hva som er en kurs (K8b/K8c).
+
+    Klassenavnene er ikke de samme i IFC 2x3 og IFC4 — 2x3 har
+    `IfcElectricDistributionPoint`, IFC4 har `IfcElectricDistributionBoard` —
+    så begge står i lista. Navn som ikke finnes i skjemaet til fila som leses
+    hoppes over.
+    """
+
+    fordeling_klasser: list[str] = [
+        "IfcElectricDistributionBoard",  # IFC4
+        "IfcElectricDistributionPoint",  # IFC 2x3
+        "IfcDistributionBoard",  # IFC4.3
+    ]
+    krets_klasser: list[str] = [
+        "IfcDistributionCircuit",  # IFC4
+        "IfcElectricalCircuit",  # IFC 2x3
+    ]
+
+
 class MasterOppsett(BaseModel):
     """Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).
 
@@ -85,6 +105,7 @@ class Konfigurasjon(BaseModel):
     grammatikk: Grammatikk = Grammatikk()
     pset: PsetOppsett = PsetOppsett()
     master: MasterOppsett = MasterOppsett()
+    elektro: ElektroOppsett = ElektroOppsett()
 
     ifc_klasser: list[str] = Field(
         default=[

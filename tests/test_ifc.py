@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from fixtures.syntetisk import GYLDIG, lag_modell
+from fixtures.syntetisk import GYLDIG, lag_elektromodell, lag_modell
 
 from tfm_sjekk.config import Konfigurasjon
 from tfm_sjekk.ifc import les_modell, les_modeller
@@ -72,6 +72,60 @@ def test_federering_slar_sammen_filer(tmp_path):
     # Samme komponentforekomst i to fagmodeller — dette er K6-tilfellet.
     funn, _ = kjor_alle(Kontekst.bygg(objekter, Konfigurasjon()))
     assert any(f.kontroll == "K6" for f in funn)
+
+
+def test_leser_koblingsgrafen_gjennom_portene(tmp_path):
+    """Porten er kanten mellom to objekter (K8b/K8c)."""
+    sti = lag_elektromodell(
+        [
+            {
+                "navn": "Fordeling 1",
+                "tfm": "++115080=4310.001.00-QLF001",
+                "objekter": [
+                    {"klasse": "IfcLamp", "tfm": "++115080=4310.001.12-QLF010", "kurs": "Kurs 12"}
+                ],
+            }
+        ],
+        tmp_path / "elektro.ifc",
+    )
+    objekter = {o.navn: o for o in les_modell(sti)}
+
+    tavle, lampe = objekter["Fordeling 1"], objekter["Objekt 1.1"]
+    assert lampe.global_id in tavle.tilkoblet
+    assert tavle.global_id in lampe.tilkoblet
+    assert [str(krets) for krets in lampe.kretser] == ["Kurs 12"]
+
+
+def test_porter_er_ikke_objekter(tmp_path):
+    """IfcDistributionPort er en IfcProduct, men skal ikke telles som et
+    kontrollert objekt — den bærer ingen TFM og ville forurenset K1."""
+    sti = lag_elektromodell(
+        [{"navn": "F1", "tfm": None, "objekter": [{"klasse": "IfcLamp", "tfm": None}]}],
+        tmp_path / "porter.ifc",
+    )
+    klasser = {o.ifc_klasse for o in les_modell(sti)}
+    assert "IfcDistributionPort" not in klasser
+    assert klasser == {"IfcElectricDistributionBoard", "IfcLamp"}
+
+
+def test_fordelinger_bygges_i_konteksten(tmp_path):
+    sti = lag_elektromodell(
+        [
+            {
+                "navn": "Fordeling 1",
+                "tfm": "++115080=4310.001.00-QLF001",
+                "objekter": [
+                    {"klasse": "IfcLamp", "tfm": "++115080=4310.001.12-QLF010"},
+                    {"klasse": "IfcLamp", "tfm": "++115080=4310.001.13-QLF011"},
+                ],
+            }
+        ],
+        tmp_path / "graf.ifc",
+    )
+    kontekst = Kontekst.bygg(les_modell(sti), Konfigurasjon())
+    assert len(kontekst.fordelinger) == 1
+    (medlemmer,) = kontekst.fordelinger.values()
+    assert len(medlemmer) == 2
 
 
 def test_federering_parallelt_gir_samme_resultat(tmp_path):

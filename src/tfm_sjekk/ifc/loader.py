@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,7 @@ import ifcopenshell
 import ifcopenshell.ifcopenshell_wrapper
 
 from tfm_sjekk.config import Konfigurasjon
-from tfm_sjekk.modell import IfcObjekt
+from tfm_sjekk.modell import IfcObjekt, Krets
 
 
 def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[IfcObjekt]:
@@ -22,9 +23,17 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
     config = config or Konfigurasjon()
     fil = ifcopenshell.open(str(sti))
 
+    naboer = _koblingsgraf(fil)
+    kretser = _kretser(fil, config)
+
     objekter: list[IfcObjekt] = []
     for produkt in fil.by_type("IfcProduct"):
         if produkt.is_a("IfcSpatialStructureElement"):
+            continue
+        if produkt.is_a("IfcPort"):
+            # Porter er kanter, ikke objekter: de bærer ingen TFM-merking og
+            # skal ikke telle som kontrollerte objekter. Koblingen de
+            # uttrykker er allerede lest inn i `naboer`.
             continue
         egenskaper = _psets(produkt)
         objekter.append(
@@ -39,9 +48,75 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
                 ),
                 tfm_type=_finn(egenskaper, config.pset.type, config.pset.egenskapsnavn_type),
                 mmi=_finn(egenskaper, config.pset.mmi, config.pset.egenskapsnavn_mmi),
+                tilkoblet=sorted(naboer.get(produkt.GlobalId, set())),
+                kretser=kretser.get(produkt.GlobalId, []),
             )
         )
     return objekter
+
+
+def _by_type(fil: Any, klasse: str) -> list[Any]:
+    """`by_type` som tåler at klassen ikke finnes i skjemaet.
+
+    `IfcDistributionCircuit` finnes bare i IFC4, `IfcElectricalCircuit` bare i
+    2x3, og ifcopenshell kaster RuntimeError på den som mangler.
+    """
+    try:
+        return fil.by_type(klasse)
+    except RuntimeError:
+        return []
+
+
+def _koblingsgraf(fil: Any) -> dict[str, set[str]]:
+    """Element → elementene det er koblet til, gjennom portene (K8b/K8c).
+
+    IFC uttrykker dette i to ledd: en port hører til et element, og to porter
+    er koblet til hverandre. Leddene leses fra relasjonene direkte i stedet
+    for fra inverse attributter — `IfcRelNests` (IFC4) og
+    `IfcRelConnectsPortToElement` (2x3) finnes i begge skjemaer, mens hvilken
+    av dem en eksportør faktisk bruker varierer.
+    """
+    eier: dict[int, str] = {}
+    for rel in _by_type(fil, "IfcRelNests"):
+        vert = rel.RelatingObject
+        if vert is None or not hasattr(vert, "GlobalId"):
+            continue
+        for nestet in rel.RelatedObjects or []:
+            if nestet.is_a("IfcPort"):
+                eier[nestet.id()] = vert.GlobalId
+    for rel in _by_type(fil, "IfcRelConnectsPortToElement"):
+        if rel.RelatingPort is not None and rel.RelatedElement is not None:
+            eier[rel.RelatingPort.id()] = rel.RelatedElement.GlobalId
+
+    naboer: dict[str, set[str]] = defaultdict(set)
+    for rel in _by_type(fil, "IfcRelConnectsPorts"):
+        fra = eier.get(rel.RelatingPort.id()) if rel.RelatingPort is not None else None
+        til = eier.get(rel.RelatedPort.id()) if rel.RelatedPort is not None else None
+        if fra is None or til is None or fra == til:
+            continue
+        naboer[fra].add(til)
+        naboer[til].add(fra)
+    return naboer
+
+
+def _kretser(fil: Any, config: Konfigurasjon) -> dict[str, list[Krets]]:
+    """Element → kursgruppene det er tilordnet.
+
+    `is_a(klasse)` matcher arvekjeden, så en eksportør som bruker en subklasse
+    av `IfcDistributionCircuit` fanges også.
+    """
+    ut: dict[str, list[Krets]] = defaultdict(list)
+    for rel in _by_type(fil, "IfcRelAssignsToGroup"):
+        gruppe = rel.RelatingGroup
+        if gruppe is None:
+            continue
+        if not any(gruppe.is_a(klasse) for klasse in config.elektro.krets_klasser):
+            continue
+        krets = Krets(global_id=gruppe.GlobalId, navn=getattr(gruppe, "Name", None))
+        for objekt in rel.RelatedObjects or []:
+            if hasattr(objekt, "GlobalId"):
+                ut[objekt.GlobalId].append(krets)
+    return ut
 
 
 @lru_cache(maxsize=512)

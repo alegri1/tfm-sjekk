@@ -37,6 +37,20 @@ ifc_klasser = [
     "IfcDistributionFlowElement",
 ]
 
+[elektro]
+# Hva som er en fordeling og hva som er en kurs (K8b/K8c). Klassenavnene
+# skiller seg mellom IFC 2x3 og IFC4, så begge står her; navn som ikke finnes
+# i skjemaet til fila som leses hoppes over.
+fordeling_klasser = [
+    "IfcElectricDistributionBoard",  # IFC4
+    "IfcElectricDistributionPoint",  # IFC 2x3
+    "IfcDistributionBoard",          # IFC4.3
+]
+krets_klasser = [
+    "IfcDistributionCircuit",  # IFC4
+    "IfcElectricalCircuit",    # IFC 2x3
+]
+
 [master]
 # Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).
 # Det er kolonneoverskriftene som gjenkjennes, ikke arknavnene: alle ark i

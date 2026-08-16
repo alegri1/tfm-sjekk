@@ -75,12 +75,45 @@ class TfmId(BaseModel):
         return f"{self.typekode}.{self.type_lopenummer}.{self.type_undernummer}"
 
     @property
+    def system(self) -> str:
+        """``3600.001`` — systemet uten kurs-/undernummer.
+
+        Det er dette som skal være likt for alt som henger på samme fordeling
+        (K8b), mens undernummeret er nettopp det som skal variere.
+        """
+        return f"{self.systemkode}.{self.system_lopenummer}"
+
+    @property
+    def kurs(self) -> str:
+        """Undernummeret lest som kurs-/sløyfenummer. Bare meningsfullt for
+        elektro — se `er_elektro` og §4."""
+        return self.undernummer
+
+    @property
     def er_elektro(self) -> bool:
         """Systemer i NS 3451 kapittel 4 (elkraft) og 5 (tele/automatisering).
 
         Styrer K8. Se §4.
         """
         return self.systemkode[:1] in ("4", "5")
+
+
+class Krets(BaseModel):
+    """En kurs slik den er gruppert i IFC.
+
+    `IfcDistributionCircuit` (IFC4) eller `IfcElectricalCircuit` (2x3), begge
+    knyttet til objektene sine med `IfcRelAssignsToGroup`. Revit eksporterer
+    dette når kursene faktisk er modellert; mange modeller har det ikke, og
+    K8c sier da fra om at den ikke kan konkludere framfor å gjette.
+    """
+
+    model_config = {"frozen": True}
+
+    global_id: str
+    navn: str | None = None
+
+    def __str__(self) -> str:
+        return self.navn or self.global_id
 
 
 class IfcObjekt(BaseModel):
@@ -107,6 +140,19 @@ class IfcObjekt(BaseModel):
     )
     tfm_type: str | None = Field(default=None, description="Rå verdi fra pset for type")
     mmi: str | None = Field(default=None, description="Prosesstatus/MMI, for K9")
+
+    tilkoblet: list[str] = Field(
+        default_factory=list,
+        description=(
+            "GlobalId-ene til elementene dette er koblet til gjennom porter. "
+            "Portene selv er ikke objekter her — de er kanten mellom to "
+            "objekter, og forsvinner i uttrekket (K8b/K8c)."
+        ),
+    )
+    kretser: list[Krets] = Field(
+        default_factory=list,
+        description="Kursgruppene objektet er tilordnet med IfcRelAssignsToGroup",
+    )
 
     def er_av_type(self, klasse: str) -> bool:
         """Som ifcopenshell sin `is_a(klasse)`, men uten ifcopenshell."""

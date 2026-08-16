@@ -1,7 +1,7 @@
 """Lager en liten demomodell med tilsiktede feil.
 
     uv run python eksempler/lag_demomodell.py
-    uv run tfm-sjekk eksempler/demo-rie.ifc eksempler/demo-riv.ifc \
+    uv run tfm-sjekk eksempler/demo-*.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
         --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
         --master eksempler/FIKTIV-tfm-master.csv
@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tests"))
 
-from fixtures.syntetisk import lag_modell
+from fixtures.syntetisk import lag_elektromodell, lag_modell
 
 HER = Path(__file__).parent
 
@@ -35,7 +35,28 @@ RIV = [
     ("IfcFlowTerminal", "++115080=3600.001.04-XXX009"),  # K5: ukjent komponentkode
 ]
 
+# Fordelinger med tilkoblede objekter — det K8b og K8c leser. Tavla er
+# merket «.00» med vilje: den er roten kursene går ut fra, ikke noe som
+# selv ligger på en kurs.
+ELEKTRO = [
+    {
+        "navn": "Fordeling 1",
+        "tfm": "++115080=4310.001.00-QLF100",
+        "objekter": [
+            # ok: samme system som tavla, hver sin kurs
+            {"klasse": "IfcLamp", "tfm": "++115080=4310.001.12-QLF101", "kurs": "Kurs 12"},
+            {"klasse": "IfcLamp", "tfm": "++115080=4310.001.13-QLF102", "kurs": "Kurs 13"},
+            # K8b: hører til et annet system enn fordelingen
+            {"klasse": "IfcLamp", "tfm": "++115080=4320.001.12-QLF103", "kurs": "Kurs 12"},
+            # K8c: ny kurs, men gjenbruker kursnummer 14 fra Kurs 14
+            {"klasse": "IfcOutlet", "tfm": "++115080=4310.001.14-QLF104", "kurs": "Kurs 14"},
+            {"klasse": "IfcOutlet", "tfm": "++115080=4310.001.14-QLF105", "kurs": "Kurs 14B"},
+        ],
+    }
+]
+
 if __name__ == "__main__":
     for navn, objekter in (("demo-rie.ifc", RIE), ("demo-riv.ifc", RIV)):
         sti = lag_modell(objekter, HER / navn)
         print(f"skrev {sti}")
+    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-elektro.ifc')}")

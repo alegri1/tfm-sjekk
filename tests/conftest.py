@@ -8,7 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 from tfm_sjekk.config import Konfigurasjon
-from tfm_sjekk.modell import IfcObjekt
+from tfm_sjekk.modell import IfcObjekt, Krets
 from tfm_sjekk.tabeller import Kodetabell, TfmMaster
 
 GYLDIG = "++115080=3600.001.04-JVZ001%JVZ.001.008"
@@ -61,11 +61,19 @@ def objekt(
     global_id: str = "0001",
     klasse: str = "IfcFlowTerminal",
     kildefil: str = "test.ifc",
+    navn: str | None = None,
+    tilkoblet: list[str] | None = None,
+    kretser: list[str] | None = None,
 ) -> IfcObjekt:
+    """`kretser` oppgis som navn; GlobalId-en er navnet, siden identiteten
+    bare brukes til å skille kurser fra hverandre (K8c)."""
     return IfcObjekt(
         global_id=global_id,
         ifc_klasse=klasse,
         ifc_supertyper=["IfcDistributionFlowElement", "IfcDistributionElement", "IfcProduct"],
         kildefil=kildefil,
+        navn=navn,
         tfm_forekomst=tfm,
+        tilkoblet=tilkoblet or [],
+        kretser=[Krets(global_id=navn_, navn=navn_) for navn_ in kretser or []],
     )

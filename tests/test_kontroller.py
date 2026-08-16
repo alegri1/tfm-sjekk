@@ -194,6 +194,100 @@ def test_k8_ignorerer_ikke_elektro(config):
     assert funn_for("K8", k) == []
 
 
+def fordeling(tfm: str | None = "++115080=4310.001.00-QLF001", medlemmer: list = ()):
+    """En fordeling med objektene som henger på den, ferdig koblet begge veier."""
+    tavle = objekt(
+        tfm=tfm,
+        global_id="tavle1",
+        klasse="IfcElectricDistributionBoard",
+        navn="Fordeling 1",
+        tilkoblet=[m.global_id for m in medlemmer],
+    )
+    for medlem in medlemmer:
+        medlem.tilkoblet = [tavle.global_id]
+    return [tavle, *medlemmer]
+
+
+def test_k8b_flagger_objekt_med_annet_system_enn_fordelingen(config):
+    avvik = objekt(tfm="++115080=4320.001.12-QLF010", global_id="a")
+    k = Kontekst.bygg(fordeling(medlemmer=[avvik]), config)
+    funn = [f for f in funn_for("K8", k) if f.global_id == "a"]
+    assert len(funn) == 1
+    assert "4310.001" in funn[0].melding and "4320.001" in funn[0].melding
+
+
+def test_k8b_godtar_ulike_kursnumre_i_samme_system(config):
+    """Undernummeret er nettopp det som skal variere på en fordeling."""
+    medlemmer = [
+        objekt(tfm="++115080=4310.001.12-QLF010", global_id="a"),
+        objekt(tfm="++115080=4310.001.13-QLF011", global_id="b"),
+    ]
+    k = Kontekst.bygg(fordeling(medlemmer=medlemmer), config)
+    assert [f for f in funn_for("K8", k) if f.alvorlighet is Alvorlighet.FEIL] == []
+
+
+def test_k8b_hopper_over_fordeling_uten_egen_tfm(config):
+    """Uten TFM på tavla er det K1 som har jobben — ikke gjett systemet."""
+    avvik = objekt(tfm="++115080=4320.001.12-QLF010", global_id="a")
+    k = Kontekst.bygg(fordeling(tfm=None, medlemmer=[avvik]), config)
+    assert [f for f in funn_for("K8", k) if f.global_id == "a"] == []
+
+
+def test_k8b_stopper_i_neste_fordeling(config):
+    """En underfordeling er sin egen rot; den skal ikke arve systemet over."""
+    underfordeling = objekt(
+        tfm="++115080=4320.001.00-QLF002",
+        global_id="tavle2",
+        klasse="IfcElectricDistributionBoard",
+        navn="Underfordeling",
+    )
+    lampe = objekt(tfm="++115080=4320.001.12-QLF010", global_id="a")
+    objekter = fordeling(medlemmer=[underfordeling])
+    underfordeling.tilkoblet = ["tavle1", "a"]
+    lampe.tilkoblet = ["tavle2"]
+    k = Kontekst.bygg([*objekter, lampe], config)
+
+    # Lampa hører til underfordelingen, ikke hovedfordelingen, og har samme
+    # system som den. Ingen K8b-feil på lampa.
+    assert [f for f in funn_for("K8", k) if f.global_id == "a"] == []
+
+
+def test_k8c_flagger_kursnummer_brukt_av_to_kurser(config):
+    medlemmer = [
+        objekt(tfm="++115080=4310.001.12-QLF010", global_id="a", kretser=["Kurs 12"]),
+        objekt(tfm="++115080=4310.001.12-QLF011", global_id="b", kretser=["Kurs 12B"]),
+    ]
+    k = Kontekst.bygg(fordeling(medlemmer=medlemmer), config)
+    funn = [f for f in funn_for("K8", k) if f.alvorlighet is Alvorlighet.FEIL]
+    assert len(funn) == 2  # begge objektene rapporteres, som i K6
+    assert "Kurs 12" in funn[0].melding and "Kurs 12B" in funn[0].melding
+
+
+def test_k8c_godtar_mange_objekter_pa_samme_kurs(config):
+    """Ti armaturer på kurs 12 er normalt, ikke en kollisjon."""
+    medlemmer = [
+        objekt(tfm=f"++115080=4310.001.12-QLF01{i}", global_id=f"a{i}", kretser=["Kurs 12"])
+        for i in range(3)
+    ]
+    k = Kontekst.bygg(fordeling(medlemmer=medlemmer), config)
+    assert [f for f in funn_for("K8", k) if f.alvorlighet is Alvorlighet.FEIL] == []
+
+
+def test_k8c_sier_fra_nar_modellen_mangler_kursgrupper(config):
+    """Uten kursgrupper kan ikke K8c konkludere — da skal den si det."""
+    medlemmer = [objekt(tfm="++115080=4310.001.12-QLF010", global_id="a")]
+    k = Kontekst.bygg(fordeling(medlemmer=medlemmer), config)
+    info = [f for f in funn_for("K8", k) if f.alvorlighet is Alvorlighet.INFO]
+    assert len(info) == 1
+    assert "kursgrupper" in info[0].melding
+
+
+def test_k8c_er_stille_uten_fordelinger(config):
+    """Ingen tavler i modellen betyr ikke at noe er galt."""
+    k = Kontekst.bygg([objekt(tfm="++115080=4310.001.12-QLF010")], config)
+    assert funn_for("K8", k) == []
+
+
 def test_k9_hoppes_over_inntil_den_er_implementert(config):
     _, hoppet_over = kjor_alle(Kontekst.bygg([objekt()], config))
     assert "K9" in {k.id for k in hoppet_over}
