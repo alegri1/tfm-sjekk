@@ -19,23 +19,58 @@ MAL = Template(
 <meta charset="utf-8">
 <title>TFM-rapport — {{ tittel }}</title>
 <style>
-  :root { color-scheme: light dark; }
+  /* Hele paletten defineres her, for lys bakgrunn. Mørk modus under bytter
+     bare ut verdiene — ingen farge har sin eneste definisjon der, ellers
+     ville den manglet for alle andre. */
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --tekst: #1a1a1a;
+    --dempet: #5f5f5f;
+    --ramme: #dddddd;
+    --ramme-sterk: #cccccc;
+    --th-bg: #f4f4f4;
+    --ok: #2e7d32;
+    --feil: #c0392b;
+    --advarsel: #e67e22;
+    --info: #7f8c8d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --tekst: #e8e8e8;
+      --dempet: #a3a3a3;
+      --ramme: #3a3a3a;
+      --ramme-sterk: #4a4a4a;
+      --th-bg: #262626;
+      /* Lysere varianter: de mettede fargene over forsvinner mot mørk bakgrunn. */
+      --ok: #66bb6a;
+      --feil: #e57373;
+      --advarsel: #ffb74d;
+      --info: #b0bec5;
+    }
+  }
+  /* Bakgrunn og tekstfarge må stå eksplisitt. Uten dem arver sida browserens
+     standardfarger, og da ble overskriftsraden hvit på hvitt i mørk modus. */
   body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem auto;
-         max-width: 1200px; padding: 0 1rem; }
+         max-width: 1200px; padding: 0 1rem;
+         background: var(--bg); color: var(--tekst); }
   h1 { margin-bottom: .25rem; }
-  .meta { color: #666; margin-bottom: 1.5rem; }
+  .meta { color: var(--dempet); margin-bottom: 1.5rem; }
   .tall { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-  .tall div { border: 1px solid #ccc; border-radius: 6px; padding: .6rem 1rem; }
+  .tall div { border: 1px solid var(--ramme-sterk); border-radius: 6px;
+              padding: .6rem 1rem; }
   .tall b { display: block; font-size: 1.6rem; }
   table { border-collapse: collapse; width: 100%; }
-  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #ddd;
+  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--ramme);
            vertical-align: top; }
-  th { cursor: pointer; user-select: none; background: #f4f4f4; position: sticky; top: 0; }
-  tr.feil td:first-child { border-left: 4px solid #c0392b; }
-  tr.advarsel td:first-child { border-left: 4px solid #e67e22; }
-  tr.info td:first-child { border-left: 4px solid #7f8c8d; }
+  th { cursor: pointer; user-select: none; background: var(--th-bg); color: var(--tekst);
+       position: sticky; top: 0; }
+  tr.feil td:first-child { border-left: 4px solid var(--feil); }
+  tr.advarsel td:first-child { border-left: 4px solid var(--advarsel); }
+  tr.info td:first-child { border-left: 4px solid var(--info); }
   code { font-size: .9em; }
-  .tom { padding: 2rem; text-align: center; color: #2e7d32; font-size: 1.2rem; }
+  .tom { padding: 2rem; text-align: center; color: var(--ok); font-size: 1.2rem; }
 </style>
 <h1>TFM-rapport</h1>
 <p class="meta">{{ tittel }}</p>
