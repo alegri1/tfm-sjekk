@@ -1,10 +1,15 @@
 # tfm-sjekk
 
+[![test](https://github.com/alegri1/tfm-sjekk/actions/workflows/test.yml/badge.svg)](https://github.com/alegri1/tfm-sjekk/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/tfm-sjekk)](https://pypi.org/project/tfm-sjekk/)
+[![Python](https://img.shields.io/pypi/pyversions/tfm-sjekk)](https://pypi.org/project/tfm-sjekk/)
+
 Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
 
 > **Status: under utvikling.** Alle kontrollene K1–K9 virker, og rapportene
-> (BCF 2.1, HTML, CSV) er på plass. BCF-fila er ikke prøvd i en ekte viewer ennå.
-> Hypotesen bak verktøyet er ikke validert — se §11 i spesifikasjonen.
+> (BCF 2.1, HTML, XLSX og CSV) er på plass. BCF-fila er ikke prøvd i en ekte
+> viewer ennå. Hypotesen bak verktøyet er ikke validert — se §11 i
+> spesifikasjonen.
 
 ---
 
