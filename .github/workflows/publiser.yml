@@ -1,0 +1,93 @@
+name: publiser
+
+# PyPI-publisering på tag (§6). «Distribuer som `pipx install tfm-sjekk`.»
+#
+#     git tag v0.1.0 && git push origin v0.1.0
+#
+# Autentiseringen er «trusted publishing»: PyPI stoler på en OIDC-billett fra
+# GitHub Actions, og det finnes ingen API-nøkkel å lekke. Oppsettet gjøres én
+# gang på PyPI — se README, seksjonen «Publisering».
+#
+# workflow_dispatch bygger og laster opp artefakter uten å publisere. Det gjør
+# det mulig å prøve kjeden før man binder seg til et versjonsnummer.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  bygg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Et hjul med feil versjonsnummer kan ikke trekkes tilbake fra PyPI —
+      # versjonen er brent for godt. Derfor sjekkes taggen mot pyproject før
+      # noe bygges.
+      - name: Tag og versjon skal stemme
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          versjon=$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")
+          echo "tag=$tag  pyproject=$versjon"
+          if [ "$tag" != "$versjon" ]; then
+            echo "Taggen $GITHUB_REF_NAME svarer ikke til version = \"$versjon\" i pyproject.toml."
+            echo "Rett opp versjonen, eller slett taggen og lag den på nytt."
+            exit 1
+          fi
+
+      - run: uv sync --all-extras --dev
+
+      # Publiser aldri noe utestet. Tag-push utløser ikke test-arbeidsflyten,
+      # som bare lytter på main og pull requests.
+      - name: Tester
+        run: uv run pytest
+
+      - run: uv build
+
+      - name: Innholdet i pakka
+        run: |
+          ls -l dist/
+          python3 -c "
+          import zipfile, glob
+          hjul = glob.glob('dist/*.whl')[0]
+          navn = zipfile.ZipFile(hjul).namelist()
+          mangler = [f for f in ('tfm_sjekk/cli.py', 'tfm_sjekk/py.typed') if f not in navn]
+          assert not mangler, f'hjulet mangler {mangler}'
+          print(f'{hjul}: {len(navn)} oppføringer')
+          "
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pakker
+          path: dist/*
+          if-no-files-found: error
+
+  publiser:
+    needs: bygg
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    # Miljønavnet må være det samme som står i publisher-oppsettet på PyPI.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/tfm-sjekk
+
+    permissions:
+      id-token: write # OIDC-billetten til trusted publishing
+
+    steps:
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakker
+          path: dist
+
+      - name: Last opp til PyPI
+        run: uv publish --trusted-publishing always

@@ -276,6 +276,34 @@ en graf av rene strenger og har aldri hørt om `IfcDistributionPort`.
 Full spesifikasjon: [`specification/tfm-sjekk-spesifikasjon.md`](specification/tfm-sjekk-spesifikasjon.md).
 Paragrafhenvisninger i koden (§4, §8, …) peker dit.
 
+## Publisering
+
+`publiser`-arbeidsflyten bygger og laster opp til PyPI når en tag pushes:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+Taggen sjekkes mot `version` i `pyproject.toml` før noe bygges. Et hjul med
+feil versjonsnummer kan ikke trekkes tilbake fra PyPI — versjonen er brent for
+godt — så det er verdt et eget steg. Testene kjøres i samme jobb, siden en
+tag-push ikke utløser `test`-arbeidsflyten.
+
+Autentiseringen er **trusted publishing**: PyPI stoler på en OIDC-billett fra
+GitHub Actions, og det finnes ingen API-nøkkel å lekke. Oppsettet gjøres én
+gang, før første tag:
+
+1. Lag prosjektet på [pypi.org](https://pypi.org) — eller bruk «pending
+   publisher» hvis navnet ennå ikke er tatt.
+2. Under **Publishing → Add a new publisher**, velg GitHub og fyll inn eier,
+   repo, workflow-fil `publiser.yml` og miljø `pypi`.
+3. Lag miljøet `pypi` under repoets **Settings → Environments**. Vil du ha en
+   godkjenning før hver utgivelse, legg til deg selv som «required reviewer»
+   der.
+
+`workflow_dispatch` kjører bygg og pakkesjekk uten å publisere, så kjeden kan
+prøves før du binder deg til et versjonsnummer.
+
 ## Lisens
 
 MIT.
