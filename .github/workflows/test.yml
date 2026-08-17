@@ -34,7 +34,67 @@ jobs:
         run: uv run pytest
 
       - name: Røyktest av CLI
+        shell: bash
+        env:
+          # Låser CreationDate i BCF-fila. Uten den varierer utdata mellom to
+          # kjøringer, og determinismesjekken under blir umulig.
+          OPPRETTET: "2026-01-01T12:00:00Z"
         run: |
+          # Modellene lages ÉN gang. lag_demomodell trekker nye GlobalId-er
+          # hver kjøring, så to generasjoner ville gitt ulike funn — og da
+          # måler vi tilfeldigheten i fixturen, ikke determinismen i BCF-en.
           uv run python eksempler/lag_demomodell.py
           uv run tfm-sjekk kontroller
+
+          kjor() {
+            uv run tfm-sjekk sjekk \
+              eksempler/demo-rie.ifc eksempler/demo-riv.ifc eksempler/demo-elektro.ifc \
+              --systemtabell eksempler/FIKTIV-systemkoder.csv \
+              --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
+              --master eksempler/FIKTIV-tfm-master.csv \
+              --config tfm-sjekk.toml \
+              --opprettet "$OPPRETTET" \
+              --ut "$1"
+          }
+
+          # Demomodellene har tilsiktede feil, så exit 1 er det riktige svaret.
+          # Uten denne sjekken kunne verktøyet sluttet å finne noe som helst
+          # uten at CI merket det — exit-koden er porten i leveranseprosessen (§5).
+          utdata=$(kjor rapport-1 2>&1) && kode=0 || kode=$?
+          echo "$utdata"
+
+          if [ "$kode" -ne 1 ]; then
+            echo "Forventet exit 1 fra modeller med tilsiktede feil, fikk $kode"
+            exit 1
+          fi
+
+          # Exit 1 alene er ikke nok: en krasj gir også 1. Oppsummeringslinja
+          # skrives helt til slutt, så den beviser at kjøringen kom i mål.
+          # (Den gikk faktisk i stykker på cp1252-konsoll en gang — se
+          # tests/test_cli.py.)
+          case "$utdata" in
+            *advarsler*) ;;
+            *) echo "Fant ikke oppsummeringslinja — kjøringen kom aldri i mål"; exit 1 ;;
+          esac
+
+          kjor rapport-2 >/dev/null 2>&1 || true
+
+      - name: BCF-utdata er deterministisk
         shell: bash
+        run: |
+          # Python framfor cmp/sha256sum: de finnes ikke likt på Git Bash,
+          # macOS og Linux, og uv gir oss uansett en tolk på alle tre.
+          uv run python - <<'PY'
+          from pathlib import Path
+          import sys
+
+          a = Path("rapport-1/funn.bcfzip").read_bytes()
+          b = Path("rapport-2/funn.bcfzip").read_bytes()
+          if a != b:
+              sys.exit(
+                  "BCF-fila er ikke byte-identisk mellom to kjøringer med samme "
+                  "--opprettet. Da duger den ikke som golden file (§7), og hver "
+                  "kjøring støyer i diff-en."
+              )
+          print(f"BCF byte-identisk over to kjøringer ({len(a)} byte)")
+          PY

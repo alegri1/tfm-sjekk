@@ -22,6 +22,7 @@ htmlcov/
 # Rapporter. Skråstreken foran er ikke pynt: uten den traff «rapport/» også
 # src/tfm_sjekk/rapport/, og hele rapportpakken lå utenfor versjonskontroll.
 /rapport/
+/rapport-*/
 *.bcf
 *.bcfzip
 

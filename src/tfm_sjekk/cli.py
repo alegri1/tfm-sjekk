@@ -9,6 +9,8 @@ leveranseprosess uten å blokkere på anbefalinger.
 
 from __future__ import annotations
 
+import contextlib
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -26,6 +28,32 @@ app = typer.Typer(
     add_completion=False,
     help="Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.",
 )
+
+
+@app.callback()
+def _for_hver_kommando() -> None:
+    """Kjøres før kommandoene under."""
+    _tal_konsollens_kodeside()
+
+
+def _tal_konsollens_kodeside() -> None:
+    """Sørger for at utskrift aldri kan velte kjøringen.
+
+    Windows-konsoller står ofte i cp1252, og «→» finnes ikke der. Uten dette
+    kaster den avsluttende `typer.echo` UnicodeEncodeError *etter* at
+    rapportene er skrevet, og prosessen ender på exit-kode 1 uansett hva
+    kontrollene fant. Exit-koden er porten i leveranseprosessen (§5) — den
+    skal aldri avhenge av kodesida i terminalen.
+
+    `errors="replace"` er med som belte-og-bukseseler: en filsti eller en
+    konfigurasjonsverdi kan inneholde tegn selv UTF-8-konsollen ikke tegner.
+    """
+    for strom in (sys.stdout, sys.stderr):
+        rekonfigurer = getattr(strom, "reconfigure", None)
+        if rekonfigurer is None:  # ombrutt strøm i test eller pipe
+            continue
+        with contextlib.suppress(OSError, ValueError):
+            rekonfigurer(encoding="utf-8", errors="replace")
 
 
 @app.command()
