@@ -8,6 +8,7 @@ siste er forutsetningen for golden files (§7).
 
 from __future__ import annotations
 
+import math
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -100,6 +101,50 @@ def test_viewpoint_peker_pa_objektet(tmp_path):
     # Markup må referere fila for at viewer-en skal finne den.
     markup = les_forste(sti, "markup.bcf")
     assert markup.findtext("Viewpoints/Viewpoint") == "viewpoint.bcfv"
+
+
+def test_viewpointet_har_et_kamera_som_ser_mot_objektet(tmp_path):
+    """Uten kamera svarer viewer-en «this issue has no viewpoint to zoom to».
+
+    Et utvalg alene er ikke en synsvinkel. Kameraet er valgfritt i skjemaet,
+    så dette er ikke noe en validering fanger — det viste seg først i en ekte
+    viewer.
+    """
+    f = funn_med_objekt()
+    f.posisjon = (6.0, 0.0, 0.0)
+    sti = skriv_bcf([f], tmp_path / "funn.bcfzip", OPPRETTET)
+    kamera = les_forste(sti, "viewpoint.bcfv").find("PerspectiveCamera")
+    assert kamera is not None
+
+    def vektor(navn):
+        node = kamera.find(navn)
+        return tuple(float(node.find(akse).text) for akse in "XYZ")
+
+    øye, retning, opp = (
+        vektor("CameraViewPoint"),
+        vektor("CameraDirection"),
+        vektor("CameraUpVector"),
+    )
+
+    assert øye[2] > 0, "kameraet står under bakken"
+
+    # Retningen skal peke fra øyet mot objektet.
+    mot_målet = [m - o for m, o in zip(f.posisjon, øye, strict=True)]
+    lengde = math.sqrt(sum(k * k for k in mot_målet))
+    for forventet, faktisk in zip(mot_målet, retning, strict=True):
+        assert abs(forventet / lengde - faktisk) < 1e-6
+
+    # Opp-vektoren må stå vinkelrett på retningen, ellers vipper bildet.
+    assert abs(sum(a * b for a, b in zip(retning, opp, strict=True))) < 1e-6
+    assert opp[2] > 0
+
+
+def test_uten_posisjon_skrives_viewpointet_uten_kamera(tmp_path):
+    """En modell uten plassering skal gi et utvalg, ikke en krasj."""
+    sti = skriv_bcf([funn_med_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
+    bcfv = les_forste(sti, "viewpoint.bcfv")
+    assert bcfv.find("PerspectiveCamera") is None
+    assert bcfv.find("Components/Selection/Component") is not None
 
 
 def test_funn_uten_objekt_far_ikke_viewpoint(tmp_path):

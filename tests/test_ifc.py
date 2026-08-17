@@ -128,6 +128,30 @@ def test_fordelinger_bygges_i_konteksten(tmp_path):
     assert len(medlemmer) == 2
 
 
+def test_posisjon_leses_fra_plasseringen(tmp_path):
+    """Posisjonen ender i BCF-kameraet, så den må komme ut av loaderen."""
+    sti = lag_elektromodell(
+        [
+            {
+                "navn": "Fordeling 1",
+                "tfm": "++115080=4310.001.00-QLF001",
+                "objekter": [{"klasse": "IfcLamp", "tfm": "++115080=4310.001.12-QLF010"}],
+            }
+        ],
+        tmp_path / "plassert.ifc",
+        geometri=True,
+    )
+    etter_navn = {o.navn: o for o in les_modell(sti)}
+    assert etter_navn["Fordeling 1"].posisjon == (0.0, 0.0, 0.0)
+    assert etter_navn["Objekt 1.1"].posisjon == (2.0, 0.0, 0.0)
+
+
+def test_modell_uten_plassering_gir_ingen_posisjon(tmp_path):
+    """De tynne testmodellene har ingen plassering, og det skal gå fint."""
+    sti = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "tynn.ifc")
+    assert les_modell(sti)[0].posisjon is None
+
+
 def test_visningsmodell_kan_apnes_og_tegnes(tmp_path):
     """Modellen med geometri må ha det en viewer krever.
 

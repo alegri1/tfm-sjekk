@@ -141,6 +141,14 @@ class IfcObjekt(BaseModel):
     tfm_type: str | None = Field(default=None, description="Rå verdi fra pset for type")
     mmi: str | None = Field(default=None, description="Prosesstatus/MMI, for K9")
 
+    posisjon: tuple[float, float, float] | None = Field(
+        default=None,
+        description=(
+            "Objektets plassering i modellens koordinater. Brukes til å sikte "
+            "kameraet i BCF-viewpointet; uten den har viewer-en ingen "
+            "synsvinkel å gjenopprette."
+        ),
+    )
     tilkoblet: list[str] = Field(
         default_factory=list,
         description=(
@@ -174,6 +182,9 @@ class Funn(BaseModel):
     ifc_klasse: str | None = None
     kildefil: str | None = None
     verdi: str | None = Field(default=None, description="Den aktuelle TFM-verdien, om relevant")
+    posisjon: tuple[float, float, float] | None = Field(
+        default=None, description="Objektets plassering, til kameraet i BCF-viewpointet"
+    )
 
     @classmethod
     def for_objekt(
@@ -192,6 +203,7 @@ class Funn(BaseModel):
             ifc_klasse=objekt.ifc_klasse,
             kildefil=objekt.kildefil,
             verdi=verdi if verdi is not None else objekt.tfm_forekomst,
+            posisjon=objekt.posisjon,
         )
 
     def sorteringsnokkel(self) -> tuple[str, str, str]:

@@ -34,6 +34,7 @@ faktisk importrutine.
 
 from __future__ import annotations
 
+import math
 import uuid
 import xml.etree.ElementTree as ET
 import zipfile
@@ -54,6 +55,11 @@ NAVNEROM = uuid.uuid5(uuid.NAMESPACE_URL, "urn:tfm-sjekk:bcf")
 FAST_TIDSSTEMPEL = (1980, 1, 1, 0, 0, 0)
 
 MAKS_TITTEL = 100
+
+# Kameraets plassering i forhold til objektet, i modellens enhet (normalt
+# meter). Skrått ovenfra, langt nok unna til at naboobjektene er med.
+KAMERAAVSTAND = 8.0
+KAMERAHOYDE = 6.0
 
 
 def skriv_bcf(
@@ -179,7 +185,57 @@ def _viewpoint(f: Funn, emne: str) -> ET.Element:
     utvalg = ET.SubElement(komponenter, "Selection")
     ET.SubElement(utvalg, "Component", {"IfcGuid": f.global_id or ""})
     ET.SubElement(komponenter, "Visibility", {"DefaultVisibility": "true"})
+
+    # Kameraet kommer etter Components, også det er skjemaets rekkefølge.
+    if f.posisjon is not None:
+        _kamera(rot, f.posisjon)
     return rot
+
+
+def _kamera(viewpoint: ET.Element, mål: tuple[float, float, float]) -> None:
+    """Et perspektivkamera som ser mot objektet.
+
+    Et utvalg alene er ikke nok: en viewer gjenoppretter en *synsvinkel*, og
+    uten kamera svarer den «this issue has no viewpoint to zoom to» — utvalget
+    blir aldri brukt. Det er den delen av formatet et skjema ikke fanger,
+    siden kameraet er valgfritt der.
+
+    Kameraet settes skrått ovenfra, som en RIE ville stilt seg selv: langt nok
+    unna til at nabo-objektene er med, høyt nok til å se hva som står rundt.
+    """
+    forskyvning = (-KAMERAAVSTAND, -KAMERAAVSTAND, KAMERAHOYDE)
+    øye = tuple(m + f for m, f in zip(mål, forskyvning, strict=True))
+
+    retning = _normaliser(tuple(m - ø for m, ø in zip(mål, øye, strict=True)))
+    # Opp-vektoren må stå vinkelrett på retningen, ellers vipper bildet.
+    høyre = _normaliser(_kryss(retning, (0.0, 0.0, 1.0)))
+    opp = _normaliser(_kryss(høyre, retning))
+
+    kamera = ET.SubElement(viewpoint, "PerspectiveCamera")
+    for navn, vektor in (
+        ("CameraViewPoint", øye),
+        ("CameraDirection", retning),
+        ("CameraUpVector", opp),
+    ):
+        element = ET.SubElement(kamera, navn)
+        for akse, verdi in zip("XYZ", vektor, strict=True):
+            ET.SubElement(element, akse).text = f"{verdi:.6f}"
+    ET.SubElement(kamera, "FieldOfView").text = "60"
+
+
+def _kryss(a: tuple[float, ...], b: tuple[float, ...]) -> tuple[float, float, float]:
+    return (
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    )
+
+
+def _normaliser(v: tuple[float, ...]) -> tuple[float, float, float]:
+    lengde = math.sqrt(sum(k * k for k in v))
+    if lengde == 0:
+        return (0.0, 0.0, 1.0)
+    return (v[0] / lengde, v[1] / lengde, v[2] / lengde)
 
 
 def _tittel(f: Funn) -> str:

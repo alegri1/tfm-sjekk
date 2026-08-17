@@ -48,11 +48,37 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
                 ),
                 tfm_type=_finn(egenskaper, config.pset.type, config.pset.egenskapsnavn_type),
                 mmi=_finn(egenskaper, config.pset.mmi, config.pset.egenskapsnavn_mmi),
+                posisjon=_posisjon(produkt),
                 tilkoblet=sorted(naboer.get(produkt.GlobalId, set())),
                 kretser=kretser.get(produkt.GlobalId, []),
             )
         )
     return objekter
+
+
+def _posisjon(produkt: Any) -> tuple[float, float, float] | None:
+    """Objektets origo i modellens koordinater.
+
+    Går ut fra plasseringskjeden, ikke fra geometrien: en modell kan ha
+    titusenvis av objekter, og å tessellere hvert av dem for å finne et punkt
+    ville kostet mange sekunder for noe kameraet bare trenger omtrentlig.
+
+    Punktet ender i BCF-viewpointet. Uten det har viewer-en ingen synsvinkel å
+    gjenopprette, og svarer «this issue has no viewpoint to zoom to».
+    """
+    plassering = getattr(produkt, "ObjectPlacement", None)
+    if plassering is None:
+        return None
+    try:
+        import ifcopenshell.util.placement
+
+        matrise = ifcopenshell.util.placement.get_local_placement(plassering)
+        return (float(matrise[0][3]), float(matrise[1][3]), float(matrise[2][3]))
+    except Exception:
+        # Plasseringen kan være sirkulær eller bruke noe vi ikke forstår.
+        # Et manglende kamera er en dårligere rapport, ikke en mislykket
+        # kjøring — kontrollene bryr seg ikke om posisjon.
+        return None
 
 
 def _by_type(fil: Any, klasse: str) -> list[Any]:
