@@ -72,13 +72,14 @@ Flere filer federeres og kontrolleres samlet — det er slik K6 finner duplikate
 på tvers av fagmodeller. Exit-kode 0 ved ingen feil, 1 ved feil, slik at verktøyet
 kan stå som port i en leveranseprosess.
 
-Hver kjøring skriver tre filer til `--ut`:
+Hver kjøring skriver fire filer til `--ut`:
 
 | Fil | Til hva |
 |---|---|
 | `funn.bcfzip` | BCF 2.1 — åpnes i Solibri, Catenda, Dalux, BIMcollab |
 | `rapport.html` | Én selvstendig fil med sorterbar tabell, til deling |
-| `funn.csv` | Semikolonseparert, for videre analyse i Excel — se under |
+| `funn.xlsx` | For analyse i Excel — frosset overskriftsrad og filter |
+| `funn.csv` | Semikolonseparert UTF-8, for skript og pandas |
 
 Prøv det med demomodellene:
 
@@ -133,24 +134,26 @@ K8c trenger at kursene er gruppert i modellen (`IfcDistributionCircuit` /
 `IfcElectricalCircuit`). Mangler de, sier verktøyet fra én gang framfor å gjette.
 Klassenavnene ligger under `[elektro]` i `tfm-sjekk.toml`.
 
-## CSV-en og Excel
+## Excel: bruk `funn.xlsx`, ikke CSV-en
 
-`funn.csv` er semikolonseparert med BOM, og starter med linja `sep=;`.
+De to filene har hver sin jobb, og grunnen er verdt å kjenne til.
 
-Den linja er ikke pynt. Excel på skrivebordet deler på listeskilletegnet fra
-regionsinnstillingene, altså semikolon på en norsk maskin — men **Excel på web
-gjør ikke det**: den antar komma, og uten `sep=`-linja havner hele rapporten i
-kolonne A. Linja er en Excel-konvensjon snarere enn CSV, og den er det eneste
-som får begge utgavene til å dele i kolonner ved dobbeltklikk.
+CSV er tekst, og Excel må gjette to ting: skilletegnet og tegnkodingen.
+Skrivebords-Excel deler på listeskilletegnet fra regionsinnstillingene —
+semikolon på en norsk maskin — mens **Excel på web antar komma** og legger hele
+rapporten i kolonne A. Løsningen på det, en `sep=;`-linje øverst, setter
+samtidig Excel på en parse-vei som **ignorerer BOM-en**, og da blir «følger» til
+«fÃ¸lger». Innenfor én CSV kan Excel gi riktige tegn eller riktige kolonner,
+ikke begge.
 
-Skal fila leses av et program, gir `--ren-csv` en fil uten linja:
+`funn.xlsx` har ingenting å gjette: tegn og kolonner ligger strukturert i fila,
+og den åpner likt i begge utgavene av Excel. Overskriftsraden er frosset og
+filtrerbar. `openpyxl` var allerede en avhengighet for å lese TFM-mastera, så
+formatet koster ikke noe ekstra.
 
-```bash
-tfm-sjekk sjekk modell.ifc --ren-csv
-```
-
-Da leser `csv`-modulen, pandas og `Import-Csv` den rett fram. Med linja må du
-hoppe over første rad — `pandas.read_csv(sti, sep=";", skiprows=1)`.
+`funn.csv` er dermed fri til å være det maskinlesbare formatet: semikolon,
+UTF-8 med BOM, ingen direktivlinje. `csv`-modulen, pandas og `Import-Csv` leser
+den rett fram.
 
 ## BCF-fila
 
