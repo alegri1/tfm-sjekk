@@ -9,8 +9,10 @@ siste er forutsetningen for golden files (§7).
 from __future__ import annotations
 
 import math
+import struct
 import xml.etree.ElementTree as ET
 import zipfile
+import zlib
 
 import pytest
 from conftest import uten_ansi
@@ -92,7 +94,7 @@ def test_markup_har_det_skjemaet_krever(tmp_path):
 def test_viewpoint_peker_pa_objektet(tmp_path):
     """Uten dette er saken ikke klikkbar, og formatet mister hensikten."""
     sti = skriv_bcf([funn_med_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
-    bcfv = les_forste(sti, "viewpoint.bcfv")
+    bcfv = les_forste(sti, ".bcfv")
 
     komponent = bcfv.find("Components/Selection/Component")
     assert komponent is not None
@@ -100,7 +102,10 @@ def test_viewpoint_peker_pa_objektet(tmp_path):
 
     # Markup må referere fila for at viewer-en skal finne den.
     markup = les_forste(sti, "markup.bcf")
-    assert markup.findtext("Viewpoints/Viewpoint") == "viewpoint.bcfv"
+    referert = markup.findtext("Viewpoints/Viewpoint")
+    assert referert and any(n.endswith(referert) for n in navn_i(sti)), (
+        f"markup peker på {referert}, som ikke finnes i arkivet"
+    )
 
 
 def test_viewpointet_har_et_kamera_som_ser_mot_objektet(tmp_path):
@@ -113,7 +118,7 @@ def test_viewpointet_har_et_kamera_som_ser_mot_objektet(tmp_path):
     f = funn_med_objekt()
     f.posisjon = (6.0, 0.0, 0.0)
     sti = skriv_bcf([f], tmp_path / "funn.bcfzip", OPPRETTET)
-    kamera = les_forste(sti, "viewpoint.bcfv").find("PerspectiveCamera")
+    kamera = les_forste(sti, ".bcfv").find("PerspectiveCamera")
     assert kamera is not None
 
     def vektor(navn):
@@ -142,15 +147,53 @@ def test_viewpointet_har_et_kamera_som_ser_mot_objektet(tmp_path):
 def test_uten_posisjon_skrives_viewpointet_uten_kamera(tmp_path):
     """En modell uten plassering skal gi et utvalg, ikke en krasj."""
     sti = skriv_bcf([funn_med_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
-    bcfv = les_forste(sti, "viewpoint.bcfv")
+    bcfv = les_forste(sti, ".bcfv")
     assert bcfv.find("PerspectiveCamera") is None
     assert bcfv.find("Components/Selection/Component") is not None
+
+
+def test_viewpointet_har_snapshot(tmp_path):
+    """BIMcollab regner viewpointet som fraværende uten et bilde.
+
+    Snapshot er valgfritt i skjemaet, men alle buildingSMARTs egne
+    konformitetsfiler har ett.
+    """
+    sti = skriv_bcf([funn_med_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
+
+    bilder = [n for n in navn_i(sti) if n.endswith(".png")]
+    assert len(bilder) == 1
+
+    markup = les_forste(sti, "markup.bcf")
+    referert = markup.findtext("Viewpoints/Snapshot")
+    assert referert and bilder[0].endswith(referert), "markup peker på feil filnavn"
+
+
+def test_snapshotet_er_et_gyldig_png(tmp_path):
+    """Skrevet uten bildebibliotek, så blokkene og CRC-ene sjekkes her."""
+    sti = skriv_bcf([funn_med_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
+    with zipfile.ZipFile(sti) as arkiv:
+        data = arkiv.read(next(n for n in navn_i(sti) if n.endswith(".png")))
+
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
+
+    blokker, i = [], 8
+    while i < len(data):
+        lengde = struct.unpack(">I", data[i : i + 4])[0]
+        merke, innhold = data[i + 4 : i + 8], data[i + 8 : i + 8 + lengde]
+        crc = struct.unpack(">I", data[i + 8 + lengde : i + 12 + lengde])[0]
+        assert crc == zlib.crc32(merke + innhold) & 0xFFFFFFFF, f"CRC-feil i {merke!r}"
+        blokker.append(merke)
+        i += 12 + lengde
+
+    assert blokker == [b"IHDR", b"IDAT", b"IEND"]
+    bredde, høyde, dybde, fargetype = struct.unpack(">IIBB", data[16:26])
+    assert (bredde, høyde, dybde, fargetype) == (320, 180, 8, 2)
 
 
 def test_funn_uten_objekt_far_ikke_viewpoint(tmp_path):
     """Samlefunnene fra K7 og K8c peker på modellen, ikke på noe å zoome til."""
     sti = skriv_bcf([funn_uten_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
-    assert not [n for n in navn_i(sti) if n.endswith("viewpoint.bcfv")]
+    assert not [n for n in navn_i(sti) if n.endswith(".bcfv")]
 
     markup = les_forste(sti, "markup.bcf")
     assert markup.find("Viewpoints") is None
@@ -262,7 +305,7 @@ def test_viewpointene_peker_pa_objekter_som_finnes_i_modellen(tmp_path):
     guider = []
     with zipfile.ZipFile(sti) as arkiv:
         for navn in arkiv.namelist():
-            if navn.endswith("viewpoint.bcfv"):
+            if navn.endswith(".bcfv"):
                 rot = ET.fromstring(arkiv.read(navn))
                 guider += [k.get("IfcGuid") for k in rot.iter("Component")]
 

@@ -6,9 +6,23 @@ skrive selv om du vil unngå avhengigheten.»
 
 Poenget: funn åpnes direkte i Solibri, Catenda, Dalux og BIMcollab. Uten
 viewpoint er saken ikke klikkbar, og da mister formatet hele hensikten — så
-hvert funn med en GlobalId får en `viewpoint.bcfv` som velger nettopp det
-objektet. Funn uten objekt (samlefunnene fra K7 og K8c) blir emner uten
-viewpoint; de peker på modellen som helhet, ikke på noe å zoome til.
+hvert funn med en GlobalId får et viewpoint som velger nettopp det objektet.
+Funn uten objekt (samlefunnene fra K7 og K8c) blir emner uten viewpoint; de
+peker på modellen som helhet, ikke på noe å zoome til.
+
+**Et viewpoint består av tre ting, ikke én.** Skjemaet krever bare utvalget,
+men en viewer trenger alle tre, og BIMcollab ZOOM svarte «this issue has no
+viewpoint to zoom to» helt til de var på plass:
+
+- *Utvalget* (`Components/Selection`) sier hvilket objekt saken gjelder.
+- *Kameraet* sier hvor man skal se fra. Et utvalg er ikke en synsvinkel.
+- *Snapshotet* er bildet i sakslista. Alle buildingSMARTs egne
+  konformitetsfiler har ett, og BIMcollab regner viewpointet som fraværende
+  uten.
+
+Alle tre er valgfrie i XSD-en, så ingen av manglene ble fanget av validering.
+De ble funnet ved å importere fila i en ekte viewer, og de er grunnen til at
+det punktet sto åpent så lenge.
 
 **Determinisme.** Hele fila skal være byte-identisk for samme funn, ellers
 er den ubrukelig som golden file (§7) og støyer i diff-er. Tre kilder til
@@ -27,21 +41,23 @@ etter BCF-skjemaet komme fra prosjektets utvidelser, og en viewer som er
 streng kan avvise «K6» der. `Labels` er fritekst, og det er nettopp der
 viewerne filtrerer.
 
-GJENSTÅR: åpne en generert fil i en ekte viewer (Catenda har gratis konto)
-før dette kalles ferdig. Strukturen er verifisert mot skjemaet, ikke mot en
-faktisk importrutine.
+Fila er prøvd i BIMcollab ZOOM. Innholdet er i tillegg validert mot
+buildingSMARTs offisielle XSD-er for 2.1, og arkivstrukturen sammenlignet med
+deres egne konformitetsfiler.
 """
 
 from __future__ import annotations
 
 import math
+import struct
 import uuid
 import xml.etree.ElementTree as ET
 import zipfile
+import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tfm_sjekk.modell import Funn
+from tfm_sjekk.modell import Alvorlighet, Funn
 
 BCF_VERSJON = "2.1"
 FORFATTER = "tfm-sjekk"
@@ -60,6 +76,13 @@ MAKS_TITTEL = 100
 # meter). Skrått ovenfra, langt nok unna til at naboobjektene er med.
 KAMERAAVSTAND = 8.0
 KAMERAHOYDE = 6.0
+
+# Samme farger som i HTML-rapporten, så alvorligheten ser lik ut begge steder.
+FARGER = {
+    Alvorlighet.FEIL: (192, 57, 43),
+    Alvorlighet.ADVARSEL: (230, 126, 34),
+    Alvorlighet.INFO: (127, 140, 141),
+}
 
 
 def skriv_bcf(
@@ -83,8 +106,13 @@ def skriv_bcf(
         for f in sorted(funn, key=Funn.sorteringsnokkel):
             emne = _emne_guid(f, brukte)
             _skriv(arkiv, f"{emne}/markup.bcf", _markup(f, emne, opprettet, forfatter))
-            if f.global_id:
-                _skriv(arkiv, f"{emne}/viewpoint.bcfv", _viewpoint(f, emne))
+            if not f.global_id:
+                continue
+            # Filnavnene følger konvensjonen i buildingSMARTs egne filer, der
+            # GUID-en i navnet er den samme som Viewpoints/@Guid.
+            vp = _under_guid(emne, "viewpoint")
+            _skriv(arkiv, f"{emne}/Viewpoint_{vp}.bcfv", _viewpoint(f, emne))
+            _legg_ved(arkiv, f"{emne}/Snapshot_{vp}.png", _snapshot(f.alvorlighet))
     return sti
 
 
@@ -111,13 +139,14 @@ def normaliser_tidsstempel(opprettet: str | None) -> str:
 
 
 def _skriv(arkiv: zipfile.ZipFile, navn: str, element: ET.Element) -> None:
+    ET.indent(element)
+    _legg_ved(arkiv, navn, ET.tostring(element, encoding="utf-8", xml_declaration=True))
+
+
+def _legg_ved(arkiv: zipfile.ZipFile, navn: str, innhold: bytes) -> None:
     oppforing = zipfile.ZipInfo(navn, date_time=FAST_TIDSSTEMPEL)
     oppforing.compress_type = zipfile.ZIP_DEFLATED
-    ET.indent(element)
-    arkiv.writestr(
-        oppforing,
-        ET.tostring(element, encoding="utf-8", xml_declaration=True),
-    )
+    arkiv.writestr(oppforing, innhold)
 
 
 def _emne_guid(f: Funn, brukte: set[str]) -> str:
@@ -172,8 +201,10 @@ def _markup(f: Funn, emne: str, opprettet: str, forfatter: str) -> ET.Element:
     ET.SubElement(kommentar, "Comment").text = _detaljer(f)
 
     if f.global_id:
-        viewpoints = ET.SubElement(rot, "Viewpoints", {"Guid": _under_guid(emne, "viewpoint")})
-        ET.SubElement(viewpoints, "Viewpoint").text = "viewpoint.bcfv"
+        vp = _under_guid(emne, "viewpoint")
+        viewpoints = ET.SubElement(rot, "Viewpoints", {"Guid": vp})
+        ET.SubElement(viewpoints, "Viewpoint").text = f"Viewpoint_{vp}.bcfv"
+        ET.SubElement(viewpoints, "Snapshot").text = f"Snapshot_{vp}.png"
 
     return rot
 
@@ -221,6 +252,45 @@ def _kamera(viewpoint: ET.Element, mål: tuple[float, float, float]) -> None:
         for akse, verdi in zip("XYZ", vektor, strict=True):
             ET.SubElement(element, akse).text = f"{verdi:.6f}"
     ET.SubElement(kamera, "FieldOfView").text = "60"
+
+
+def _snapshot(alvorlighet: Alvorlighet) -> bytes:
+    """Et lite PNG i alvorlighetens farge.
+
+    BCF-skjemaet gjør snapshot valgfritt, men alle buildingSMARTs egne
+    konformitetsfiler har ett, og BIMcollab bygger saksvisningen sin rundt
+    bildet — uten det regnes viewpointet som fraværende.
+
+    Vi kan ikke rendre modellen; det ville krevd en 3D-motor i et verktøy som
+    med vilje ikke har noen. Et ensfarget felt er derfor ikke en dårlig
+    render, det er noe annet: en fargekode som viser alvorlighet i
+    sakslista. At det ikke later som å være et bilde av modellen er poenget.
+    """
+    return _png(320, 180, FARGER[alvorlighet])
+
+
+def _png(bredde: int, høyde: int, rgb: tuple[int, int, int]) -> bytes:
+    """Minste gyldige PNG for et ensfarget felt, uten bildebibliotek.
+
+    Formatet er enkelt nok til at en avhengighet ikke lønner seg, på samme
+    måte som BCF-en selv. Utdata er deterministisk: samme farge gir samme
+    byte, som resten av arkivet krever (§7).
+    """
+    rad = b"\x00" + bytes(rgb) * bredde  # filtertype 0 foran hver rad
+    piksler = zlib.compress(rad * høyde, 9)
+
+    def blokk(merke: bytes, data: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(data))
+            + merke
+            + data
+            + struct.pack(">I", zlib.crc32(merke + data) & 0xFFFFFFFF)
+        )
+
+    hode = struct.pack(">IIBBBBB", bredde, høyde, 8, 2, 0, 0, 0)  # 8-bit RGB
+    return (
+        b"\x89PNG\r\n\x1a\n" + blokk(b"IHDR", hode) + blokk(b"IDAT", piksler) + blokk(b"IEND", b"")
+    )
 
 
 def _kryss(a: tuple[float, ...], b: tuple[float, ...]) -> tuple[float, float, float]:
