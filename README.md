@@ -1,6 +1,7 @@
 # tfm-sjekk
 
 [![test](https://github.com/alegri1/tfm-sjekk/actions/workflows/test.yml/badge.svg)](https://github.com/alegri1/tfm-sjekk/actions/workflows/test.yml)
+[![bygg](https://github.com/alegri1/tfm-sjekk/actions/workflows/bygg.yml/badge.svg)](https://github.com/alegri1/tfm-sjekk/actions/workflows/bygg.yml)
 [![PyPI](https://img.shields.io/pypi/v/tfm-sjekk)](https://pypi.org/project/tfm-sjekk/)
 [![Python](https://img.shields.io/pypi/pyversions/tfm-sjekk)](https://pypi.org/project/tfm-sjekk/)
 
