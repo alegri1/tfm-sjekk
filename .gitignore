@@ -1,15 +1,17 @@
-# Python-generated files
+# Python-generated files. Byggkatalogene er ankret til rota med «/» — uten
+# den ville «build/» og «dist/» også truffet en kildekatalog med samme navn,
+# slik «rapport/» en gang gjorde. Se seksjonen om rapporter under.
 __pycache__/
 *.py[oc]
-build/
-dist/
-wheels/
+/build/
+/dist/
+/wheels/
 *.egg-info
 .pytest_cache/
 .ruff_cache/
 .hypothesis/
 .coverage
-htmlcov/
+/htmlcov/
 
 # Virtual environments
 .venv

@@ -57,6 +57,22 @@ uv sync          # utvikling
 # pipx install tfm-sjekk   (når v1 er publisert)
 ```
 
+**Uten Python:** last ned den frittstående binæren fra siste kjøring av
+`bygg`-arbeidsflyten under Actions — artefaktene heter `tfm-sjekk-windows`,
+`tfm-sjekk-macos` og `tfm-sjekk-linux`. Én fil, ingen installasjon. Mange
+BIM-koordinatorer har ikke Python og får ikke lov til å installere det heller
+(§6).
+
+Bygge den selv:
+
+```bash
+uv run pyinstaller tfm-sjekk.spec --noconfirm   # → dist/tfm-sjekk[.exe]
+```
+
+Binæren blir rundt 57 MB, fordi `ifcopenshell` alene er 82 MB på disk, og
+bruker et par sekunder på å starte: én fil betyr at alt pakkes ut i minnet ved
+hver kjøring. Det er byttehandelen mot å slippe installasjon.
+
 ## Bruk
 
 ```bash

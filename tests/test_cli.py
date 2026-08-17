@@ -58,6 +58,20 @@ def test_exit_koden_overlever_en_cp1252_konsoll(tmp_path):
     assert "advarsler" in resultat.stdout  # oppsummeringslinja kom ut
 
 
+def test_federering_over_prosessgrensa(tmp_path):
+    """`python -m tfm_sjekk` med flere filer starter arbeidsprosesser, og de
+    importerer __main__ på nytt. Uten `if __name__`-vakta ville hele
+    kontrollkjøringen startet om igjen i hvert barn."""
+    modeller = [
+        str(lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / f"m{i}.ifc")) for i in range(3)
+    ]
+    resultat = kjor(["sjekk", *modeller, "--ut", str(tmp_path / "ut")])
+
+    assert resultat.returncode == 1, resultat.stdout + resultat.stderr  # K6: samme ID i tre filer
+    assert resultat.stdout.count("Leser 3 modell(er)") == 1, "kjørte flere ganger"
+    assert "multiprocessing-fork" not in resultat.stderr
+
+
 def test_kontroller_listes_i_cp1252_konsoll():
     """Kontrolltitlene har æ, ø og å."""
     resultat = kjor(["kontroller"], koding="cp1252")

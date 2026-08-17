@@ -1,0 +1,88 @@
+name: bygg
+
+# Frittstående binærfil (§6): «Mange BIM-koordinatorer har ikke Python
+# installert og får ikke lov til å installere det heller.»
+#
+# Bygges på main og på tag, ikke på hver PR — det tar noen minutter per
+# plattform. Poenget er at main alltid skal være mulig å slippe.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  binaer:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            navn: tfm-sjekk-linux
+            fil: tfm-sjekk
+          - os: macos-latest
+            navn: tfm-sjekk-macos
+            fil: tfm-sjekk
+          - os: windows-latest
+            navn: tfm-sjekk-windows
+            fil: tfm-sjekk.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --all-extras --dev
+
+      - name: Bygg
+        run: uv run pyinstaller tfm-sjekk.spec --noconfirm
+
+      # Binæren testes utenfor prosjektmappa. Kjører den derfra, kan den
+      # plukke opp kildekoden ved siden av seg og se ut til å virke selv om
+      # noe manglet i bundelen.
+      - name: Røyktest av binæren
+        shell: bash
+        run: |
+          exe="$PWD/dist/${{ matrix.fil }}"
+          uv run python eksempler/lag_demomodell.py
+
+          arbeid=$(mktemp -d)
+          cp eksempler/demo-*.ifc eksempler/FIKTIV-*.csv tfm-sjekk.toml "$arbeid/"
+          cd "$arbeid"
+
+          "$exe" kontroller | grep -q "K9" || {
+            echo "kontroller listet ikke K9"; exit 1; }
+
+          # Tre filer tvinger federering, altså prosesspoolen. I en frossen
+          # binær starter hver arbeidsprosess exe-en på nytt, og uten
+          # freeze_support() i __main__ ender det i BrokenProcessPool.
+          # Denne feilen fantes faktisk her, og dukket bare opp i binæren.
+          utdata=$("$exe" sjekk demo-rie.ifc demo-riv.ifc demo-elektro.ifc \
+            --systemtabell FIKTIV-systemkoder.csv \
+            --komponenttabell FIKTIV-komponentkoder.csv \
+            --master FIKTIV-tfm-master.csv \
+            --config tfm-sjekk.toml \
+            --opprettet 2026-01-01T12:00:00Z \
+            --ut ut 2>&1) && kode=0 || kode=$?
+          echo "$utdata"
+
+          test "$kode" -eq 1 || { echo "forventet exit 1, fikk $kode"; exit 1; }
+          case "$utdata" in
+            *"15 objekter"*) ;;
+            *) echo "leste ikke alle tre modellene — federeringen er brutt"; exit 1 ;;
+          esac
+
+          for f in rapport.html funn.csv funn.xlsx funn.bcfzip; do
+            test -s "ut/$f" || { echo "manglet ut/$f"; exit 1; }
+          done
+          echo "binæren skrev alle fire rapportene"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.navn }}
+          path: dist/${{ matrix.fil }}
+          if-no-files-found: error
