@@ -88,6 +88,17 @@ def sjekk(
             ),
         ),
     ] = None,
+    ren_csv: Annotated[
+        bool,
+        typer.Option(
+            "--ren-csv",
+            help=(
+                "Utelat «sep=;»-linja i CSV-en. Linja finnes for at Excel — også "
+                "webutgaven — skal dele i kolonner ved dobbeltklikk; uten den får "
+                "du en fil csv-modulen, pandas og Import-Csv leser rett fram."
+            ),
+        ),
+    ] = False,
     sekvensielt: Annotated[
         bool, typer.Option("--sekvensielt", help="Ikke les filene parallelt (feilsøking)")
     ] = False,
@@ -125,7 +136,7 @@ def sjekk(
 
     tittel = ", ".join(m.name for m in modeller)
     skriv_html(funn, ut / "rapport.html", tittel, len(objekter), [k.id for k in hoppet_over])
-    skriv_csv(funn, ut / "funn.csv")
+    skriv_csv(funn, ut / "funn.csv", sep_linje=not ren_csv)
     skriv_bcf(funn, ut / "funn.bcfzip", opprettet)
 
     typer.echo(

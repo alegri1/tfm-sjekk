@@ -78,7 +78,7 @@ Hver kjøring skriver tre filer til `--ut`:
 |---|---|
 | `funn.bcfzip` | BCF 2.1 — åpnes i Solibri, Catenda, Dalux, BIMcollab |
 | `rapport.html` | Én selvstendig fil med sorterbar tabell, til deling |
-| `funn.csv` | Semikolonseparert, for videre analyse i Excel |
+| `funn.csv` | Semikolonseparert, for videre analyse i Excel — se under |
 
 Prøv det med demomodellene:
 
@@ -132,6 +132,25 @@ slik at en underfordeling blir sin egen rot.
 K8c trenger at kursene er gruppert i modellen (`IfcDistributionCircuit` /
 `IfcElectricalCircuit`). Mangler de, sier verktøyet fra én gang framfor å gjette.
 Klassenavnene ligger under `[elektro]` i `tfm-sjekk.toml`.
+
+## CSV-en og Excel
+
+`funn.csv` er semikolonseparert med BOM, og starter med linja `sep=;`.
+
+Den linja er ikke pynt. Excel på skrivebordet deler på listeskilletegnet fra
+regionsinnstillingene, altså semikolon på en norsk maskin — men **Excel på web
+gjør ikke det**: den antar komma, og uten `sep=`-linja havner hele rapporten i
+kolonne A. Linja er en Excel-konvensjon snarere enn CSV, og den er det eneste
+som får begge utgavene til å dele i kolonner ved dobbeltklikk.
+
+Skal fila leses av et program, gir `--ren-csv` en fil uten linja:
+
+```bash
+tfm-sjekk sjekk modell.ifc --ren-csv
+```
+
+Da leser `csv`-modulen, pandas og `Import-Csv` den rett fram. Med linja må du
+hoppe over første rad — `pandas.read_csv(sti, sep=";", skiprows=1)`.
 
 ## BCF-fila
 
