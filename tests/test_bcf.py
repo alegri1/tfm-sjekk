@@ -11,8 +11,13 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 import zipfile
 
+import pytest
+from fixtures.syntetisk import GYLDIG, lag_modell
+from typer.testing import CliRunner
+
+from tfm_sjekk.cli import app
 from tfm_sjekk.modell import Alvorlighet, Funn
-from tfm_sjekk.rapport import skriv_bcf
+from tfm_sjekk.rapport import normaliser_tidsstempel, skriv_bcf
 
 OPPRETTET = "2026-01-01T12:00:00Z"
 
@@ -131,3 +136,53 @@ def test_identiske_funn_kolliderer_ikke(tmp_path):
 def test_tom_rapport_er_fortsatt_en_gyldig_bcf(tmp_path):
     sti = skriv_bcf([], tmp_path / "tom.bcfzip", OPPRETTET)
     assert navn_i(sti) == ["bcf.version"]
+
+
+def test_tidsstempel_regnes_om_til_utc():
+    """Samme øyeblikk skal gi samme fil uansett hvilken sone det ble skrevet i."""
+    assert normaliser_tidsstempel("2026-01-01T13:00:00+01:00") == OPPRETTET
+    assert normaliser_tidsstempel("2026-01-01T12:00:00Z") == OPPRETTET
+
+
+def test_tidsstempel_uten_sone_tolkes_som_utc():
+    """Lokal tid ville gitt ulik fil på to maskiner — da er poenget borte."""
+    assert normaliser_tidsstempel("2026-01-01 12:00:00") == OPPRETTET
+    assert normaliser_tidsstempel("2026-01-01") == "2026-01-01T00:00:00Z"
+
+
+def test_ugyldig_tidsstempel_avvises():
+    with pytest.raises(ValueError, match="ISO 8601"):
+        normaliser_tidsstempel("i går")
+
+
+def test_cli_med_opprettet_gir_identisk_fil(tmp_path):
+    """Lovnaden flagget gir: to kjøringer, samme byte."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "modell.ifc")
+    runner = CliRunner()
+
+    filer = []
+    for katalog in ("a", "b"):
+        resultat = runner.invoke(
+            app,
+            [
+                "sjekk",
+                str(modell),
+                "--ut",
+                str(tmp_path / katalog),
+                "--opprettet",
+                OPPRETTET,
+            ],
+        )
+        assert resultat.exit_code == 0, resultat.output
+        filer.append((tmp_path / katalog / "funn.bcfzip").read_bytes())
+
+    assert filer[0] == filer[1]
+
+
+def test_cli_avviser_ugyldig_opprettet(tmp_path):
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "modell.ifc")
+    resultat = CliRunner().invoke(
+        app, ["sjekk", str(modell), "--ut", str(tmp_path / "ut"), "--opprettet", "i går"]
+    )
+    assert resultat.exit_code != 0
+    assert "--opprettet" in resultat.output

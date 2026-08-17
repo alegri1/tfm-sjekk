@@ -19,7 +19,7 @@ from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import alle_kontroller, kjor_alle
 from tfm_sjekk.modell import Alvorlighet
-from tfm_sjekk.rapport import skriv_bcf, skriv_csv, skriv_html
+from tfm_sjekk.rapport import normaliser_tidsstempel, skriv_bcf, skriv_csv, skriv_html
 from tfm_sjekk.tabeller import les_kodetabell, les_master
 
 app = typer.Typer(
@@ -49,12 +49,30 @@ def sjekk(
     master: Annotated[
         Path | None, typer.Option("--master", help="TFM-master, XLSX eller CSV", exists=True)
     ] = None,
+    opprettet: Annotated[
+        str | None,
+        typer.Option(
+            "--opprettet",
+            help=(
+                "ISO 8601-tidsstempel i BCF-fila, f.eks. 2026-01-01T12:00:00Z. "
+                "Fast verdi gjør fila byte-identisk mellom kjøringer — bruk det "
+                "når rapporten skal sammenlignes i CI. Uten flagget brukes klokka nå."
+            ),
+        ),
+    ] = None,
     sekvensielt: Annotated[
         bool, typer.Option("--sekvensielt", help="Ikke les filene parallelt (feilsøking)")
     ] = False,
 ) -> None:
     """Kjører kontrollene K1–K9 på modellen(e)."""
     oppsett = Konfigurasjon.les(config)
+
+    # Valideres før modellene leses: en skrivefeil her skal ikke koste en full
+    # kjøring før den oppdages.
+    try:
+        opprettet = normaliser_tidsstempel(opprettet)
+    except ValueError as feil:
+        raise typer.BadParameter(str(feil), param_hint="--opprettet") from feil
 
     typer.echo(f"Leser {len(modeller)} modell(er)…")
     objekter = les_modeller(list(modeller), oppsett, parallelt=not sekvensielt)
@@ -80,7 +98,7 @@ def sjekk(
     tittel = ", ".join(m.name for m in modeller)
     skriv_html(funn, ut / "rapport.html", tittel, len(objekter), [k.id for k in hoppet_over])
     skriv_csv(funn, ut / "funn.csv")
-    skriv_bcf(funn, ut / "funn.bcfzip")
+    skriv_bcf(funn, ut / "funn.bcfzip", opprettet)
 
     typer.echo(
         f"\n{antall_feil} feil, {antall_advarsler} advarsler → {ut}/rapport.html, {ut}/funn.bcfzip"

@@ -146,9 +146,20 @@ Fila skrives direkte som zip + XML, uten BCF-bibliotek. Formatet er lite nok
 til at avhengigheten ikke lønner seg, og det holder PyInstaller-binæren mindre.
 
 **Utdata er deterministisk.** Emne-GUID-ene er utledet fra innholdet i funnet,
-ikke trukket tilfeldig, og zip-oppføringene har fast tidsstempel. Samme modell
-gir byte-identisk fil, så den kan brukes som golden file i CI, og et emne som
-allerede er importert i en viewer beholder identiteten sin mellom kjøringer.
+ikke trukket tilfeldig, og zip-oppføringene har fast tidsstempel. Et emne som
+allerede er importert i en viewer beholder derfor identiteten sin mellom
+kjøringer.
+
+Det siste som varierer er `CreationDate`. Sett `--opprettet` for å låse den, så
+blir hele fila byte-identisk og kan sammenlignes i CI:
+
+```bash
+tfm-sjekk sjekk modell.ifc --opprettet 2026-01-01T12:00:00Z
+```
+
+Verdien tolkes som ISO 8601 og regnes om til UTC, så `2026-01-01T13:00:00+01:00`
+gir samme fil. En verdi uten tidssone leses som UTC, ikke lokal tid — ellers
+ville to maskiner fått ulik fil av samme kommando. Uten flagget brukes klokka nå.
 
 ## Prosesstatus (K9)
 

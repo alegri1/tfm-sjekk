@@ -37,13 +37,14 @@ from __future__ import annotations
 import uuid
 import xml.etree.ElementTree as ET
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from tfm_sjekk.modell import Funn
 
 BCF_VERSJON = "2.1"
 FORFATTER = "tfm-sjekk"
+ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Fast navnerom for uuid5. Verdien betyr ingenting i seg selv; den må bare
 # aldri endres, ellers bytter alle emner identitet.
@@ -64,9 +65,10 @@ def skriv_bcf(
     """Skriver funnene som en BCF 2.1-fil.
 
     `opprettet` er ISO 8601-tidsstempel; sendes inn for at utdata skal være
-    reproduserbart i tester.
+    reproduserbart. Uten det brukes klokka nå, og da er fila ikke
+    byte-identisk med forrige kjøring.
     """
-    opprettet = opprettet or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    opprettet = normaliser_tidsstempel(opprettet)
     sti.parent.mkdir(parents=True, exist_ok=True)
 
     brukte: set[str] = set()
@@ -78,6 +80,28 @@ def skriv_bcf(
             if f.global_id:
                 _skriv(arkiv, f"{emne}/viewpoint.bcfv", _viewpoint(f, emne))
     return sti
+
+
+def normaliser_tidsstempel(opprettet: str | None) -> str:
+    """ISO 8601 i UTC, slik BCF vil ha det.
+
+    Godtar det `datetime.fromisoformat` godtar — «2026-01-01», «2026-01-01
+    12:00:00», med eller uten sone — og regner om til UTC. En verdi uten sone
+    tolkes som UTC framfor lokal tid: poenget med å sende inn tidsstempelet
+    er reproduserbarhet, og lokal tid ville gitt ulik fil på to maskiner.
+    """
+    if opprettet is None:
+        return datetime.now(UTC).strftime(ISO_FORMAT)
+    try:
+        tid = datetime.fromisoformat(opprettet.strip())
+    except ValueError as feil:
+        raise ValueError(
+            f"«{opprettet}» er ikke et gyldig ISO 8601-tidsstempel. "
+            f"Forventet noe som «2026-01-01T12:00:00Z»."
+        ) from feil
+    if tid.tzinfo is None:
+        tid = tid.replace(tzinfo=UTC)
+    return tid.astimezone(UTC).strftime(ISO_FORMAT)
 
 
 def _skriv(arkiv: zipfile.ZipFile, navn: str, element: ET.Element) -> None:
@@ -128,9 +152,7 @@ def _markup(f: Funn, emne: str, opprettet: str, forfatter: str) -> ET.Element:
         ET.SubElement(fil, "Date").text = opprettet
 
     # Rekkefølgen på barna under er den BCF 2.1-skjemaet krever.
-    topic = ET.SubElement(
-        rot, "Topic", {"Guid": emne, "TopicType": "Issue", "TopicStatus": "Open"}
-    )
+    topic = ET.SubElement(rot, "Topic", {"Guid": emne, "TopicType": "Issue", "TopicStatus": "Open"})
     ET.SubElement(topic, "Title").text = _tittel(f)
     ET.SubElement(topic, "Priority").text = f.alvorlighet.value
     ET.SubElement(topic, "Labels").text = f.kontroll
@@ -144,9 +166,7 @@ def _markup(f: Funn, emne: str, opprettet: str, forfatter: str) -> ET.Element:
     ET.SubElement(kommentar, "Comment").text = _detaljer(f)
 
     if f.global_id:
-        viewpoints = ET.SubElement(
-            rot, "Viewpoints", {"Guid": _under_guid(emne, "viewpoint")}
-        )
+        viewpoints = ET.SubElement(rot, "Viewpoints", {"Guid": _under_guid(emne, "viewpoint")})
         ET.SubElement(viewpoints, "Viewpoint").text = "viewpoint.bcfv"
 
     return rot
