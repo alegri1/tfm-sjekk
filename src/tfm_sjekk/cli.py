@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import os
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -210,21 +211,87 @@ def _med_rapportmappe(argumenter: list[str]) -> list[str]:
 def _startet_fra_utforsker() -> bool:
     """Sant når konsollvinduet ble laget for oss, altså ved dobbeltklikk.
 
-    Windows gir en prosess startet fra Utforskeren sitt eget konsollvindu, og
+    Windows gir en prosess startet fra Utforskeren sitt eget konsollvindu og
     lukker det i samme øyeblikk prosessen avslutter — utskriften rekker ikke å
-    bli lest. Startet fra et skall som allerede har en konsoll, er vi ikke
-    alene om den, og da skal ingenting pauses.
+    bli lest. Fra et skall som allerede har en konsoll skal ingenting pauses.
+
+    Her sto det først en telling av prosessene på konsollen, med «alene = ble
+    dobbeltklikket». Den var feil på to måter: PyInstaller i onefile-modus
+    kjører en bootloader *og* selve programmet, så vi er aldri alene, og
+    antallet avhenger dessuten av hvor mange ledd skallet består av — målt til
+    seks i ett tilfelle. Derfor spør vi i stedet hvem som startet oss.
+
+    Sett `TFM_SJEKK_KONSOLL_DEBUG=1` for å skrive ut kjeden av foreldre. Den
+    finnes fordi dette bare kan reproduseres ved å faktisk dobbeltklikke, og
+    da er en utskrift lettere å be om enn en feilsøkingsøkt.
     """
     if sys.platform != "win32":
         return False
-    try:
-        import ctypes
 
-        buffer = (ctypes.c_uint * 2)()
-        antall = ctypes.windll.kernel32.GetConsoleProcessList(buffer, 2)
+    kjede = _foreldrekjede()
+    if os.environ.get("TFM_SJEKK_KONSOLL_DEBUG"):
+        print(f"[tfm-sjekk] foreldrekjede: {' <- '.join(kjede) or '(tom)'}", file=sys.stderr)
+
+    eget = Path(sys.executable).name.lower()
+    for navn in kjede:
+        if navn == eget:
+            continue  # PyInstaller-bootloaderen; samme fil som oss
+        return navn == "explorer.exe"
+    return False
+
+
+def _foreldrekjede(maks: int = 6) -> list[str]:
+    """Navnene på prosessene over oss, nærmeste først."""
+    import ctypes
+    import ctypes.wintypes as w
+
+    class Oppforing(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", w.DWORD),
+            ("cntUsage", w.DWORD),
+            ("th32ProcessID", w.DWORD),
+            ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+            ("th32ModuleID", w.DWORD),
+            ("cntThreads", w.DWORD),
+            ("th32ParentProcessID", w.DWORD),
+            ("pcPriClassBase", ctypes.c_long),
+            ("dwFlags", w.DWORD),
+            ("szExeFile", ctypes.c_wchar * 260),
+        ]
+
+    kjede: list[str] = []
+    try:
+        kernel = ctypes.windll.kernel32
+        snapshot = kernel.CreateToolhelp32Snapshot(2, 0)  # TH32CS_SNAPPROCESS
+        if snapshot == -1:
+            return kjede
+        try:
+            oppforing = Oppforing()
+            oppforing.dwSize = ctypes.sizeof(Oppforing)
+            prosesser: dict[int, tuple[int, str]] = {}
+            fant = kernel.Process32FirstW(snapshot, ctypes.byref(oppforing))
+            while fant:
+                prosesser[oppforing.th32ProcessID] = (
+                    oppforing.th32ParentProcessID,
+                    oppforing.szExeFile.lower(),
+                )
+                fant = kernel.Process32NextW(snapshot, ctypes.byref(oppforing))
+        finally:
+            kernel.CloseHandle(snapshot)
+
+        pid = os.getpid()
+        for _ in range(maks):
+            oppslag = prosesser.get(pid)
+            if oppslag is None:
+                break
+            pid = oppslag[0]
+            forelder = prosesser.get(pid)
+            if pid == 0 or forelder is None:
+                break
+            kjede.append(forelder[1])
     except Exception:
-        return False
-    return antall <= 1
+        return kjede
+    return kjede
 
 
 def _vent_pa_enter() -> None:
