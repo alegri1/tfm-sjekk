@@ -180,6 +180,51 @@ def test_cli_med_opprettet_gir_identisk_fil(tmp_path):
     assert filer[0] == filer[1]
 
 
+def test_viewpointene_peker_pa_objekter_som_finnes_i_modellen(tmp_path):
+    """Koblingen skjemaet ikke kan si noe om.
+
+    Et viewpoint velger et objekt med IfcGuid. At XML-en validerer betyr bare
+    at attributtet er der — ikke at GUID-en finnes i modellen. Er den feil,
+    åpnes emnet i viewer-en uten å velge noe, og BCF-en har mistet hensikten
+    sin uten å se ødelagt ut.
+    """
+    import ifcopenshell
+    from fixtures.syntetisk import lag_elektromodell
+
+    from tfm_sjekk.config import Konfigurasjon
+    from tfm_sjekk.ifc import les_modell
+    from tfm_sjekk.kontekst import Kontekst
+    from tfm_sjekk.kontroller import kjor_alle
+
+    modell = lag_elektromodell(
+        [
+            {
+                "navn": "Fordeling 1",
+                "tfm": "++115080=4310.001.00-QLF001",
+                "objekter": [
+                    {"klasse": "IfcLamp", "tfm": "++115080=4320.001.12-QLF010"},  # K8b
+                    {"klasse": "IfcLamp", "tfm": None},  # K1
+                ],
+            }
+        ],
+        tmp_path / "modell.ifc",
+    )
+    funn, _ = kjor_alle(Kontekst.bygg(les_modell(modell), Konfigurasjon()))
+    sti = skriv_bcf(funn, tmp_path / "funn.bcfzip", OPPRETTET)
+
+    i_modellen = {p.GlobalId for p in ifcopenshell.open(modell).by_type("IfcProduct")}
+
+    guider = []
+    with zipfile.ZipFile(sti) as arkiv:
+        for navn in arkiv.namelist():
+            if navn.endswith("viewpoint.bcfv"):
+                rot = ET.fromstring(arkiv.read(navn))
+                guider += [k.get("IfcGuid") for k in rot.iter("Component")]
+
+    assert guider, "ingen viewpoints å sjekke"
+    assert all(g in i_modellen for g in guider), [g for g in guider if g not in i_modellen]
+
+
 def test_cli_avviser_ugyldig_opprettet(tmp_path):
     modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "modell.ifc")
     resultat = CliRunner().invoke(

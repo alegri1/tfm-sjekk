@@ -87,3 +87,8 @@ if __name__ == "__main__":
         sti = lag_modell(objekter, HER / navn)
         print(f"skrev {sti}")
     print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-elektro.ifc')}")
+
+    # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
+    # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:
+    # et viewpoint kan bare vises hvis modellen har noe å vise.
+    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-visning.ifc', geometri=True)}")

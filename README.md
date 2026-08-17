@@ -128,6 +128,22 @@ uv run tfm-sjekk sjekk eksempler/demo-rie.ifc eksempler/demo-riv.ifc eksempler/d
 
 `tfm-sjekk kontroller` lister kontrollene og statusen deres.
 
+### Prøve BCF-en i en viewer
+
+`eksempler/demo-visning.ifc` har samme innhold som elektromodellen, men med
+prosjekt, enheter, romlig struktur og geometri — alt en viewer trenger for å
+åpne fila og faktisk vise noe. De øvrige demomodellene har bare objekter med
+egenskaper, som er nok for kontrollene, men gir en tom scene i en viewer.
+
+```bash
+uv run tfm-sjekk sjekk eksempler/demo-visning.ifc --ut rapport
+```
+
+Åpne så `demo-visning.ifc` i Catenda, BIMcollab ZOOM eller Solibri Anywhere og
+importer `rapport/funn.bcfzip`. Et emne skal velge nøyaktig det objektet det
+gjelder — det er den koblingen som gjør BCF verdt bryet, og den eneste delen
+av formatet et skjema ikke kan verifisere.
+
 ## Om standardene og kodetabellene
 
 **NS 3451 og NS 3457-serien er betalte standarder fra Standard Norge. Kodetabellene

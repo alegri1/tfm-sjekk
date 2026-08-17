@@ -128,6 +128,49 @@ def test_fordelinger_bygges_i_konteksten(tmp_path):
     assert len(medlemmer) == 2
 
 
+def test_visningsmodell_kan_apnes_og_tegnes(tmp_path):
+    """Modellen med geometri må ha det en viewer krever.
+
+    Uten prosjekt, enheter og romlig struktur nekter de fleste viewere å
+    åpne fila, og uten geometri er det ingenting å velge når et BCF-emne
+    peker på et objekt. Da kan ikke BCF-en prøves i praksis.
+    """
+    import ifcopenshell
+    import ifcopenshell.geom
+
+    sti = lag_elektromodell(
+        [
+            {
+                "navn": "Fordeling 1",
+                "tfm": "++115080=4310.001.00-QLF001",
+                "objekter": [{"klasse": "IfcLamp", "tfm": "++115080=4310.001.12-QLF010"}],
+            }
+        ],
+        tmp_path / "visning.ifc",
+        geometri=True,
+    )
+
+    fil = ifcopenshell.open(sti)
+    assert len(fil.by_type("IfcProject")) == 1
+    assert fil.by_type("IfcProject")[0].UnitsInContext is not None
+    assert len(fil.by_type("IfcBuildingStorey")) == 1
+    assert len(fil.by_type("IfcRelContainedInSpatialStructure")) == 1
+
+    innstillinger = ifcopenshell.geom.settings()
+    tegnbare = 0
+    for produkt in fil.by_type("IfcProduct"):
+        if produkt.Representation is None:
+            continue
+        # Formobjektet må holdes i en variabel mens hjørnene leses. Skriver
+        # man `create_shape(...).geometry.verts` i én kjede, rekker det å bli
+        # frigjort, og man får en tom liste i stedet for geometrien.
+        form = ifcopenshell.geom.create_shape(innstillinger, produkt)
+        if len(form.geometry.verts) > 0:
+            tegnbare += 1
+
+    assert tegnbare == 2  # fordelingen og lampa
+
+
 def test_federering_parallelt_gir_samme_resultat(tmp_path):
     a = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "a.ifc")
     b = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "b.ifc")
