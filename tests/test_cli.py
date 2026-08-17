@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from fixtures.syntetisk import GYLDIG, lag_modell
 
@@ -70,6 +71,47 @@ def test_federering_over_prosessgrensa(tmp_path):
     assert resultat.returncode == 1, resultat.stdout + resultat.stderr  # K6: samme ID i tre filer
     assert resultat.stdout.count("Leser 3 modell(er)") == 1, "kjørte flere ganger"
     assert "multiprocessing-fork" not in resultat.stderr
+
+
+def test_filsti_forst_virker_uten_kommandoord(tmp_path):
+    """Dra-og-slipp i Utforskeren sender bare filstier — «sjekk» settes inn."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "ren.ifc")
+    resultat = kjor([str(modell), "--ut", str(tmp_path / "ut")])
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert "advarsler" in resultat.stdout
+
+
+def test_skrivefeil_i_kommandoen_gir_fortsatt_kommandofeil():
+    """«sjekk» settes bare inn foran stier som finnes. Ellers ville en
+    skrivefeil gitt «Path does not exist» i stedet for noe forståelig."""
+    resultat = kjor(["kontrolller"])
+    assert resultat.returncode != 0
+    assert "No such command" in resultat.stdout + resultat.stderr
+
+
+def test_standardkommando_er_rein_argumentbehandling():
+    from tfm_sjekk.cli import _med_standardkommando
+
+    assert _med_standardkommando([]) == []
+    assert _med_standardkommando(["kontroller"]) == ["kontroller"]
+    assert _med_standardkommando(["--help"]) == ["--help"]
+    assert _med_standardkommando(["finnes-ikke.ifc"]) == ["finnes-ikke.ifc"]
+
+
+def test_rapportmappa_legges_hos_modellen(tmp_path):
+    """Ved dobbeltklikk er arbeidskatalogen exe-ens egen mappe, ikke modellens."""
+    from tfm_sjekk.cli import _med_rapportmappe
+
+    modell = tmp_path / "modell.ifc"
+    modell.write_text("")
+
+    ut = _med_rapportmappe(["sjekk", str(modell)])
+    assert ut[-2] == "--ut"
+    assert Path(ut[-1]) == tmp_path / "rapport"
+
+    # Har brukeren sagt --ut selv, skal vi ikke overstyre.
+    eget = ["sjekk", str(modell), "--ut", "et-annet-sted"]
+    assert _med_rapportmappe(eget) == eget
 
 
 def test_kontroller_listes_i_cp1252_konsoll():

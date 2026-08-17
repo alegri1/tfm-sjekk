@@ -20,13 +20,9 @@ barn — altså hele kontrollkjøringen, rekursivt.
 
 import multiprocessing
 
-
-def main() -> None:
-    from tfm_sjekk.cli import app
-
-    app()
-
-
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+
+    from tfm_sjekk.cli import main
+
     main()

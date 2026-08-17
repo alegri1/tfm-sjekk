@@ -73,6 +73,19 @@ Binæren blir rundt 57 MB, fordi `ifcopenshell` alene er 82 MB på disk, og
 bruker et par sekunder på å starte: én fil betyr at alt pakkes ut i minnet ved
 hver kjøring. Det er byttehandelen mot å slippe installasjon.
 
+### Uten kommandolinje
+
+**Dra IFC-filene oppå `tfm-sjekk.exe`** i Utforskeren. Rapportene havner i en
+mappe som heter `rapport` ved siden av modellene. Flere filer på én gang
+federeres, som er det K6 trenger for å finne duplikater på tvers av fagmodeller.
+
+Uten kodetabeller hopper K3, K4, K5 og K7 over — de trenger `--systemtabell`,
+`--komponenttabell` og `--master`, og da må du på kommandolinja. Resten kjører.
+
+**Dobbeltklikk** viser en kort bruksanvisning og lar vinduet stå til du trykker
+Enter. Uten det ville Windows lukket konsollen i samme øyeblikk programmet var
+ferdig, og du hadde ikke rukket å lese noe.
+
 ## Bruk
 
 ```bash

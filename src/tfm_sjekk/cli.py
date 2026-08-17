@@ -9,6 +9,7 @@ leveranseprosess uten å blokkere på anbefalinger.
 
 from __future__ import annotations
 
+import atexit
 import contextlib
 import sys
 from pathlib import Path
@@ -149,5 +150,108 @@ def kontroller() -> None:
         typer.echo(f"{k.id}  [{k.standard_alvorlighet.value:9}] {k.tittel}{status}")
 
 
-if __name__ == "__main__":
+BRUK_VED_DOBBELTKLIKK = """
+tfm-sjekk validerer TFM-merking i IFC-modeller.
+
+Verktøyet kjøres fra kommandolinja, men du kan også dra én eller flere
+IFC-filer rett oppå denne fila i Utforskeren. Da legges rapportene i en
+mappe som heter «rapport» ved siden av modellene.
+
+Fra PowerShell, med kodetabellene dine:
+
+    .\\tfm-sjekk.exe sjekk modell.ifc ^
+        --systemtabell min-ns3451.csv ^
+        --komponenttabell min-ns3457-8.csv ^
+        --ut rapport
+
+    .\\tfm-sjekk.exe --help        alle valg
+    .\\tfm-sjekk.exe kontroller    hvilke kontroller som finnes
+"""
+
+KOMMANDOER = {"sjekk", "kontroller"}
+
+
+def _med_standardkommando(argumenter: list[str]) -> list[str]:
+    """Lar filstier stå først, uten «sjekk» foran.
+
+    Det gjør at dra-og-slipp av IFC-filer oppå exe-en virker: Utforskeren
+    sender filstiene som argumenter, og uten dette svarer Typer «No such
+    command».
+
+    «sjekk» settes bare inn når det første argumentet faktisk er en fil som
+    finnes. En skrivefeil i kommandonavnet skal fortsatt gi «No such command
+    'kontrolller'» og ikke den langt mer forvirrende «Path does not exist».
+    """
+    if not argumenter or argumenter[0].startswith("-") or argumenter[0] in KOMMANDOER:
+        return argumenter
+    if not Path(argumenter[0]).exists():
+        return argumenter
+    return ["sjekk", *argumenter]
+
+
+def _med_rapportmappe(argumenter: list[str]) -> list[str]:
+    """Legger rapportene ved siden av modellene ved dra-og-slipp.
+
+    Standard `--ut` er «rapport» relativt til arbeidskatalogen, og den er
+    exe-ens egen mappe når Utforskeren starter oss. Da ville rapportene havnet
+    i nedlastingsmappa ved siden av programmet i stedet for hos modellen, og
+    det er ikke der noen leter etter dem.
+
+    Røres ikke når brukeren selv har oppgitt `--ut`.
+    """
+    if not argumenter or argumenter[0] != "sjekk" or "--ut" in argumenter:
+        return argumenter
+    modell = next((a for a in argumenter[1:] if not a.startswith("-")), None)
+    if modell is None:
+        return argumenter
+    return [*argumenter, "--ut", str(Path(modell).resolve().parent / "rapport")]
+
+
+def _startet_fra_utforsker() -> bool:
+    """Sant når konsollvinduet ble laget for oss, altså ved dobbeltklikk.
+
+    Windows gir en prosess startet fra Utforskeren sitt eget konsollvindu, og
+    lukker det i samme øyeblikk prosessen avslutter — utskriften rekker ikke å
+    bli lest. Startet fra et skall som allerede har en konsoll, er vi ikke
+    alene om den, og da skal ingenting pauses.
+    """
+    if sys.platform != "win32":
+        return False
+    try:
+        import ctypes
+
+        buffer = (ctypes.c_uint * 2)()
+        antall = ctypes.windll.kernel32.GetConsoleProcessList(buffer, 2)
+    except Exception:
+        return False
+    return antall <= 1
+
+
+def _vent_pa_enter() -> None:
+    with contextlib.suppress(Exception):  # stdin kan være lukket
+        input("\nTrykk Enter for å lukke …")
+
+
+def main() -> None:
+    """Inngangspunkt for både konsollskriptet og PyInstaller-binæren."""
+    fra_utforsker = _startet_fra_utforsker()
+
+    if fra_utforsker:
+        # Registreres før app() kjører, slik at pausen også gjelder når
+        # kommandoen avslutter med typer.Exit — altså etter en vellykket
+        # kjøring via dra-og-slipp.
+        atexit.register(_vent_pa_enter)
+        if len(sys.argv) == 1:
+            _tal_konsollens_kodeside()
+            typer.echo(BRUK_VED_DOBBELTKLIKK)
+            return
+
+    argumenter = _med_standardkommando(sys.argv[1:])
+    if fra_utforsker:
+        argumenter = _med_rapportmappe(argumenter)
+    sys.argv[1:] = argumenter
     app()
+
+
+if __name__ == "__main__":
+    main()
