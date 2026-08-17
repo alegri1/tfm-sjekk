@@ -200,6 +200,20 @@ def test_funn_uten_objekt_far_ikke_viewpoint(tmp_path):
     assert markup.find("Header") is None
 
 
+def test_modellnivafunn_er_merket_som_sadan(tmp_path):
+    """«Ingenting å zoome til» skal være noe man kan filtrere på, ikke noe
+    som ser ut som en feil i verktøyet."""
+    sti = skriv_bcf([funn_uten_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
+    etiketter = [e.text for e in les_forste(sti, "markup.bcf").findall("Topic/Labels")]
+    assert etiketter == ["K7", "modellnivå"]
+
+
+def test_objektfunn_far_ikke_modellnivaetiketten(tmp_path):
+    sti = skriv_bcf([funn_med_objekt()], tmp_path / "funn.bcfzip", OPPRETTET)
+    etiketter = [e.text for e in les_forste(sti, "markup.bcf").findall("Topic/Labels")]
+    assert etiketter == ["K6"]
+
+
 def test_samme_funn_gir_byte_identisk_fil(tmp_path):
     """Golden files (§7) forutsetter det, og en diff uten reelle endringer
     er verdiløs i en leveranseprosess."""

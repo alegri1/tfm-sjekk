@@ -72,6 +72,9 @@ FAST_TIDSSTEMPEL = (1980, 1, 1, 0, 0, 0)
 
 MAKS_TITTEL = 100
 
+# Etikett på emner som peker på modellen som helhet framfor på et objekt.
+MODELLNIVA = "modellnivå"
+
 # Kameraets plassering i forhold til objektet, i modellens enhet (normalt
 # meter). Skrått ovenfra, langt nok unna til at naboobjektene er med.
 KAMERAAVSTAND = 8.0
@@ -191,6 +194,13 @@ def _markup(f: Funn, emne: str, opprettet: str, forfatter: str) -> ET.Element:
     ET.SubElement(topic, "Title").text = _tittel(f)
     ET.SubElement(topic, "Priority").text = f.alvorlighet.value
     ET.SubElement(topic, "Labels").text = f.kontroll
+    if not f.global_id:
+        # Funnet peker på modellen som helhet, ikke på et objekt — typisk
+        # K7-retningen «står i mastera, men er ikke modellert». Slike emner
+        # har ingenting å zoome til, og en viewer sier fra om det på en måte
+        # som ser ut som en feil. Etiketten gjør det til noe man kan filtrere
+        # på i stedet for noe man lurer på.
+        ET.SubElement(topic, "Labels").text = MODELLNIVA
     ET.SubElement(topic, "CreationDate").text = opprettet
     ET.SubElement(topic, "CreationAuthor").text = forfatter
     ET.SubElement(topic, "Description").text = f.melding
