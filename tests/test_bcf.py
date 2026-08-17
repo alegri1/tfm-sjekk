@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 import pytest
+from conftest import uten_ansi
 from fixtures.syntetisk import GYLDIG, lag_modell
 from typer.testing import CliRunner
 
@@ -185,4 +186,4 @@ def test_cli_avviser_ugyldig_opprettet(tmp_path):
         app, ["sjekk", str(modell), "--ut", str(tmp_path / "ut"), "--opprettet", "i går"]
     )
     assert resultat.exit_code != 0
-    assert "--opprettet" in resultat.output
+    assert "--opprettet" in uten_ansi(resultat.output)

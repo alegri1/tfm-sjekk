@@ -13,6 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from conftest import uten_ansi
 from fixtures.syntetisk import GYLDIG, lag_modell
 
 
@@ -86,7 +87,7 @@ def test_skrivefeil_i_kommandoen_gir_fortsatt_kommandofeil():
     skrivefeil gitt «Path does not exist» i stedet for noe forståelig."""
     resultat = kjor(["kontrolller"])
     assert resultat.returncode != 0
-    assert "No such command" in resultat.stdout + resultat.stderr
+    assert "No such command" in uten_ansi(resultat.stdout + resultat.stderr)
 
 
 def test_standardkommando_er_rein_argumentbehandling():

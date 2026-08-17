@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -12,6 +13,19 @@ from tfm_sjekk.modell import IfcObjekt, Krets
 from tfm_sjekk.tabeller import Kodetabell, TfmMaster
 
 GYLDIG = "++115080=3600.001.04-JVZ001%JVZ.001.008"
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def uten_ansi(tekst: str) -> str:
+    """Fjerner fargekoder fra CLI-utdata før den sammenlignes.
+
+    Rich slår på farger når den kjenner igjen et CI-miljø, og den styler
+    opsjonsnavn — med escape-sekvenser *inne i* tokenet. «--opprettet» er da
+    ikke lenger en sammenhengende streng, og en assert som leter etter den
+    feiler i CI selv om alt er som det skal. Lokalt, uten farger, passerer den.
+    """
+    return ANSI.sub("", tekst)
 
 
 @pytest.fixture
