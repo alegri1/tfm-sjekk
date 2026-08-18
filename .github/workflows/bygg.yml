@@ -54,8 +54,20 @@ jobs:
           cp eksempler/demo-*.ifc eksempler/FIKTIV-*.csv tfm-sjekk.toml "$arbeid/"
           cd "$arbeid"
 
-          "$exe" kontroller | grep -q "K9" || {
-            echo "kontroller listet ikke K9"; exit 1; }
+          # Utdata fanges i en variabel framfor å røres til grep. Stegets shell
+          # kjører med pipefail, og `grep -q` avslutter ved første treff — står
+          # det flere kontroller etter den vi leter etter, får exe-en SIGPIPE
+          # og pipelinen feiler på noe som egentlig gikk bra. Det slo til da
+          # T1 og D1 kom etter K9 i lista, og bare på macOS, siden det er et
+          # kappløp mellom skriving og lukking.
+          kontroller=$("$exe" kontroller)
+          echo "$kontroller"
+          for k in K1 K9 T1 D1; do
+            case "$kontroller" in
+              *"$k "*) ;;
+              *) echo "kontroller listet ikke $k"; exit 1 ;;
+            esac
+          done
 
           # Tre filer tvinger federering, altså prosesspoolen. I en frossen
           # binær starter hver arbeidsprosess exe-en på nytt, og uten
@@ -71,10 +83,17 @@ jobs:
           echo "$utdata"
 
           test "$kode" -eq 1 || { echo "forventet exit 1, fikk $kode"; exit 1; }
-          case "$utdata" in
-            *"15 objekter"*) ;;
-            *) echo "leste ikke alle tre modellene — federeringen er brutt"; exit 1 ;;
-          esac
+
+          # Sjekk at hver fagmodell er lest, ikke at objekttallet er et bestemt
+          # tall. Tallet endres hver gang demoen utvides — det sto på 15 og var
+          # 17 dagen etter — og et hardkodet tall tester ikke det vi mener:
+          # at federeringen fikk med seg alle filene.
+          for fil in demo-rie.ifc demo-riv.ifc demo-elektro.ifc; do
+            case "$utdata" in
+              *"$fil:"*) ;;
+              *) echo "fant ingen dekningslinje for $fil — federeringen er brutt"; exit 1 ;;
+            esac
+          done
 
           for f in rapport.html funn.csv funn.xlsx funn.bcfzip; do
             test -s "ut/$f" || { echo "manglet ut/$f"; exit 1; }
