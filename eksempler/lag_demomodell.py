@@ -108,4 +108,9 @@ if __name__ == "__main__":
     # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
     # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:
     # et viewpoint kan bare vises hvis modellen har noe å vise.
-    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-visning.ifc', geometri=True)}")
+    #
+    # Den heter bevisst ikke «demo-»: den har samme TFM-verdier som
+    # elektromodellen, så tas den med i en «demo-*.ifc»-kjøring finner K6
+    # hver eneste komponentforekomst i to filer. Riktig oppførsel, ubrukelig
+    # demo — 39 funn i stedet for 17.
+    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'visning.ifc', geometri=True)}")

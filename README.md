@@ -31,6 +31,8 @@ Skriv `4310` der `4310.001.00` mangler kursnummer, eller gjenbruk `QLF001` i to
 fagmodeller, og ingen oppdager det før i FDV-fasen.
 
 ## Rapporten
+![HTML-rapporten](docs/rapport.png)
+*Demomodellene, som har én tilsiktet feil per kontroll. Dekningstabellen øverst sier hvor mye som faktisk ble kontrollert — «0 av 412» er ikke det samme som «ingen feil».*
 
 <!-- SKJERMBILDE MANGLER. Kjør demoen, åpne rapport/rapport.html, ta et bilde
      av øverste del (tallrekka, dekningstabellen og de første funnradene), og
@@ -152,16 +154,16 @@ uv run tfm-sjekk sjekk eksempler/demo-rie.ifc eksempler/demo-riv.ifc eksempler/d
 
 ### Prøve BCF-en i en viewer
 
-`eksempler/demo-visning.ifc` har samme innhold som elektromodellen, men med
+`eksempler/visning.ifc` har samme innhold som elektromodellen, men med
 prosjekt, enheter, romlig struktur og geometri — alt en viewer trenger for å
 åpne fila og faktisk vise noe. De øvrige demomodellene har bare objekter med
 egenskaper, som er nok for kontrollene, men gir en tom scene i en viewer.
 
 ```bash
-uv run tfm-sjekk sjekk eksempler/demo-visning.ifc --ut rapport
+uv run tfm-sjekk sjekk eksempler/visning.ifc --ut rapport
 ```
 
-Åpne så `demo-visning.ifc` i Catenda, BIMcollab ZOOM eller Solibri Anywhere og
+Åpne så `visning.ifc` i Catenda, BIMcollab ZOOM eller Solibri Anywhere og
 importer `rapport/funn.bcfzip`. Et emne skal velge nøyaktig det objektet det
 gjelder — det er den koblingen som gjør BCF verdt bryet, og den eneste delen
 av formatet et skjema ikke kan verifisere.
