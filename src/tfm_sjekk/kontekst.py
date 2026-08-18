@@ -9,7 +9,7 @@ bygges konteksten én gang, og hver kontroll er en ren funksjon
 
 from __future__ import annotations
 
-from collections import deque
+from collections import defaultdict, deque
 from functools import cached_property
 
 from pydantic import BaseModel, Field
@@ -91,6 +91,34 @@ class Kontekst(BaseModel):
         return [
             (o, self.parsede[o.global_id]) for o in self.objekter if o.global_id in self.parsede
         ]
+
+    def dekning(self) -> dict[str, tuple[int, int]]:
+        """Per fagmodell: (objekter i omfanget, objekter lest).
+
+        To tall, ikke ett. Ett tall kan ikke skille «412 objekter, ingen
+        relevante» fra «412 objekter, alle kontrollert», og det er nettopp den
+        forskjellen som avgjør om en ren rapport betyr noe.
+
+        Grupperingen går på fil, ikke på kjøringen samlet: i en federering av
+        RIE, RIV og ARK er det ARK-fila som skal si fra, selv om kjøringen har
+        objekter nok til sammen.
+        """
+        lest: dict[str, int] = defaultdict(int)
+        for objekt in self.objekter:
+            lest[objekt.kildefil] += 1
+
+        i_omfang: dict[str, int] = defaultdict(int)
+        for objekt in self.relevante_objekter():
+            i_omfang[objekt.kildefil] += 1
+
+        return {fil: (i_omfang[fil], antall) for fil, antall in sorted(lest.items())}
+
+    def klasser_i(self, kildefil: str) -> list[str]:
+        """IFC-klassene som faktisk finnes i én fagmodell.
+
+        Uten dem er «ingenting ble sjekket» en beskjed uten anvisning.
+        """
+        return sorted({o.ifc_klasse for o in self.objekter if o.kildefil == kildefil})
 
     def objekt(self, global_id: str) -> IfcObjekt | None:
         return self._etter_id.get(global_id)

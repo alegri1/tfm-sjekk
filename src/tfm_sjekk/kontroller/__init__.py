@@ -18,4 +18,8 @@ from tfm_sjekk.kontroller import k7_master  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import k8_elektro  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import k9_mmi  # noqa: F401  isort:skip
 
+# D1 kontrollerer kjøringen, ikke modellen, og står derfor utenfor
+# K-serien i §4. Sist, så den leses etter det den kommenterer.
+from tfm_sjekk.kontroller import d1_dekning  # noqa: F401  isort:skip
+
 __all__ = ["Kontroll", "alle_kontroller", "kjor_alle", "registrer"]

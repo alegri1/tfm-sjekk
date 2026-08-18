@@ -70,6 +70,9 @@ MAL = Template(
   tr.advarsel td:first-child { border-left: 4px solid var(--advarsel); }
   tr.info td:first-child { border-left: 4px solid var(--info); }
   code { font-size: .9em; }
+  table.dekning { width: auto; margin-bottom: 1.5rem; }
+  table.dekning th { cursor: default; position: static; }
+  table.dekning td { font-variant-numeric: tabular-nums; }
   .tom { padding: 2rem; text-align: center; color: var(--ok); font-size: 1.2rem; }
 </style>
 <h1>TFM-rapport</h1>
@@ -79,11 +82,25 @@ MAL = Template(
   <div><b>{{ antall.feil }}</b>feil</div>
   <div><b>{{ antall.advarsel }}</b>advarsler</div>
   <div><b>{{ antall.info }}</b>info</div>
-  <div><b>{{ objekter }}</b>objekter kontrollert</div>
+  <div><b>{{ i_omfang }}</b>objekter kontrollert</div>
+  <div><b>{{ objekter }}</b>objekter lest</div>
 </div>
 
 {% if hoppet_over %}
 <p class="meta">Hoppet over: {{ hoppet_over|join(', ') }}</p>
+{% endif %}
+
+{% if dekning %}
+<table class="dekning">
+<thead><tr><th>Fagmodell</th><th>I omfanget</th><th>Lest</th></tr></thead>
+<tbody>
+{% for fil, tall in dekning.items() %}
+<tr{% if not tall[0] %} class="advarsel"{% endif %}>
+  <td>{{ fil }}</td><td>{{ tall[0] }}</td><td>{{ tall[1] }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
 {% endif %}
 
 {% if funn %}
@@ -135,7 +152,13 @@ def skriv_html(
     tittel: str,
     objekter: int = 0,
     hoppet_over: list[str] | None = None,
+    dekning: dict[str, tuple[int, int]] | None = None,
 ) -> Path:
+    """`dekning` er (i omfanget, lest) per fagmodell.
+
+    Tabellen vises uansett utfall, ikke bare når noe mangler: det er den rene
+    rapporten en leser trenger å kunne stole på.
+    """
     teller = Counter(f.alvorlighet for f in funn)
     sti.parent.mkdir(parents=True, exist_ok=True)
     sti.write_text(
@@ -144,6 +167,8 @@ def skriv_html(
             tittel=tittel,
             objekter=objekter,
             hoppet_over=hoppet_over or [],
+            dekning=dekning or {},
+            i_omfang=sum(tall[0] for tall in (dekning or {}).values()),
             antall={
                 "feil": teller[Alvorlighet.FEIL],
                 "advarsel": teller[Alvorlighet.ADVARSEL],

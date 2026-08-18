@@ -123,6 +123,11 @@ def sjekk(
     )
 
     funn, hoppet_over = kjor_alle(kontekst)
+    dekning = kontekst.dekning()
+
+    for fil, (i_omfang, lest) in dekning.items():
+        merke = "  <- ingenting kontrollert" if not i_omfang else ""
+        typer.echo(f"  {fil}: {i_omfang} av {lest} objekter i omfanget{merke}")
 
     antall_feil = sum(1 for f in funn if f.alvorlighet is Alvorlighet.FEIL)
     antall_advarsler = sum(1 for f in funn if f.alvorlighet is Alvorlighet.ADVARSEL)
@@ -132,7 +137,14 @@ def sjekk(
         typer.echo(f"  {kontroll.id}: {grunn}")
 
     tittel = ", ".join(m.name for m in modeller)
-    skriv_html(funn, ut / "rapport.html", tittel, len(objekter), [k.id for k in hoppet_over])
+    skriv_html(
+        funn,
+        ut / "rapport.html",
+        tittel,
+        len(objekter),
+        [k.id for k in hoppet_over],
+        dekning,
+    )
     skriv_csv(funn, ut / "funn.csv")
     skriv_xlsx(funn, ut / "funn.xlsx")
     skriv_bcf(funn, ut / "funn.bcfzip", opprettet)

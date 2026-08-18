@@ -93,3 +93,25 @@ def test_alle_variabler_som_brukes_er_definert(tmp_path):
 def test_tom_rapport_sier_fra(tmp_path):
     html = skriv(tmp_path, [])
     assert "Ingen funn" in html
+
+
+def test_dekningen_vises_ogsa_uten_funn(tmp_path):
+    """Den rene rapporten er nettopp den en leser trenger å kunne stole på."""
+    sti = skriv_html([], tmp_path / "r.html", "test", objekter=412, dekning={"ark.ifc": (0, 412)})
+    html = sti.read_text(encoding="utf-8")
+
+    assert "ark.ifc" in html
+    assert "412" in html
+    assert "Ingen funn" in html
+
+
+def test_lest_og_i_omfanget_er_ulike_tall(tmp_path):
+    """«objekter kontrollert» var antall leste objekter — den etiketten løy."""
+    sti = skriv_html([], tmp_path / "r.html", "test", objekter=412, dekning={"ark.ifc": (0, 412)})
+    html = sti.read_text(encoding="utf-8")
+
+    assert "objekter kontrollert" in html
+    assert "objekter lest" in html
+    # Tallet ved «kontrollert» skal være omfanget, ikke antall leste.
+    kontrollert = html.split("objekter kontrollert")[0].rsplit("<b>", 1)[1].split("</b>")[0]
+    assert kontrollert == "0"

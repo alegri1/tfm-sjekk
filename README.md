@@ -162,6 +162,26 @@ testene og demoen skal kunne kjøre.
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.
 
+## Hva «ingen funn» betyr
+
+Rapporten oppgir alltid **hvor mye som ble kontrollert**, per fagmodell:
+
+```
+rie.ifc   184 av 210 objekter i omfanget
+riv.ifc    96 av 140 objekter i omfanget
+ark.ifc     0 av 412 objekter i omfanget   <- ingenting kontrollert
+```
+
+Uten det tallet er fravær av funn tvetydig: det kan bety at merkingen er i orden,
+eller at ingen kontroll hadde noe å se på. Omfanget bestemmes av `ifc_klasser`, så
+en modell uten tekniske fag — eller en eksport som legger utstyr i
+`IfcBuildingElementProxy` — gir null i omfanget og en rapport som ser ren ut.
+
+En fagmodell med tomt omfang gir en **advarsel**, ikke en feil. Exit-koden er
+uendret, slik at et legitimt kjør på en arkitektmodell ikke stenger porten i CI.
+Meldingen nevner klassene fila faktisk inneholder, så den er nok til å rette
+`ifc_klasser`.
+
 ## Hvordan verktøyet finner TFM-verdien
 
 Norske modeller er rotete, så verktøyet leter i tre trinn — i synkende styrke
