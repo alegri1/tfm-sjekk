@@ -1,5 +1,9 @@
 systemforekomst;komponenttype;beskrivelse
-4310.001.12;JVZ.001.008;Fiktiv kurs 12 i fiktiv fordeling
-3600.001.04;QLF.001.001;Fiktivt luftbehandlingssystem
-2300.001.12;;Fiktivt system som demomodellen bruker
-3600.002.04;;Fiktivt system som ennå ikke er modellert
+4310.001.00;JVZ.001.008;FIKTIV fordeling - systemets rot, uten kursnummer
+4310.001.12;;FIKTIV kurs 12
+4310.001.13;;FIKTIV kurs 13
+4310.001.14;;FIKTIV kurs 14
+4320.001.12;;FIKTIVT system i et annet fordelingsomrade
+3600.001.04;QLF.001.001;FIKTIVT luftbehandlingssystem
+2300.001.12;;FIKTIVT system som demomodellen bruker
+3600.002.04;;FIKTIVT system som enna ikke er modellert

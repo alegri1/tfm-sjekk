@@ -27,6 +27,13 @@ Denne er også oppdiktet, men av en annen grunn: TFM-mastera er *prosjektets ege
 ikke Standard Norges. Den er ikke opphavsrettslig beskyttet materiale — den ligger
 her bare fordi demokjøringen trenger noe å sjekke K7 mot.
 
-Fila er laget så demoen viser begge retningene K7 går i: to systemer modellen
-bruker mangler i mastera (feil), og én systemoppføring og én komponenttype i
-mastera er ikke modellert (info).
+Fila dekker systemene demomodellene bruker, med tre bevisste unntak som viser
+begge retningene K7 går i:
+
+- `9999.001.12` er utelatt, så det ene objektet med ugyldig systemkode gir feil
+  i retningen modell → master.
+- `3600.002.04` og komponenttypen `QLF.001.001` står i mastera uten å være
+  modellert, og gir info i retningen master → modell.
+
+Resten er med med vilje. Uten dem ville K7 slått ut på nesten hvert
+elektroobjekt, og støyen ville skjult de tre tilfellene fila skal demonstrere.
