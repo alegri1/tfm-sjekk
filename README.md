@@ -32,14 +32,9 @@ fagmodeller, og ingen oppdager det før i FDV-fasen.
 
 ## Rapporten
 ![HTML-rapporten](docs/rapport.png)
-*Demomodellene, som har én tilsiktet feil per kontroll. Dekningstabellen øverst sier hvor mye som faktisk ble kontrollert — «0 av 412» er ikke det samme som «ingen feil».*
-
-<!-- SKJERMBILDE MANGLER. Kjør demoen, åpne rapport/rapport.html, ta et bilde
-     av øverste del (tallrekka, dekningstabellen og de første funnradene), og
-     legg det som docs/rapport.png. Bytt så denne kommentaren med:
-         ![HTML-rapporten](docs/rapport.png)
-     §12 setter skjermbildet som punkt 2 av åtte — det er det første en
-     BIM-koordinator ser etter, og det eneste som viser hva verktøyet gir. -->
+*Demomodellene, som har én tilsiktet feil per kontroll. Dekningstabellen sier
+hvor mye som faktisk ble kontrollert — her 17 av 17. Står det 0, er «ingen funn»
+ikke det samme som «ingen feil».*
 
 Hver kjøring gir en selvstendig HTML-rapport med sorterbar tabell, en BCF-fil
 som åpnes i Solibri, Catenda, Dalux og BIMcollab, en XLSX til analyse, og en
