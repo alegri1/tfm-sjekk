@@ -38,6 +38,11 @@ funnet som viser seg å være oppdiktet.
 - **Funn som hviler på en usikker verdi sier det.** Meldingen skal peke på årsaken
   brukeren kan gjøre noe med — at feltet ikke ble funnet der det var forventet —
   framfor å beskrive gjetningen som om den var data.
+- **Meldingens presisjon skal svare til hva verktøyet vet.** Samme skjønn brukes
+  også på den konfigurerte veien: i dag gir `Systemair` i TFM-feltet meldingen
+  «Mangler «++»-delen: plassering (6 siffer)» — en presis anvisning om et felt som
+  aldri inneholdt en TFM-ID. Parseren skiller ikke «dette er ikke en TFM-ID» fra
+  «dette er en TFM-ID som mangler `++`».
 - **`tfm_type` avklares.** Feltet leses og lagres, men ingen kontroll bruker det;
   K7 henter komponenttypen fra `%`-delen av den parsede forekomsten. Enten kobles
   det til noe, eller så slutter vi å lese det. Å bære en ubrukt verdi med den mest
@@ -47,9 +52,11 @@ funnet som viser seg å være oppdiktet.
 
 ### New Capabilities
 - `verdiuttrekk`: hvordan verktøyet finner TFM-forekomst, TFM-type og MMI i et
-  objekts egenskapssett, hvor sikker den kan være på det den fant, og hva som skjer
-  når verdien ikke finnes der den var forventet. Dekker også hvordan en rå
-  pset-verdi blir til et MMI-nivå.
+  objekts egenskapssett, hvor sikker den kan være på det den fant, og hva det har
+  lov til å påstå om verdien. Dekker også hvordan en rå pset-verdi blir til et
+  MMI-nivå. Skjønnet «ligner dette på en TFM-ID?» hører hjemme her fordi det brukes
+  to steder — som port for en gjettet verdi og som valg av hvor spesifikk en
+  feilmelding kan være — og de to må ikke kunne komme til ulik konklusjon.
 
 ### Modified Capabilities
 <!-- Ingen. openspec/specs/ er tom; dette er den første spec-en i repoet. -->
@@ -73,3 +80,12 @@ avgjørende prøven er en ekte, rotete IFC-fil — helst en fagmodell fra et pro
 ellers en offentlig fil fra buildingSMART. Ingen ekte modell har vært gjennom
 verktøyet ennå, og alle fallbackene finnes nettopp for virkeligheten testmodellene
 våre ikke inneholder.
+
+## Utenfor omfanget
+
+`_forklar` gir i dag samme generiske melding for alle verdier der alle
+strukturmarkørene finnes, uansett hva som er galt i innholdet. Docstringen lover
+noe annet — «forventet 6 siffer etter ++, fant 5» — men koden leverer det ikke.
+
+Det er en mangel av samme familie, men det er en presisering av en melding som
+allerede er sann. Denne endringen handler om meldinger som er usanne. Tas separat.

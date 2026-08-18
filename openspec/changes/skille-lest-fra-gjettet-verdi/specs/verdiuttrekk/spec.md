@@ -1,10 +1,13 @@
 ## Purpose
 
 Beskriver hvordan verktøyet finner TFM-forekomst, TFM-type og MMI i et objekts
-egenskapssett, hvor sikkert det kan vite at det fant riktig verdi, og hva som skjer
-når verdien ikke ligger der den var forventet. Uttrekket er inngangen til alle
-kontrollene, så en verdi som leses feil her blir til et funn som er presist og
-usant lenger ute.
+egenskapssett, hvor sikkert det kan vite at det fant riktig verdi, og hva det har
+lov til å påstå om den. Uttrekket er inngangen til alle kontrollene, så en verdi
+som leses feil her blir til et funn som er presist og usant lenger ute.
+
+Det samme skjønnet — ligner denne strengen i det hele tatt på en TFM-ID? — brukes
+to steder: som port for en verdi verktøyet har gjettet seg til, og som valg av
+hvor spesifikk en feilmelding kan være. Det er én dom, brukt to ganger.
 
 ## ADDED Requirements
 
@@ -111,3 +114,28 @@ funn om objekter som ikke har noe med saken å gjøre.
 - **WHEN** det eneste objektet med en MMI-lignende verdi i fila fikk den forkastet
 - **THEN** fila regnes som å ikke bruke MMI
 - **AND** de øvrige objektene får ingen funn om manglende MMI
+
+### Requirement: Meldingens presisjon skal svare til hva verktøyet vet
+
+Når verktøyet melder om en verdi som ikke følger grammatikken, SKAL meldingen
+gjenspeile hvor mye det faktisk kan avgjøre. En verdi som ikke er gjenkjennelig som
+en TFM-ID SKAL ikke beskrives som om den mangler en bestemt del av grammatikken.
+
+Kravet gjelder uansett hvordan verdien ble funnet, også når den sto i det
+konfigurerte egenskapssettet og feltet. En mal som legger fabrikatnavnet i
+TFM-feltet gir i dag «Mangler «++»-delen: plassering (6 siffer)» — en presis
+anvisning om et felt som aldri inneholdt en TFM-ID.
+
+#### Scenario: Fremmed verdi beskrives som fremmed
+- **WHEN** verdien i det konfigurerte feltet er `Systemair`
+- **THEN** meldingen sier at verdien ikke ser ut som en TFM-ID
+- **AND** den navngir ikke en bestemt manglende del av grammatikken
+
+#### Scenario: Nesten-treff får spesifikk anvisning
+- **WHEN** verdien er `++115080-3600.001.04`, altså gjenkjennelig som en TFM-ID der
+  bare `=`-delen mangler
+- **THEN** meldingen navngir den manglende delen
+
+#### Scenario: Samme verdi gir samme dom begge veier
+- **WHEN** en verdi vurderes som gjenkjennelig nok til å godtas fra gjetningsveien
+- **THEN** den er også gjenkjennelig nok til å få en spesifikk feilmelding, og motsatt
