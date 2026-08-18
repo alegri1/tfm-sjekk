@@ -1,13 +1,50 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Vises til AI-en når den lager forslag, oppgaver og spesifikasjoner.
+context: |
+  tfm-sjekk validerer TFM-merking i IFC-modeller mot NS 3457-serien og
+  prosjektets TFM-master. Norsk verktøy for norske byggeprosjekter.
+
+  Språk: norsk i kode, kommentarer, dokumentasjon og meldinger til bruker.
+  Klasse- og funksjonsnavn er norske (Kontekst, Funn, Alvorlighet, kjor_alle).
+  Meldingene i rapportene leses av en BIM-koordinator, ikke av en utvikler.
+
+  Stack: Python 3.12, uv, pydantic, typer, ifcopenshell, openpyxl, jinja2.
+  ruff for lint og format (linje 100). pytest, kjøres med `uv run pytest`.
+
+  Arkitekturen har én bærende regel: `tfm_sjekk.ifc` er eneste modul som
+  importerer ifcopenshell, og den returnerer ren, picklebar pydantic-data.
+  Alt derfra — parser, kontroller, rapporter — jobber mot `Kontekst`, som
+  holder hele den federerte modellen. Hver kontroll er en ren funksjon
+  `Kontekst -> list[Funn]`. Det er den grensen som gjør de relasjonelle
+  kontrollene mulige, som lar federering kjøre i prosesspool, og som lar
+  kontrollene testes uten en eneste IFC-fil. Forslag som bryter den bør
+  begrunnes eksplisitt.
+
+  Kontrollene K1-K9 er beskrevet i §4 i specification/tfm-sjekk-spesifikasjon.md.
+  Paragrafhenvisninger i kode og commit-meldinger (§4, §8, ...) peker dit.
+
+  Regelsettet leveres som data, ikke som konstanter (§14): kodetabeller,
+  pset-navn, IFC-klasser per fag, MMI-skala, alvorlighetsgrader og
+  fordelings-/kursklasser hører hjemme i tfm-sjekk.toml. TFM-tolkningene
+  varierer mellom prosjekter, og det er den variasjonen konfigurasjonen finnes
+  for.
+
+  JURIDISK (§8): NS 3451 og NS 3457-serien er betalte standarder fra Standard
+  Norge. Kodetabellinnhold skal aldri inn i repoet. Bare filer med
+  FIKTIV-prefiks under eksempler/ er lov, og .gitignore håndhever det.
+
+  Utdata: BCF 2.1 er viktigst — det er forskjellen mellom «interessant
+  skript» og «noe vi tar i bruk». Så HTML (én selvstendig fil), XLSX (til
+  Excel) og CSV (til skript). Exit-kode 0/1 gjør verktøyet kjørbart som port
+  i en leveranseprosess. BCF-fila skal være byte-identisk for samme funn og
+  samme --opprettet.
+
+  Erfaring verdt å ta med: flere feil i dette prosjektet har vært usynlige
+  for både typer og skjemavalidering, og dukket først opp i den faktiske
+  mottakeren — Excel på web, en cp1252-konsoll, mørk modus i browseren, en
+  BCF-viewer. Foreslå gjerne hvordan en endring skal prøves der den skal
+  brukes, ikke bare hvordan den skal testes.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
