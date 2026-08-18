@@ -64,8 +64,9 @@ fremmede verdier fra nesten-treff, dette skiller nesten-treffene fra hverandre.
 konfigurasjon berøres.
 
 **Meldingene endres.** Tekstene er brukersynlige og går i BCF, HTML, XLSX og CSV.
-Ingen test låser dagens generiske ordlyd fast som forventet resultat, men
-K2-meldingen i demoen endres, og det er verdt å se på.
+Fire rader i `test_parser.py` forventer i dag ordet «grammatikken» for nettopp de
+innholdsfeilene denne endringen gjør spesifikke; de må oppdateres til å forvente
+det som faktisk sies. K2-meldingen i demoen endres også, og er verdt å lese.
 
 **Determinismen er urørt.** Samme verdi gir samme melding; BCF-fila er fortsatt
 byte-identisk med fast `--opprettet`.

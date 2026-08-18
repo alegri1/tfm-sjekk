@@ -58,10 +58,12 @@ def test_elektro_gjenkjennes_pa_forste_siffer():
         ("115080=3600.001.04-JVZ001", r"\+\+"),
         ("++115080-JVZ001", "="),
         ("++115080=3600.001.04", "-"),
-        ("++11508=3600.001.04-JVZ001", "grammatikken"),  # 5 siffer i plassering
-        ("++115080=360.001.04-JVZ001", "grammatikken"),  # 3 siffer i systemkode
-        ("++115080=3600.001.04-JV001", "grammatikken"),  # 2 bokstaver
-        ("++115080=3600.001.04-jvz001", "grammatikken"),  # små bokstaver
+        # Innholdsfeil navngir delen som svikter. Sto som «grammatikken» før,
+        # da alle fire ga samme generiske melding.
+        ("++11508=3600.001.04-JVZ001", "Plasseringen .* forventet 6"),
+        ("++115080=360.001.04-JVZ001", "Systemkoden .* forventet 4"),
+        ("++115080=3600.001.04-JV001", "Komponentkoden .* forventet 3"),
+        ("++115080=3600.001.04-jvz001", "store bokstaver"),
     ],
 )
 def test_avviser_ugyldige_strenger(streng, forventet_i_melding):

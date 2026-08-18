@@ -68,29 +68,114 @@ def mmi_niva(verdi: str | None) -> str | None:
     return None
 
 
+# Delenes navn på norsk, ett sted. En melding om «system_lopenummer» hjelper
+# ingen; en om «systemets løpenummer» peker på noe man kan finne i modellen.
+DELNAVN = {
+    "plassering": "Plasseringen",
+    "systemkode": "Systemkoden",
+    "system_lopenummer": "Systemets løpenummer",
+    "undernummer": "Undernummeret",
+    "komponentkode": "Komponentkoden",
+    "komponent_lopenummer": "Komponentens løpenummer",
+    "typekode": "Komponenttypens kode",
+    "type_lopenummer": "Komponenttypens løpenummer",
+    "type_undernummer": "Komponenttypens undernummer",
+}
+
+
+def _forventet_lengde(g: Grammatikk) -> list[tuple[str, int, int]]:
+    """(delnavn, minste antall, største antall) i lesretning.
+
+    Hentet fra grammatikken, ikke fra en egen tabell — ellers kunne meldingen
+    oppgitt et annet antall enn regelen som avviste verdien.
+    """
+    return [
+        ("plassering", g.plassering_siffer, g.plassering_siffer),
+        ("systemkode", g.systemkode_siffer, g.systemkode_siffer),
+        ("system_lopenummer", g.system_lopenummer_siffer, g.system_lopenummer_siffer),
+        ("undernummer", g.undernummer_siffer_min, g.undernummer_siffer_maks),
+        ("komponentkode", g.komponentkode_bokstaver, g.komponentkode_bokstaver),
+        ("komponent_lopenummer", g.komponent_lopenummer_siffer, g.komponent_lopenummer_siffer),
+        ("typekode", g.komponentkode_bokstaver, g.komponentkode_bokstaver),
+        ("type_lopenummer", g.type_lopenummer_siffer, g.type_lopenummer_siffer),
+        ("type_undernummer", g.type_undernummer_siffer, g.type_undernummer_siffer),
+    ]
+
+
+BOKSTAVDELER = ("komponentkode", "typekode")
+
+
+def _forste_avvik(raa: str, g: Grammatikk) -> str | None:
+    """Hvilken del av en TFM-lignende streng bryter grammatikken?
+
+    Returnerer None når den løse regexen ikke matcher — da vet vi at noe er
+    galt, men ikke hvor, og den generiske formmalen er det ærlige svaret.
+
+    Bare det første avviket meldes. Retter man det, tar neste kjøring det
+    neste; en melding som lister alt ville sprengt BCF-tittelen, som kuttes.
+    """
+    treff = monster_for(g, streng=False).match(raa)
+    if treff is None:
+        return None
+
+    for felt, minst, mest in _forventet_lengde(g):
+        verdi = treff.groupdict().get(felt)
+        if verdi is None:  # valgfri del som ikke er med
+            continue
+
+        navn = DELNAVN[felt]
+        if felt in BOKSTAVDELER and not verdi.isupper():
+            return f"{navn} «{verdi}» skal skrives med store bokstaver."
+
+        enhet = "bokstaver" if felt in BOKSTAVDELER else "siffer"
+        if not minst <= len(verdi) <= mest:
+            forventet = f"{minst}" if minst == mest else f"{minst}-{mest}"
+            return f"{navn} «{verdi}» har {len(verdi)} {enhet}, forventet {forventet}."
+    return None
+
+
 class ParseFeil(ValueError):
     """Strengen er ikke en gyldig TFM-ID. Meldingen er på norsk og går rett
     i rapporten (K2)."""
 
 
-def bygg_monster(g: Grammatikk) -> re.Pattern[str]:
-    """Setter sammen regexen fra konfigurert sifferantall."""
+def bygg_monster(g: Grammatikk, streng: bool = True) -> re.Pattern[str]:
+    r"""Setter sammen regexen fra konfigurert sifferantall.
+
+    `streng=False` gir samme form med samme delnavn, men uten krav til antall
+    tegn: sifre blir `\d+`, bokstaver blir bokstaver. Den matcher enhver
+    TFM-lignende streng og fanger hver del for seg, slik at feilforklaringen kan
+    si *hvilken* del som svikter.
+
+    De to bygges her, av samme funksjon og samme grammatikk, med kvantorene som
+    eneste forskjell. Skrevet hver for seg kunne de beskrevet ulik form, og da
+    ville meldingen pekt på noe annet enn regelen som faktisk avviste verdien.
+    """
+    if streng:
+        siffer = lambda antall: f"{{{antall}}}"  # noqa: E731
+        undernummer = f"{{{g.undernummer_siffer_min},{g.undernummer_siffer_maks}}}"
+        bokstaver = f"[A-ZÆØÅ]{{{g.komponentkode_bokstaver}}}"
+    else:
+        siffer = lambda antall: "+"  # noqa: E731  (antallet er nettopp det vi ikke krever)
+        undernummer = "+"
+        bokstaver = "[A-Za-zÆØÅæøå]+"
+
     type_del = (
-        rf"%(?P<typekode>[A-ZÆØÅ]{{{g.komponentkode_bokstaver}}})"
-        rf"\.(?P<type_lopenummer>\d{{{g.type_lopenummer_siffer}}})"
-        rf"\.(?P<type_undernummer>\d{{{g.type_undernummer_siffer}}})"
+        rf"%(?P<typekode>{bokstaver})"
+        rf"\.(?P<type_lopenummer>\d{siffer(g.type_lopenummer_siffer)})"
+        rf"\.(?P<type_undernummer>\d{siffer(g.type_undernummer_siffer)})"
     )
     if not g.krev_komponenttype:
         type_del = f"(?:{type_del})?"
 
     monster = (
         (
-            rf"^\+\+(?P<plassering>\d{{{g.plassering_siffer}}})"
-            rf"=(?P<systemkode>\d{{{g.systemkode_siffer}}})"
-            rf"\.(?P<system_lopenummer>\d{{{g.system_lopenummer_siffer}}})"
-            rf"\.(?P<undernummer>\d{{{g.undernummer_siffer_min},{g.undernummer_siffer_maks}}})"
-            rf"-(?P<komponentkode>[A-ZÆØÅ]{{{g.komponentkode_bokstaver}}})"
-            rf"(?P<komponent_lopenummer>\d{{{g.komponent_lopenummer_siffer}}})"
+            rf"^\+\+(?P<plassering>\d{siffer(g.plassering_siffer)})"
+            rf"=(?P<systemkode>\d{siffer(g.systemkode_siffer)})"
+            rf"\.(?P<system_lopenummer>\d{siffer(g.system_lopenummer_siffer)})"
+            rf"\.(?P<undernummer>\d{undernummer})"
+            rf"-(?P<komponentkode>{bokstaver})"
+            rf"(?P<komponent_lopenummer>\d{siffer(g.komponent_lopenummer_siffer)})"
         )
         + type_del
         + r"$"
@@ -99,14 +184,14 @@ def bygg_monster(g: Grammatikk) -> re.Pattern[str]:
     return re.compile(monster)
 
 
-@lru_cache(maxsize=32)
-def _kompilert(grammatikk_json: str) -> re.Pattern[str]:
-    return bygg_monster(Grammatikk.model_validate_json(grammatikk_json))
+@lru_cache(maxsize=64)
+def _kompilert(grammatikk_json: str, streng: bool) -> re.Pattern[str]:
+    return bygg_monster(Grammatikk.model_validate_json(grammatikk_json), streng)
 
 
-def monster_for(g: Grammatikk) -> re.Pattern[str]:
+def monster_for(g: Grammatikk, streng: bool = True) -> re.Pattern[str]:
     """Cachet variant — parseren kalles én gang per objekt i store modeller."""
-    return _kompilert(g.model_dump_json())
+    return _kompilert(g.model_dump_json(), streng)
 
 
 def parse(streng: str, g: Grammatikk | None = None) -> TfmId:
@@ -167,6 +252,10 @@ def _forklar(raa: str, g: Grammatikk) -> str:
 
     if g.krev_komponenttype and "%" not in raa:
         return "Mangler «%»-delen (komponenttype)"
+
+    avvik = _forste_avvik(raa, g)
+    if avvik is not None:
+        return avvik
 
     return (
         f"«{raa}» følger ikke TFM-grammatikken. Forventet formen "
