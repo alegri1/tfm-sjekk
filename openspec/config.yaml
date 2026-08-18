@@ -24,6 +24,18 @@ context: |
   Kontrollene K1-K9 er beskrevet i §4 i specification/tfm-sjekk-spesifikasjon.md.
   Paragrafhenvisninger i kode og commit-meldinger (§4, §8, ...) peker dit.
 
+  To dokumentsett, med hver sin jobb:
+
+  specification/tfm-sjekk-spesifikasjon.md er fasit for §-numrene og for hva
+  verktøyet er ment å være. Den er grunnlaget, skrevet én gang, og endres ikke
+  per endring. Referer til den med §-nummer.
+
+  openspec/specs/ beskriver oppførselen verktøyet faktisk har, og vokser én
+  evne om gangen. Et forslag som endrer oppførsel skriver en delta her — ikke
+  i specification/. Motsier de to hverandre, er det openspec/specs/ som sier
+  hva koden gjør, og specification/ som sier hva den skulle gjort; det er i
+  seg selv verdt et funn.
+
   Regelsettet leveres som data, ikke som konstanter (§14): kodetabeller,
   pset-navn, IFC-klasser per fag, MMI-skala, alvorlighetsgrader og
   fordelings-/kursklasser hører hjemme i tfm-sjekk.toml. TFM-tolkningene

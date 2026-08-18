@@ -322,7 +322,9 @@ igjen der som `IfcObjekt.tilkoblet` — en liste med GlobalId-er. Kontrollene se
 en graf av rene strenger og har aldri hørt om `IfcDistributionPort`.
 
 Full spesifikasjon: [`specification/tfm-sjekk-spesifikasjon.md`](specification/tfm-sjekk-spesifikasjon.md).
-Paragrafhenvisninger i koden (§4, §8, …) peker dit.
+Paragrafhenvisninger i koden (§4, §8, …) peker dit. Den er grunnlaget og endres
+ikke løpende; `openspec/specs/` beskriver oppførselen verktøyet faktisk har, og
+vokser én evne om gangen etter hvert som endringer arkiveres.
 
 ## Publisering
 
