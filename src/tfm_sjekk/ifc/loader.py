@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,8 @@ import ifcopenshell
 import ifcopenshell.ifcopenshell_wrapper
 
 from tfm_sjekk.config import Konfigurasjon
-from tfm_sjekk.modell import IfcObjekt, Krets
+from tfm_sjekk.modell import IfcObjekt, Kilde, Krets, Verdikilde
+from tfm_sjekk.parser import ligner_komponenttype, ligner_tfm_id, mmi_niva
 
 
 def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[IfcObjekt]:
@@ -36,6 +38,27 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
             # uttrykker er allerede lest inn i `naboer`.
             continue
         egenskaper = _psets(produkt)
+        forekomst, forekomst_kilde = _finn(
+            egenskaper, config.pset.forekomst, config.pset.egenskapsnavn_forekomst, ligner_tfm_id
+        )
+        type_verdi, type_kilde = _finn(
+            egenskaper, config.pset.type, config.pset.egenskapsnavn_type, ligner_komponenttype
+        )
+        mmi_verdi, mmi_kilde = _finn(
+            egenskaper,
+            config.pset.mmi,
+            config.pset.egenskapsnavn_mmi,
+            lambda v: mmi_niva(v) is not None,
+        )
+        kilder = {
+            navn: kilde
+            for navn, kilde in (
+                ("forekomst", forekomst_kilde),
+                ("type", type_kilde),
+                ("mmi", mmi_kilde),
+            )
+            if kilde is not None
+        }
         objekter.append(
             IfcObjekt(
                 global_id=produkt.GlobalId,
@@ -43,11 +66,10 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
                 ifc_supertyper=_supertyper(produkt),
                 navn=getattr(produkt, "Name", None),
                 kildefil=sti.name,
-                tfm_forekomst=_finn(
-                    egenskaper, config.pset.forekomst, config.pset.egenskapsnavn_forekomst
-                ),
-                tfm_type=_finn(egenskaper, config.pset.type, config.pset.egenskapsnavn_type),
-                mmi=_finn(egenskaper, config.pset.mmi, config.pset.egenskapsnavn_mmi),
+                tfm_forekomst=forekomst,
+                tfm_type=type_verdi,
+                mmi=mmi_verdi,
+                kilder=kilder,
                 posisjon=_posisjon(produkt),
                 tilkoblet=sorted(naboer.get(produkt.GlobalId, set())),
                 kretser=kretser.get(produkt.GlobalId, []),
@@ -205,28 +227,54 @@ def _finn(
     egenskaper: dict[str, dict[str, str]],
     pset_navn: list[str],
     egenskapsnavn: list[str],
-) -> str | None:
-    """Første treff på (pset, egenskap) i konfigurert prioritetsrekkefølge.
+    gjenkjenner: Callable[[str], bool],
+) -> tuple[str | None, Verdikilde | None]:
+    """Finner én verdi, og sier hvor sikkert den ble funnet.
 
-    Faller tilbake til å lete i alle psets — norske modeller er rotete nok
-    til at riktig verdi ofte ligger i et pset ingen forutså (§7).
+    Tre strategier, i synkende styrke på beviset:
+
+    1. Konfigurert egenskapssett og konfigurert feltnavn. Sikkert.
+    2. Et konfigurert feltnavn i et hvilket som helst egenskapssett. Norske
+       modeller legger ofte riktig verdi et sted ingen forutså, og et gjenkjent
+       feltnavn er bevis nok.
+    3. Konfigurert egenskapssett, ukjent feltnavn. En gjetning — og den godtas
+       bare hvis verdien er gjenkjennelig som det feltet skal inneholde.
+
+    Steg 3 leser alle feltene, ikke bare det første. Ellers ville utfallet
+    avgjøres av rekkefølgen egenskapene tilfeldigvis har i IFC-fila.
     """
     for pset in pset_navn:
         if pset not in egenskaper:
             continue
         for navn in egenskapsnavn:
-            verdi = egenskaper[pset].get(navn)
+            verdi = (egenskaper[pset].get(navn) or "").strip()
             if verdi:
-                return verdi.strip()
-        # Pset-et finnes, men ingen av de forventede egenskapsnavnene:
-        # ta første ikke-tomme verdi.
-        for verdi in egenskaper[pset].values():
-            if verdi and verdi.strip():
-                return verdi.strip()
+                return verdi, Verdikilde(kilde=Kilde.KONFIGURERT, pset=pset, felt=navn)
 
-    for verdier in egenskaper.values():
+    for pset, verdier in egenskaper.items():
         for navn in egenskapsnavn:
-            verdi = verdier.get(navn)
-            if verdi and verdi.strip():
-                return verdi.strip()
-    return None
+            verdi = (verdier.get(navn) or "").strip()
+            if verdi:
+                return verdi, Verdikilde(kilde=Kilde.GJENKJENT_FELT, pset=pset, felt=navn)
+
+    for pset in pset_navn:
+        if pset not in egenskaper:
+            continue
+        forkastet: tuple[str, str] | None = None
+        for navn, raa in egenskaper[pset].items():
+            verdi = (raa or "").strip()
+            if not verdi:
+                continue
+            if gjenkjenner(verdi):
+                return verdi, Verdikilde(kilde=Kilde.GJETTET, pset=pset, felt=navn)
+            if forkastet is None:
+                forkastet = (navn, verdi)
+        if forkastet is not None:
+            return None, Verdikilde(
+                kilde=Kilde.FORKASTET,
+                pset=pset,
+                felt=forkastet[0],
+                forkastet_verdi=forkastet[1],
+            )
+
+    return None, None

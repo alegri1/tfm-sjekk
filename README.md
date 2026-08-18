@@ -162,6 +162,32 @@ testene og demoen skal kunne kjøre.
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.
 
+## Hvordan verktøyet finner TFM-verdien
+
+Norske modeller er rotete, så verktøyet leter i tre trinn — i synkende styrke
+på beviset:
+
+| Trinn | Hvor | Sikkerhet |
+|---|---|---|
+| 1 | konfigurert egenskapssett, konfigurert feltnavn | sikkert |
+| 2 | konfigurert feltnavn i et hvilket som helst egenskapssett | bevis nok |
+| 3 | konfigurert egenskapssett, ukjent feltnavn | en gjetning |
+
+Trinn 3 er den som kan ta feil, og derfor godtas en verdi der bare når den er
+**gjenkjennelig som det feltet skal inneholde** — for TFM betyr det at høyst én
+av `++`, `=` og `-` mangler. Uten den regelen leste verktøyet fabrikatnavnet fra
+et egenskapssett som het riktig, og meldte det som syntaksfeil i TFM-ID-en.
+
+Et funn som hviler på trinn 2 eller 3 sier hvor verdien faktisk kom fra. Ble
+verdien forkastet, sier meldingen hva som sto der i stedet — det er den
+opplysningen som lar deg finne ut hvilket felt malen egentlig skriver til.
+
+Feltnavnene i `egenskapsnavn_*` brukes også til søk på tvers av alle
+egenskapssett, så de må være distinkte. **Endret:** `Type` er fjernet fra
+standardlista for `egenskapsnavn_type`; den traff
+`Pset_ManufacturerTypeInformation` i praktisk talt enhver modell. Trenger
+prosjektet ditt den, kan den settes i `tfm-sjekk.toml`.
+
 ## Elektrokontrollene (K8)
 
 Dette er kontrollen som krever at man forstår både IFC og et kursopplegg, og

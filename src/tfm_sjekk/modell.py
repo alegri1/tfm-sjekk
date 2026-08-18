@@ -21,6 +21,58 @@ class Alvorlighet(StrEnum):
     INFO = "info"
 
 
+class Kilde(StrEnum):
+    """Hvordan verktøyet kom fram til en verdi.
+
+    Rekkefølgen er styrken på beviset: et konfigurert felt er sikkert, et
+    gjenkjent feltnavn andre steder er godt nok, en gjetning er en gjetning.
+    """
+
+    KONFIGURERT = "konfigurert"
+    GJENKJENT_FELT = "gjenkjent felt"
+    GJETTET = "gjettet"
+    FORKASTET = "forkastet"
+
+
+class Verdikilde(BaseModel):
+    """Hvor en verdi ble lest fra, og med hvilken sikkerhet.
+
+    Følger objektet gjennom prosessgrensa som ren data — se modulens
+    docstring. Kontrollene leser den som strenger og trenger ikke vite hva et
+    egenskapssett er.
+    """
+
+    model_config = {"frozen": True}
+
+    kilde: Kilde
+    pset: str
+    felt: str
+    forkastet_verdi: str | None = Field(
+        default=None, description="Verdien som ble forkastet, til bruk i meldingen"
+    )
+
+    @property
+    def sikker(self) -> bool:
+        return self.kilde is Kilde.KONFIGURERT
+
+    def forklaring(self) -> str | None:
+        """Én setning om opphavet, til bruk i et funn. None når verdien er sikker."""
+        if self.kilde is Kilde.KONFIGURERT:
+            return None
+        if self.kilde is Kilde.FORKASTET:
+            return (
+                f"Egenskapssettet «{self.pset}» har feltet «{self.felt}» med verdien "
+                f"«{self.forkastet_verdi}», som ikke er gjenkjennelig som det feltet "
+                f"skal inneholde."
+            )
+        if self.kilde is Kilde.GJENKJENT_FELT:
+            return f"Verdien ble lest fra egenskapssettet «{self.pset}», feltet «{self.felt}»."
+        return (
+            f"Verdien ble gjettet fra egenskapssettet «{self.pset}», feltet «{self.felt}», "
+            f"som ikke er et konfigurert feltnavn."
+        )
+
+
 class TfmId(BaseModel):
     """En parset TFM-ID.
 
@@ -141,6 +193,13 @@ class IfcObjekt(BaseModel):
     tfm_type: str | None = Field(default=None, description="Rå verdi fra pset for type")
     mmi: str | None = Field(default=None, description="Prosesstatus/MMI, for K9")
 
+    kilder: dict[str, Verdikilde] = Field(
+        default_factory=dict,
+        description=(
+            "Hvor hver verdi kom fra, nøklet på «forekomst», «type» og «mmi». "
+            "Et funn som hviler på noe annet enn den konfigurerte veien sier det."
+        ),
+    )
     posisjon: tuple[float, float, float] | None = Field(
         default=None,
         description=(
@@ -185,6 +244,9 @@ class Funn(BaseModel):
     posisjon: tuple[float, float, float] | None = Field(
         default=None, description="Objektets plassering, til kameraet i BCF-viewpointet"
     )
+    kilde: Verdikilde | None = Field(
+        default=None, description="Hvor verdien funnet hviler på ble lest fra"
+    )
 
     @classmethod
     def for_objekt(
@@ -194,11 +256,17 @@ class Funn(BaseModel):
         melding: str,
         objekt: IfcObjekt,
         verdi: str | None = None,
+        felt: str = "forekomst",
     ) -> Funn:
+        """`felt` sier hvilken av objektets verdier funnet hviler på, slik at
+        meldingen kan si fra hvis nettopp den ble lest et uventet sted."""
+        kilde = objekt.kilder.get(felt)
+        opphav = kilde.forklaring() if kilde else None
         return cls(
             kontroll=kontroll,
             alvorlighet=alvorlighet,
-            melding=melding,
+            melding=f"{melding} {opphav}" if opphav else melding,
+            kilde=kilde,
             global_id=objekt.global_id,
             ifc_klasse=objekt.ifc_klasse,
             kildefil=objekt.kildefil,

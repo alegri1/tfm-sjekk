@@ -30,12 +30,12 @@ ulike nivåer midt i en prosjekteringsfase. Sett `alvorlighet` under
 
 from __future__ import annotations
 
-import re
 from collections import Counter, defaultdict
 
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller.base import Kontroll, registrer
 from tfm_sjekk.modell import Alvorlighet, Funn, IfcObjekt
+from tfm_sjekk.parser import mmi_niva as normaliser_mmi
 
 
 @registrer
@@ -146,22 +146,7 @@ class K9Mmi(Kontroll):
                         f"(fordeling: {andre}).",
                         objekt,
                         verdi=objekt.mmi,
+                        felt="mmi",
                     )
                 )
         return funn
-
-
-def normaliser_mmi(verdi: str | None) -> str | None:
-    """«MMI 300», «mmi300» og «300» er samme nivå.
-
-    Sifrene er det som betyr noe; alt annet er skrivemåte. En verdi helt uten
-    siffer beholdes som den er, i store bokstaver — da bruker prosjektet en
-    skala vi ikke skal late som vi forstår.
-    """
-    if verdi is None:
-        return None
-    tekst = verdi.strip()
-    if not tekst:
-        return None
-    siffer = re.sub(r"\D", "", tekst)
-    return siffer or tekst.upper()

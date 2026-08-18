@@ -44,7 +44,9 @@ class PsetOppsett(BaseModel):
     mmi: list[str] = ["MMI", "Prosesstatus"]
 
     egenskapsnavn_forekomst: list[str] = ["TFM", "TFMForekomst", "Forekomst"]
-    egenskapsnavn_type: list[str] = ["TFM", "TFMType", "Type"]
+    # «Type» sto her før. Den finnes i Pset_ManufacturerTypeInformation i
+    # praktisk talt enhver modell, og et treff der er tilfeldig, ikke bevis.
+    egenskapsnavn_type: list[str] = ["TFM", "TFMType", "TFM11_Type"]
     egenskapsnavn_mmi: list[str] = ["MMI", "Prosesstatus"]
 
 

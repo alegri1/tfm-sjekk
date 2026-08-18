@@ -128,3 +128,22 @@ Rulles tilbake ved å reversere endringen; ingen tilstand er skrevet noe sted.
   vanlig fordi noen strippet prefikset i eksport, eller er det en form jeg fant på?
   Svaret kan justere markørsettet senere, men endrer ikke tilnærmingen: én
   formtest, brukt to steder.
+
+  **Fortsatt åpent etter prøvingen.** To offentlige modeller ble kjørt gjennom
+  verktøyet: buildingSMARTs `Building-Hvac.ifc` og en Revit-avledet eksport fra
+  IfcOpenShells filsamling. Ingen av dem har TFM-merking i det hele tatt — den ene
+  har ett eneste egenskapssett i hele fila — så de kan ikke si noe om hvilke
+  ødelagte TFM-former som forekommer. Spørsmålet krever en norsk fagmodell, og det
+  er en sosial oppgave, ikke en teknisk.
+
+  Prøvingen ga likevel to funn, notert her fordi de er ekte observasjoner og ikke
+  antakelser:
+
+  - Den Revit-avledede eksporten har et felt som **faktisk heter `Type`**, i et
+    egenskapssett som heter `Other`, med verdien «None». Med den gamle
+    standardlista leste verktøyet den som TFM-type; med den nye leser det
+    ingenting. Kandidatnavn-kravet er dermed bekreftet mot en ekte fil.
+  - I VVS-modellen er 2 av 6 objekter `IfcBuildingElementProxy`, altså utenfor
+    `ifc_klasser` og usynlige for K1. Det hører til en annen sak — at verktøyet
+    ikke skiller «alt i orden» fra «jeg så på ingenting» — men det er verdt å ha
+    skrevet ned at klassen forekommer i praksis, ikke bare i teorien.
