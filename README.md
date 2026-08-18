@@ -7,10 +7,11 @@
 
 Validerer TFM-merking i IFC-modeller mot NS 3457-serien og prosjektets TFM-master.
 
-> **Status: under utvikling.** Alle kontrollene K1–K9 virker, og rapportene
-> (BCF 2.1, HTML, XLSX og CSV) er på plass. BCF-fila er ikke prøvd i en ekte
-> viewer ennå. Hypotesen bak verktøyet er ikke validert — se §11 i
-> spesifikasjonen.
+> **Status: virker, men er ikke prøvd i et ekte prosjekt.** Elleve kontroller,
+> fire rapportformater, og BCF-fila er prøvd i BIMcollab ZOOM. Ingen norsk
+> fagmodell har vært gjennom verktøyet, og hypotesen bak det er ikke validert —
+> se §11 i spesifikasjonen. Si fra hvis noe ikke stemmer med hvordan dere
+> jobber; det er akkurat det jeg vil vite.
 
 ---
 
@@ -29,6 +30,19 @@ En TFM-ID ser slik ut:
 Skriv `4310` der `4310.001.00` mangler kursnummer, eller gjenbruk `QLF001` i to
 fagmodeller, og ingen oppdager det før i FDV-fasen.
 
+## Rapporten
+
+<!-- SKJERMBILDE MANGLER. Kjør demoen, åpne rapport/rapport.html, ta et bilde
+     av øverste del (tallrekka, dekningstabellen og de første funnradene), og
+     legg det som docs/rapport.png. Bytt så denne kommentaren med:
+         ![HTML-rapporten](docs/rapport.png)
+     §12 setter skjermbildet som punkt 2 av åtte — det er det første en
+     BIM-koordinator ser etter, og det eneste som viser hva verktøyet gir. -->
+
+Hver kjøring gir en selvstendig HTML-rapport med sorterbar tabell, en BCF-fil
+som åpnes i Solibri, Catenda, Dalux og BIMcollab, en XLSX til analyse, og en
+exit-kode til CI.
+
 ## Hvorfor ikke bare IDS eller Solibri?
 
 **IDS** er per design begrenset til det som kan avgjøres på ett objekt om gangen.
@@ -44,23 +58,31 @@ Nisjen er norsk-spesifikk, relasjonell, gratis og kjørbar i CI.
 
 ## Kontrollene
 
-| # | Kontroll | Grad | Status |
+| # | Kontroll | Springer ut av | Grad |
 |---|---|---|---|
-| K1 | Alle objekter i konfigurerte IFC-klasser har en TFM-verdi | feil | ✅ |
-| K2 | TFM-ID-en parser mot grammatikken | feil | ✅ |
-| K3 | Systemkoden finnes i NS 3451 tabell 8 | feil | ✅ |
-| K4 | Systemkoden er angitt så spesifikt som mulig (PA 0805) | advarsel | ✅ |
-| K5 | Komponentkoden finnes i NS 3457-8 | feil | ✅ |
-| K6 | Komponentforekomster er unike, også på tvers av fagmodeller | feil | ✅ |
-| K7 | Systemer og typer finnes i prosjektets TFM-master (SIMBA) | feil | ✅ |
-| K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | feil | ✅ |
-| K9 | MMI/prosesstatus satt og konsistent | info | ✅ |
+| K1 | Alle objekter i konfigurerte IFC-klasser har en TFM-verdi | krav om merking | feil |
+| K2 | TFM-ID-en følger grammatikken | TFM-strukturen | feil |
+| K3 | Systemkoden finnes i kodetabellen | NS 3451 tabell 8 | feil |
+| K4 | Systemkoden er angitt så spesifikt som mulig | PA 0805 | advarsel |
+| K5 | Komponentkoden finnes i kodetabellen | NS 3457-8 | feil |
+| K6 | Komponentforekomster er unike, også på tvers av fagmodeller | krav om entydig ID | feil |
+| K7 | Systemer og typer finnes i prosjektets TFM-master | SIMBA | feil |
+| K8 | Elektro: kurs-/sløyfenummer utfylt og konsistent | NS 3451 kap. 4 og 5 | feil |
+| K9 | MMI/prosesstatus satt og konsistent innenfor systemet | SIMBA | info |
+| T1 | Komponenttypen er den samme i TFM-ID-en og i typefeltet | to felt, én sannhet | feil |
+| D1 | Noe ble faktisk kontrollert i hver fagmodell | egen erfaring | advarsel |
+
+K1–K9 er kontrollene i §4 i spesifikasjonen. T1 og D1 kom til etterpå, da det
+viste seg at samme opplysning kan stå to steder i en modell, og at fravær av
+funn ellers ikke er til å skille fra at ingenting ble undersøkt.
+
+Alle kan slås av eller få endret alvorlighetsgrad i `tfm-sjekk.toml` — TFM-
+tolkningene varierer mellom prosjekter, og da må regelsettet være data.
 
 ## Installasjon
 
 ```bash
-uv sync          # utvikling
-# pipx install tfm-sjekk   (når v1 er publisert)
+pipx install tfm-sjekk
 ```
 
 **Uten Python:** last ned den frittstående binæren fra siste kjøring av
@@ -144,6 +166,11 @@ importer `rapport/funn.bcfzip`. Et emne skal velge nøyaktig det objektet det
 gjelder — det er den koblingen som gjør BCF verdt bryet, og den eneste delen
 av formatet et skjema ikke kan verifisere.
 
+## Avgrensning
+
+Ingen GUI, ingen 3D-visning, ingen Revit-plugin, ingen webapp, ingen skriving tilbake
+til modellen, ingen støtte for samferdsel. Se §3 og §10 i spesifikasjonen.
+
 ## Om standardene og kodetabellene
 
 **NS 3451 og NS 3457-serien er betalte standarder fra Standard Norge. Kodetabellene
@@ -161,6 +188,11 @@ testene og demoen skal kunne kjøre.
 
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.
+
+---
+
+Avsnittene under er oppslagsverk — de forklarer valg verktøyet har tatt,
+og trengs først når noe oppfører seg uventet.
 
 ## Komponenttypen står to steder
 
@@ -336,11 +368,6 @@ rapporteres som **info** og teller ikke mot exit-koden — de kan like gjerne v�
 prosjektert men ikke tegnet ennå, og å skille det fra utgåtte oppføringer krever
 prosesstatus (K9).
 
-## Avgrensning
-
-Ingen GUI, ingen 3D-visning, ingen Revit-plugin, ingen webapp, ingen skriving tilbake
-til modellen, ingen støtte for samferdsel. Se §3 og §10 i spesifikasjonen.
-
 ## Utvikling
 
 ```bash
@@ -391,6 +418,13 @@ gang, før første tag:
 
 `workflow_dispatch` kjører bygg og pakkesjekk uten å publisere, så kjeden kan
 prøves før du binder deg til et versjonsnummer.
+
+## Hvem som står bak
+
+Jeg er elkraftingeniør og utvikler, og fersk i BIM. Verktøyet finnes fordi K8 —
+kursnummer og fordelinger — er noe jeg kan, og fordi ingen andre så ut til å ha
+skrevet det. Alt om IFC og TFM har jeg lært underveis, og det er nettopp derfor
+jeg vil høre hvordan dere gjør dette i dag.
 
 ## Lisens
 
