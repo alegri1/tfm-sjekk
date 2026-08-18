@@ -78,6 +78,23 @@ ELEKTRO = [
                 "kurs": "Kurs 14B",
                 "mmi": "200",
             },
+            # T1: TFM-ID-en og typefeltet er uenige om komponenttypen
+            {
+                "klasse": "IfcLamp",
+                "tfm": "++115080=4310.001.13-QLF106%QLF.001.004",
+                "typefelt": "QLF.001.005",
+                "kurs": "Kurs 13",
+                "mmi": "300",
+            },
+            # K7: komponenttypen står bare i typefeltet, og ikke i mastera.
+            # Uten denne endringen hoppet K7 over objektet.
+            {
+                "klasse": "IfcLamp",
+                "tfm": "++115080=4310.001.13-QLF107",
+                "typefelt": "QLF.001.003",
+                "kurs": "Kurs 13",
+                "mmi": "300",
+            },
         ],
     }
 ]

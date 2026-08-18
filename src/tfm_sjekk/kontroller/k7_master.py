@@ -63,7 +63,12 @@ class K7Master(Kontroll):
                     )
                 )
 
-            komponenttype = tfm.komponenttype
+            # Komponenttypen kan stå i %-delen eller i typefeltet. Spriker de
+            # to, har objektet ingen avklart type: T1 melder spriket, og et funn
+            # herfra ville hvilt på et vilkårlig valg mellom to verdier.
+            if k.komponenttype_spriker(objekt) is not None:
+                continue
+            komponenttype = k.komponenttype_for(objekt)
             if komponenttype is None:
                 continue
             brukte_typer.add(komponenttype)

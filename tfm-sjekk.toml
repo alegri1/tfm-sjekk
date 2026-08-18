@@ -23,10 +23,12 @@ mmi = ["MMI", "Prosesstatus"]
 
 # Egenskapsnavnet inne i settet. Disse navnene brukes også til å lete på tvers av ALLE egenskapssett, ikke
 # bare de som står over. Derfor må de være distinkte nok til at et treff er
-# bevis. «Type» sto her en gang, og traff Pset_ManufacturerTypeInformation i
-# praktisk talt enhver modell — altså fabrikatets typebetegnelse, ikke TFM.
+# bevis. «Type» sto en gang i lista under, og traff
+# Pset_ManufacturerTypeInformation i praktisk talt enhver modell — altså
+# fabrikatets typebetegnelse, ikke TFM. «TFM» sto der også, og ga hele
+# TFM-ID-en som komponenttype, siden det er forekomstens eget kandidatnavn.
 egenskapsnavn_forekomst = ["TFM", "TFMForekomst", "Forekomst"]
-egenskapsnavn_type = ["TFM", "TFMType", "TFM11_Type"]
+egenskapsnavn_type = ["TFMType", "TFM11_Type"]
 
 # Klassene K1 krever TFM på. Matches mot hele arvekjeden, så
 # «IfcFlowTerminal» dekker også IfcAirTerminal, IfcLamp, IfcOutlet osv.

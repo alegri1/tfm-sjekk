@@ -67,6 +67,14 @@ innhold vil nå gi feil, og K7 vil melde komponenttyper den før hoppet over. Fo
 modell som er i orden endres ingenting; for en som ikke er det, er det hele poenget.
 Graden er verdt en innvending før implementasjon, siden den påvirker exit-koden.
 
+**En felle sprang da verdien ble tatt i bruk.** `TFM` sto i både
+`egenskapsnavn_forekomst` og `egenskapsnavn_type`, så en modell uten
+`TFM11_Type`-pset fikk hele TFM-ID-en lest inn som komponenttype gjennom søket på
+tvers av egenskapssett — og T1 meldte sprik på hvert eneste objekt. Det brøt kravet
+om distinkte feltnavn i `verdiuttrekk`, usynlig så lenge `tfm_type` var ubrukt.
+Navnet er fjernet fra typelista. **BREAKING** for prosjekter som lener seg på
+standardverdien.
+
 **Demoen har ett objekt med `%`-del.** Den må utvides for å vise både et sprik og
 et objekt der `TFM11_Type` er eneste kilde — ellers demonstrerer ingenting av dette.
 

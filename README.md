@@ -162,6 +162,24 @@ testene og demoen skal kunne kjøre.
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.
 
+## Komponenttypen står to steder
+
+Komponenttypen kan stå både i `%`-delen av TFM-ID-en og i et eget egenskapssett:
+
+```
+TFM11_Forekomst:  ++115080=3600.001.04-JVZ001%JVZ.001.008
+TFM11_Type:                                   JVZ.001.008
+```
+
+`%`-delen har forrang — den er en del av selve TFM-ID-en. Mangler den, som er
+vanlig siden `krev_komponenttype` er `false` som standard, gjelder typefeltet. Uten
+den regelen hoppet K7 over hvert objekt uten `%`-del, og sjekket i praksis
+komponenttyper mot mastera for en forsvinnende liten del av en modell.
+
+**Er de to uenige, er det en feil (T1).** Da har objektet ingen avklart
+komponenttype, og K7 tier om det: et funn om mastera ville hvilt på et vilkårlig
+valg mellom to verdier. Rett spriket først.
+
 ## Hva «ingen funn» betyr
 
 Rapporten oppgir alltid **hvor mye som ble kontrollert**, per fagmodell:

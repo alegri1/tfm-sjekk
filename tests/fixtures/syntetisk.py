@@ -213,12 +213,20 @@ def lag_elektromodell(
             RelatingPropertyDefinition=pset,
         )
 
-    def lag(klasse: str, navn: str, tfm: str | None, mmi: str | None = None):
+    def lag(
+        klasse: str,
+        navn: str,
+        tfm: str | None,
+        mmi: str | None = None,
+        typefelt: str | None = None,
+    ):
         element = f.create_entity(klasse, GlobalId=guid.new(), Name=navn)
         if tfm is not None:
             sett_pset(element, pset_navn, egenskapsnavn, tfm)
         if mmi is not None:
             sett_pset(element, "MMI", "MMI", mmi)
+        if typefelt is not None:
+            sett_pset(element, "TFM11_Type", "TFMType", typefelt)
         if rom is not None:
             # Objektene settes på rekke med to meters mellomrom. Ingen
             # arkitektur i det — poenget er at de skal være til å skille fra
@@ -240,6 +248,7 @@ def lag_elektromodell(
             spesifikasjon.get("navn", f"Fordeling {nummer}"),
             spesifikasjon.get("tfm"),
             spesifikasjon.get("mmi"),
+            spesifikasjon.get("typefelt"),
         )
         for indeks, objekt_spek in enumerate(spesifikasjon.get("objekter", []), start=1):
             objekt = lag(
@@ -247,6 +256,7 @@ def lag_elektromodell(
                 objekt_spek.get("navn", f"Objekt {nummer}.{indeks}"),
                 objekt_spek.get("tfm"),
                 objekt_spek.get("mmi"),
+                objekt_spek.get("typefelt"),
             )
             f.create_entity(
                 "IfcRelConnectsPorts",

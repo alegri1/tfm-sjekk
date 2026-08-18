@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from tfm_sjekk.config import Konfigurasjon
 from tfm_sjekk.modell import IfcObjekt, TfmId
 from tfm_sjekk.parser import ParseFeil, parse
-from tfm_sjekk.tabeller import Kodetabell, TfmMaster
+from tfm_sjekk.tabeller import Kodetabell, TfmMaster, normaliser
 
 
 class Kontekst(BaseModel):
@@ -91,6 +91,40 @@ class Kontekst(BaseModel):
         return [
             (o, self.parsede[o.global_id]) for o in self.objekter if o.global_id in self.parsede
         ]
+
+    def komponenttype_kilder(self, objekt: IfcObjekt) -> tuple[str | None, str | None]:
+        """Komponenttypen slik den står i TFM-ID-en og i typefeltet.
+
+        Samme opplysning kan stå to steder, og det er nettopp der en modell går
+        ut av synk med seg selv.
+        """
+        tfm = self.parsede.get(objekt.global_id)
+        return (tfm.komponenttype if tfm else None), objekt.tfm_type
+
+    def komponenttype_for(self, objekt: IfcObjekt) -> str | None:
+        """Objektets komponenttype, med `%`-delen først.
+
+        `%`-delen er en del av selve TFM-ID-en, som er det merkingen egentlig
+        er; typefeltet er en gjentakelse ved siden av. Mangler `%`-delen —
+        vanlig, siden `krev_komponenttype` er false som standard — gjelder
+        typefeltet, og uten den ville K7 hoppet over objektet.
+        """
+        fra_id, fra_felt = self.komponenttype_kilder(objekt)
+        return fra_id or fra_felt or None
+
+    def komponenttype_spriker(self, objekt: IfcObjekt) -> tuple[str, str] | None:
+        """(verdien i TFM-ID-en, verdien i typefeltet) når de to er uenige.
+
+        Sammenligningen går gjennom samme normalisering som mastera bruker, så
+        «samme komponenttype» har én definisjon i verktøyet. Mellomrom og små
+        bokstaver skiller ikke to like verdier.
+        """
+        fra_id, fra_felt = self.komponenttype_kilder(objekt)
+        if not fra_id or not fra_felt:
+            return None
+        if normaliser(fra_id) == normaliser(fra_felt):
+            return None
+        return fra_id, fra_felt
 
     def dekning(self) -> dict[str, tuple[int, int]]:
         """Per fagmodell: (objekter i omfanget, objekter lest).
