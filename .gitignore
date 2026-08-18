@@ -20,6 +20,10 @@ __pycache__/
 .idea/
 .vscode/
 .mcp.json
+# Slash-kommandoer og skills fra `openspec init`. Regenereres med
+# `openspec update`, og hvilke AI-verktøy hver enkelt bruker er deres eget
+# valg. Spesifikasjonene selv ligger i openspec/ og hører til i repoet.
+.claude/
 
 # Rapporter. Skråstreken foran er ikke pynt: uten den traff «rapport/» også
 # src/tfm_sjekk/rapport/, og hele rapportpakken lå utenfor versjonskontroll.
