@@ -201,3 +201,46 @@ def test_federering_parallelt_gir_samme_resultat(tmp_path):
     sekvensielt = les_modeller([a, b], parallelt=False)
     parallelt = les_modeller([a, b], parallelt=True)
     assert [o.global_id for o in sekvensielt] == [o.global_id for o in parallelt]
+
+
+def test_typeegenskaper_leses_ikke(tmp_path):
+    """Dokumenterer en kjent mangel: TFM på typeobjektet blir ikke sett.
+
+    Docstringen i `_psets` påsto en gang at typeegenskaper var håndtert. Det
+    var usant i begge skjemaer: i IFC4 ligger koblingen i `IsTypedBy`, som
+    aldri leses, og i 2x3 ligger den i `IsDefinedBy` som en
+    `IfcRelDefinesByType`, som forkastes.
+
+    Konsekvensen er alvorlig hvis den treffer: merker prosjektet TFM som
+    typeparameter i Revit, melder K1 at hvert eneste objekt mangler TFM.
+
+    Testen låser dagens oppførsel slik at den som lukker hullet får beskjed
+    om at det var her det satt.
+    """
+    import ifcopenshell
+    import ifcopenshell.guid as guid
+
+    for schema in ("IFC4", "IFC2X3"):
+        f = ifcopenshell.file(schema=schema)
+        forekomst = f.create_entity("IfcFlowTerminal", GlobalId=guid.new(), Name="Uten eget pset")
+        egenskap = f.create_entity(
+            "IfcPropertySingleValue", Name="TFM", NominalValue=f.create_entity("IfcLabel", GYLDIG)
+        )
+        pset = f.create_entity(
+            "IfcPropertySet", GlobalId=guid.new(), Name="TFM11_Forekomst", HasProperties=[egenskap]
+        )
+        type_objekt = f.create_entity(
+            "IfcFlowTerminalType", GlobalId=guid.new(), Name="Familietype", HasPropertySets=[pset]
+        )
+        f.create_entity(
+            "IfcRelDefinesByType",
+            GlobalId=guid.new(),
+            RelatedObjects=[forekomst],
+            RelatingType=type_objekt,
+        )
+        sti = tmp_path / f"type-{schema}.ifc"
+        f.write(str(sti))
+
+        objekt = next(o for o in les_modell(sti) if o.ifc_klasse == "IfcFlowTerminal")
+        assert objekt.tfm_forekomst is None, f"{schema}: typeegenskaper leses nå — oppdater testen"
+        assert objekt.kilder == {}

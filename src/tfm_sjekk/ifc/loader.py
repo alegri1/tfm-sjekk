@@ -198,11 +198,21 @@ def _supertyper(produkt: Any) -> list[str]:
 
 
 def _psets(produkt: Any) -> dict[str, dict[str, str]]:
-    """Egenskapssett som ren dict.
+    """Egenskapssett på forekomsten, som ren dict.
 
-    Håndterer både IFC4 (`IsDefinedBy`) og typeegenskaper. IfcOpenShell har
-    `ifcopenshell.util.element.get_psets`, men den er tregere og drar inn
-    mer enn vi trenger; her henter vi bare navn/verdi.
+    IfcOpenShell har `ifcopenshell.util.element.get_psets`, men den er tregere
+    og drar inn mer enn vi trenger; her henter vi bare navn/verdi.
+
+    MANGEL: typeegenskaper leses ikke. Ligger TFM-verdien på typeobjektet —
+    en Revit-familietype med TFM som typeparameter — ser verktøyet ingenting,
+    og K1 melder at hvert eneste objekt mangler TFM.
+
+    Koblingen ligger i `IsTypedBy` i IFC4 og som en `IfcRelDefinesByType` i
+    `IsDefinedBy` i 2x3; ingen av delene fanges her. Prøvd i begge skjemaer,
+    se `test_ifc.py::test_typeegenskaper_leses_ikke`.
+
+    Om det er verdt å lukke avhenger av om norske eksporter faktisk merker på
+    typen. Det er et spørsmål til en RIE, ikke en antakelse å kode på.
     """
     ut: dict[str, dict[str, str]] = {}
     for rel in getattr(produkt, "IsDefinedBy", None) or []:
