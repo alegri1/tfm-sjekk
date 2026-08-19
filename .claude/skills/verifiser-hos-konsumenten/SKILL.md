@@ -7,7 +7,7 @@ description: Bruk denne før du sier at noe er ferdig i tfm-sjekk, og alltid nå
 
 ## Hvorfor denne finnes
 
-Seks feil i dette prosjektet har sluppet gjennom med alt grønt. Ikke én av dem
+Sju feil i dette prosjektet har sluppet gjennom med alt grønt. Ikke én av dem
 kunne typer, tester eller skjemavalidering fange, fordi ingen av delene ser det
 konsumenten ser:
 
@@ -19,6 +19,7 @@ konsumenten ser:
 | Mørk modus hadde 1,11:1 kontrast | CSS-en var syntaktisk feilfri | et øye |
 | BCF-emner manglet kamera, så snapshot | begge er valgfrie i XSD-en | BIMcollab ZOOM |
 | `demo-*.ifc` sveipet med visning.ifc | K6 gjorde nøyaktig som den skulle | å lese rapporten |
+| Ubeskyttet `$(...)` i et CI-steg | terminalen her kjører ikke med `set -e` | bygg på alle tre plattformer |
 
 Mønsteret er ett: **det ble erklært ferdig uten at noen så på det der det
 brukes.** Verktøykjeden her hjemme sier god dag.
@@ -58,6 +59,21 @@ Endret du noe i venstre kolonne, gjør du høyre kolonne før du sier ferdig.
   ender det i `BrokenProcessPool`, og bare i den frosne binæren.
 - Røyktesten i `.github/workflows/bygg.yml` gjør begge deler.
 
+**Steg i en GitHub-workflow**
+- `shell: bash` kjører som `bash --noprofile --norc -eo pipefail`. Under `set -e`
+  river en tilordning fra en kommando som feiler hele steget, uten en eneste
+  melding om hvorfor — og `tfm-sjekk sjekk` gir exit 1 hver gang den finner en
+  feil. Skriv `$(... || true)` når det er utdata og ikke exit-koden du er ute
+  etter.
+- Prøv **steget**, ikke kommandoene hver for seg. En kommando som virker fint i
+  terminalen din kan velte steget:
+
+      verktoy/kjor-ci-steg.sh .github/workflows/bygg.yml binaer Røyktest
+
+  Skriptet henter `run:`-blokka ut av YAML-en og kjører den med GitHubs egne
+  flagg. Det gjenskapte feilen over på første forsøk, mens de samme kommandoene
+  kjørte feilfritt i en vanlig terminal.
+
 **README og alt som havner på GitHub**
 - Lokale lenker og bilder: sjekk bokstavstørrelsen mot filnavnet på disk.
   Windows ser ikke forskjellen, GitHub gjør det.
@@ -78,4 +94,4 @@ gjenstår - «testene er grønne, men jeg har ikke åpnet BCF-en i en viewer» e
 brukbart svar. «Ferdig» om noe du ikke har sett, er det ikke.
 
 Er konsumenten noe bare brukeren har - BIMcollab ZOOM, Excel, en ekte
-fagmodell - så si det, og be dem se. De seks feilene over ble alle funnet slik.
+fagmodell - så si det, og be dem se. De sju feilene over ble alle funnet slik.

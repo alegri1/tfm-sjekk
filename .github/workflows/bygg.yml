@@ -113,15 +113,22 @@ jobs:
           cat forslag.toml
           grep -q "IfcBuildingElementProxy" forslag.toml             || { echo "forslaget manglet klassen utenfor omfanget"; exit 1; }
 
-          for f in avveie.ifc; do
-            uten=$("$exe" sjekk "$f" --ut ut2 2>&1)
-            med=$("$exe" sjekk "$f" --config forslag.toml --ut ut3 2>&1)
-            case "$uten" in *"3 av 4 objekter"*) ;; *) echo "uventet utgangspunkt"; exit 1 ;; esac
-            case "$med" in
-              *"4 av 4 objekter"*) ;;
-              *) echo "forslaget ble lest, men tok ikke effekt"; exit 1 ;;
-            esac
-          done
+          # «|| true» er ikke slurv: avveie.ifc har en tilsiktet feil, så sjekk
+          # gir exit 1. Steget kjører med «set -e», og en tilordning fra en
+          # kommando som feiler river hele steget — uten en eneste melding om
+          # hvorfor. Her er exit-koden uinteressant; det er dekningslinja som
+          # skal leses.
+          uten=$("$exe" sjekk avveie.ifc --ut ut2 2>&1 || true)
+          med=$("$exe" sjekk avveie.ifc --config forslag.toml --ut ut3 2>&1 || true)
+
+          case "$uten" in
+            *"3 av 4 objekter"*) ;;
+            *) echo "uventet utgangspunkt:"; echo "$uten"; exit 1 ;;
+          esac
+          case "$med" in
+            *"4 av 4 objekter"*) ;;
+            *) echo "forslaget ble lest, men tok ikke effekt:"; echo "$med"; exit 1 ;;
+          esac
           echo "binæren skrev et oppsettforslag som virket da det ble tatt i bruk"
 
       - uses: actions/upload-artifact@v4
