@@ -113,6 +113,51 @@ def lag_modell_pa_avveie(sti: Path, schema: str = "IFC4") -> Path:
     return sti
 
 
+def lag_modell_i_blindsonen(sti: Path, schema: str = "IFC4", antall: int = 40) -> Path:
+    """Skriver en modell verktøyet ikke ser TFM-verdiene i i det hele tatt.
+
+    Verdiene er velformede TFM-ID-er, men de ligger i et egenskapssett ingen har
+    konfigurert *og* i et felt ingen har konfigurert. Verdiuttrekket har tre
+    strategier, og alle trenger minst ett kjent holdepunkt: konfigurert sett og
+    felt, konfigurert feltnavn hvor som helst, eller ukjent felt i et konfigurert
+    sett. Ingen av dem leter etter en TFM-lignende verdi hvor som helst.
+
+    Utfallet er at «tfm-sjekk oppsett» ikke kan foreslå noe, og at «tfm-sjekk
+    sjekk» melder at hvert eneste objekt mangler TFM. Modellen er merket helt
+    korrekt; det er verktøyet som ikke finner fram.
+
+    Fila finnes for å gjøre den grensen synlig og prøvbar. Lukkes den en dag,
+    er det denne modellen som skal begynne å gi forslag.
+    """
+    f = ifcopenshell.file(schema=schema)
+
+    for i in range(antall):
+        element = f.create_entity("IfcFlowTerminal", GlobalId=guid.new(), Name=f"Terminal {i + 1}")
+        egenskap = f.create_entity(
+            "IfcPropertySingleValue",
+            Name="Anleggskode",
+            NominalValue=f.create_entity(
+                "IfcLabel", f"++115080=3600.001.04-JVZ{i + 1:03d}%JVZ.001.008"
+            ),
+        )
+        pset = f.create_entity(
+            "IfcPropertySet",
+            GlobalId=guid.new(),
+            Name="AnleggsData",
+            HasProperties=[egenskap],
+        )
+        f.create_entity(
+            "IfcRelDefinesByProperties",
+            GlobalId=guid.new(),
+            RelatedObjects=[element],
+            RelatingPropertyDefinition=pset,
+        )
+
+    sti.parent.mkdir(parents=True, exist_ok=True)
+    f.write(str(sti))
+    return sti
+
+
 def _punkt(f, x: float = 0.0, y: float = 0.0, z: float = 0.0):
     return f.create_entity("IfcCartesianPoint", Coordinates=(x, y, z))
 

@@ -370,3 +370,40 @@ def test_skriveren_escaper_saerskilte_tegn(verdi):
         )
     )
     assert verdi in tomllib.loads(til_toml(f))["pset"]["forekomst"]
+
+
+# --- Grensen: begge dimensjonene ukjente samtidig ---
+
+
+def test_verdier_i_ukjent_pset_og_ukjent_felt_er_usynlige(tmp_path):
+    """Blindsonen. Låser dagens oppførsel, som er en bevisst grense.
+
+    Verdiuttrekket har tre strategier, og alle trenger minst ett kjent
+    holdepunkt: konfigurert sett og felt, konfigurert feltnavn hvor som helst,
+    eller ukjent felt i et konfigurert sett. Ligger verdien i et ukonfigurert
+    sett *og* et ukonfigurert felt, er den usynlig — og da har `oppsett` heller
+    ingenting å foreslå, enda modellen er merket helt korrekt.
+
+    Å lukke hullet ville bety å skanne hvert felt i hvert egenskapssett og
+    stole på `ligner_tfm_id` alene. Det er en større beslutning enn den
+    utledningen tar i dag. Endres den, er det denne testen som skal si fra.
+    """
+    from fixtures.syntetisk import lag_modell_i_blindsonen
+
+    from tfm_sjekk.ifc import les_modell
+
+    modell = lag_modell_i_blindsonen(tmp_path / "blindsone.ifc", antall=5)
+    k = Kontekst.bygg(les_modell(modell), Konfigurasjon())
+
+    assert all(o.tfm_forekomst is None for o in k.objekter)
+    assert all(o.kilder == {} for o in k.objekter)
+
+    f = utled(k)
+    assert not f.har_noe()
+    assert not f.fant_grunnlag()
+    assert f.lest == 5
+
+    # Og tomheten skal si hvilken av de to slagene den er.
+    ut = til_toml(f)
+    assert "ingen av objektene hadde TFM-verdi" in ut
+    assert "verdiene lå der oppsettet sa" not in ut

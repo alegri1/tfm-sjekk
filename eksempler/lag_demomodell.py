@@ -2,16 +2,18 @@
 
     uv run python eksempler/lag_demomodell.py
 
-Fem filer, med hver sin jobb:
+Seks filer, med hver sin jobb:
 
     demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc   kontrollene K1-K9 og T1
     avveie.ifc                                     «tfm-sjekk oppsett»
+    blindsone.ifc                                  grensen for hva oppsett ser
     visning.ifc                                    BCF-en prøvd i en viewer
 
 Bare de tre første er merket «demo-», og det er med vilje: globben under skal
-treffe akkurat dem. De to andre har verdier som ville forstyrret en
-kontrollkjøring — avveie.ifc ligger utenfor oppsettet, og visning.ifc er en
-kopi av elektromodellen som ville gitt K6-duplikater av hver komponent.
+treffe akkurat dem. De tre andre har verdier som ville forstyrret en
+kontrollkjøring — avveie.ifc og blindsone.ifc ligger utenfor oppsettet, og
+visning.ifc er en kopi av elektromodellen som ville gitt K6-duplikater av hver
+eneste komponent.
 
     uv run tfm-sjekk eksempler/demo-*.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
@@ -28,7 +30,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tests"))
 
-from fixtures.syntetisk import lag_elektromodell, lag_modell, lag_modell_pa_avveie
+from fixtures.syntetisk import (
+    lag_elektromodell,
+    lag_modell,
+    lag_modell_i_blindsonen,
+    lag_modell_pa_avveie,
+)
 
 HER = Path(__file__).parent
 
@@ -122,6 +129,12 @@ if __name__ == "__main__":
     # utenfor «demo-*.ifc» med vilje — tas den med i en kontrollkjøring, er den
     # bare tre objekter med merkelige psett-navn, og det demonstrerer ingenting.
     print(f"skrev {lag_modell_pa_avveie(HER / 'avveie.ifc')}")
+
+    # Grensen for hva «oppsett» kan hjelpe med: verdiene ligger i et
+    # ukonfigurert egenskapssett OG et ukonfigurert felt samtidig. Da har
+    # verdiuttrekket ingen holdepunkter, og verktøyet ser ingenting — enda
+    # modellen er merket helt korrekt.
+    print(f"skrev {lag_modell_i_blindsonen(HER / 'blindsone.ifc')}")
 
     # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
     # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:

@@ -192,6 +192,34 @@ uv run tfm-sjekk sjekk eksempler/avveie.ifc --config forslag.toml   # 4 av 4
 Den fjerde er en `IfcBuildingElementProxy` med TFM-verdi — utstyr eksportert i
 feil klasse. Forslaget finner den, og etter at det er tatt i bruk er den med.
 
+#### Én grense verdt å kjenne
+
+`oppsett` kan lukke ett hull om gangen, ikke to samtidig. Verdiuttrekket har tre
+strategier, og alle trenger minst ett kjent holdepunkt:
+
+| Hvor verdien ligger | Verktøyet | `oppsett` |
+|---|---|---|
+| Ukjent egenskapssett, kjent feltnavn | finner den | foreslår egenskapssettet |
+| Kjent egenskapssett, ukjent feltnavn | finner den | foreslår feltnavnet |
+| **Ukjent begge deler** | **ser ingenting** | **kan ikke hjelpe** |
+
+`eksempler/blindsone.ifc` er det siste tilfellet: førti objekter merket helt
+korrekt, i `AnleggsData.Anleggskode`. Verktøyet melder førti K1-feil, og
+`oppsett` sier at det ikke fant noe å bygge på.
+
+```bash
+uv run tfm-sjekk oppsett eksempler/blindsone.ifc
+# Ingenting å bygge på: ingen av objektene hadde TFM-verdi.
+```
+
+Skjer dette, må du oppgi holdepunktet selv — legg egenskapssettet eller
+feltnavnet inn i `tfm-sjekk.toml` for hånd, og kjør `oppsett` på nytt. Da har
+den noe å gå ut fra, og finner resten.
+
+Grensen er bevisst. Alternativet er å skanne hvert felt i hvert egenskapssett og
+stole på at verdien *ser ut som* en TFM-ID — en langt løsere slutning enn de
+øvrige, og en beslutning som fortjener sin egen vurdering.
+
 ### Prøve BCF-en i en viewer
 
 `eksempler/visning.ifc` har samme innhold som elektromodellen, men med
