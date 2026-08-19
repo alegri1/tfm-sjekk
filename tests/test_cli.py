@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from conftest import uten_ansi
-from fixtures.syntetisk import GYLDIG, lag_modell
+from fixtures.syntetisk import GYLDIG, lag_modell, lag_modell_pa_avveie
 
 
 def kjor(argumenter: list[str], koding: str | None = None) -> subprocess.CompletedProcess:
@@ -120,3 +120,105 @@ def test_kontroller_listes_i_cp1252_konsoll():
     resultat = kjor(["kontroller"], koding="cp1252")
     assert resultat.returncode == 0
     assert resultat.stdout.count("\n") >= 9
+
+
+# --- oppsett: forslag til tfm-sjekk.toml ---
+
+
+def test_oppsett_skriver_forslag_til_skjermen(tmp_path):
+    modell = lag_modell_pa_avveie(tmp_path / "avveie.ifc")
+    resultat = kjor(["oppsett", str(modell)])
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert '"Data"' in resultat.stdout
+    assert '"Merking"' in resultat.stdout
+    assert '"IfcBuildingElementProxy"' in resultat.stdout
+    # Forkastelsen skal ikke ha blitt til konfigurasjon.
+    assert "Fabrikat" not in resultat.stdout
+
+
+def test_oppsett_skriver_til_fil(tmp_path):
+    modell = lag_modell_pa_avveie(tmp_path / "avveie.ifc")
+    fil = tmp_path / "forslag.toml"
+    resultat = kjor(["oppsett", str(modell), "--ut", str(fil)])
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert '"Data"' in fil.read_text(encoding="utf-8")
+
+
+def test_oppsett_nekter_a_overskrive(tmp_path):
+    modell = lag_modell_pa_avveie(tmp_path / "avveie.ifc")
+    fil = tmp_path / "tfm-sjekk.toml"
+    fil.write_text("# arbeidet mitt\n", encoding="utf-8")
+
+    resultat = kjor(["oppsett", str(modell), "--ut", str(fil)])
+    assert resultat.returncode == 1
+    assert fil.read_text(encoding="utf-8") == "# arbeidet mitt\n"
+    assert "--overskriv" in uten_ansi(resultat.stderr)
+
+    resultat = kjor(["oppsett", str(modell), "--ut", str(fil), "--overskriv"])
+    assert resultat.returncode == 0
+    assert '"Data"' in fil.read_text(encoding="utf-8")
+
+
+def test_oppsett_i_cp1252_konsoll(tmp_path):
+    """Kommentarene i forslaget er norske og bruker «»."""
+    modell = lag_modell_pa_avveie(tmp_path / "avveie.ifc")
+    resultat = kjor(["oppsett", str(modell)], koding="cp1252")
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert "objekter" in resultat.stdout
+
+
+def test_oppsett_sier_at_alt_la_der_det_skulle(tmp_path):
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "ren.ifc")
+    resultat = kjor(["oppsett", str(modell)])
+    assert resultat.returncode == 0
+    assert "dekker modellene som de er" in uten_ansi(resultat.stderr)
+
+
+def test_oppsett_skiller_ingenting_a_bygge_pa(tmp_path):
+    modell = lag_modell([("IfcFlowTerminal", None)], tmp_path / "umerket.ifc")
+    resultat = kjor(["oppsett", str(modell)])
+    assert resultat.returncode == 0
+    assert "ingen TFM-verdier" in uten_ansi(resultat.stderr)
+
+
+def test_forslaget_kan_brukes_som_config(tmp_path):
+    """Rundturen mot en ekte IFC-fil: fila verktøyet skriver, leser det selv.
+
+    Uten forslaget finner K1 objektet i klassen utenfor omfanget aldri; med
+    forslaget er både egenskapssettet, feltnavnet og klassen på plass.
+    """
+    modell = lag_modell_pa_avveie(tmp_path / "avveie.ifc")
+    forslag = tmp_path / "forslag.toml"
+    assert kjor(["oppsett", str(modell), "--ut", str(forslag)]).returncode == 0
+
+    resultat = kjor(["sjekk", str(modell), "--config", str(forslag), "--ut", str(tmp_path / "ut")])
+    assert resultat.returncode in (0, 1), resultat.stdout + resultat.stderr
+    assert "Traceback" not in resultat.stderr
+
+
+def test_forslaget_er_stabilt_over_to_kjoringer(tmp_path):
+    modell = lag_modell_pa_avveie(tmp_path / "avveie.ifc")
+    forste = tmp_path / "forste.toml"
+    assert kjor(["oppsett", str(modell), "--ut", str(forste)]).returncode == 0
+
+    andre = kjor(["oppsett", str(modell), "--config", str(forste)])
+    assert andre.returncode == 0
+    assert "dekker modellene som de er" in uten_ansi(andre.stderr)
+
+
+def test_fil_som_heter_som_en_kommando_gar_til_sjekk(tmp_path):
+    """Dra-og-slipp av «oppsett.ifc» skal sjekke fila, ikke treffe kommandoordet.
+
+    Uten kommandoord er det `_med_standardkommando` som avgjør, og den ser bare
+    på om første argument er et kjent kommandoord. «oppsett.ifc» er det ikke,
+    så «sjekk» skal settes inn som for enhver annen fil.
+    """
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "oppsett.ifc")
+    resultat = kjor([str(modell), "--ut", str(tmp_path / "ut")])
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert "advarsler" in resultat.stdout
+
+
+def test_oppsett_listes_i_hjelpeteksten():
+    resultat = kjor(["--help"])
+    assert "oppsett" in uten_ansi(resultat.stdout)

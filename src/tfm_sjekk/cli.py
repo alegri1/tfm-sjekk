@@ -23,6 +23,7 @@ from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import alle_kontroller, kjor_alle
 from tfm_sjekk.modell import Alvorlighet
+from tfm_sjekk.oppsett import til_toml, utled
 from tfm_sjekk.rapport import (
     normaliser_tidsstempel,
     skriv_bcf,
@@ -163,6 +164,74 @@ def kontroller() -> None:
         typer.echo(f"{k.id}  [{k.standard_alvorlighet.value:9}] {k.tittel}{status}")
 
 
+@app.command()
+def oppsett(
+    modeller: Annotated[
+        list[Path],
+        typer.Argument(help="Én eller flere IFC-filer.", exists=True),
+    ],
+    ut: Annotated[
+        Path | None,
+        typer.Option("--ut", help="Skriv til fil i stedet for skjermen"),
+    ] = None,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", help="Oppsettet forslaget måles mot", exists=True),
+    ] = None,
+    overskriv: Annotated[
+        bool, typer.Option("--overskriv", help="Tillat at --ut skriver over en fil som finnes")
+    ] = False,
+    sekvensielt: Annotated[
+        bool, typer.Option("--sekvensielt", help="Ikke les filene parallelt (feilsøking)")
+    ] = False,
+) -> None:
+    """Foreslår et tfm-sjekk.toml ut fra hvor verdiene faktisk lå.
+
+    Kjører ingen kontroller, og trenger verken master eller kodetabeller. Dette
+    er førstegangsmøtet med et prosjekt: du har en fagmodell og ingenting annet.
+    """
+    gjeldende = Konfigurasjon.les(config)
+
+    typer.echo(f"Leser {len(modeller)} modell(er)…", err=True)
+    objekter = les_modeller(list(modeller), gjeldende, parallelt=not sekvensielt)
+    kontekst = Kontekst.bygg(objekter, gjeldende)
+    forslag = utled(kontekst)
+    innhold = til_toml(forslag, gjeldende)
+
+    if not forslag.har_noe():
+        # Tomheten betyr to helt ulike ting, og de ser like ut. Se
+        # `Oppsettforslag.fant_grunnlag`.
+        if forslag.fant_grunnlag():
+            typer.echo(
+                f"Oppsettet dekker modellene som de er: alle "
+                f"{forslag.med_tfm} TFM-verdier lå der det sa.",
+                err=True,
+            )
+        else:
+            typer.echo(
+                f"Fant ingen TFM-verdier å utlede noe av. Leste "
+                f"{forslag.lest} objekter i {len(forslag.kildefiler)} fagmodell(er).",
+                err=True,
+            )
+
+    if ut is None:
+        typer.echo(innhold)
+        return
+
+    # Fila forslaget er nærmest å hete er `tfm-sjekk.toml` — den samme fila
+    # prosjektet allerede har lagt arbeid i.
+    if ut.exists() and not overskriv:
+        typer.echo(
+            f"{ut} finnes fra før, og er ikke rørt. Kjør med --overskriv for å bytte den ut.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    ut.parent.mkdir(parents=True, exist_ok=True)
+    ut.write_text(innhold, encoding="utf-8")
+    typer.echo(f"skrev {ut}", err=True)
+
+
 BRUK_VED_DOBBELTKLIKK = """
 tfm-sjekk validerer TFM-merking i IFC-modeller.
 
@@ -181,7 +250,7 @@ Fra PowerShell, med kodetabellene dine:
     .\\tfm-sjekk.exe kontroller    hvilke kontroller som finnes
 """
 
-KOMMANDOER = {"sjekk", "kontroller"}
+KOMMANDOER = {"sjekk", "kontroller", "oppsett"}
 
 
 def _med_standardkommando(argumenter: list[str]) -> list[str]:

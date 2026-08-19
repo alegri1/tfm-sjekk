@@ -147,6 +147,40 @@ uv run tfm-sjekk sjekk eksempler/demo-rie.ifc eksempler/demo-riv.ifc eksempler/d
 
 `tfm-sjekk kontroller` lister kontrollene og statusen deres.
 
+### Første møte med et prosjekt
+
+Du har en fagmodell og ingen `tfm-sjekk.toml`. Da er spørsmålet hvor TFM-verdiene
+faktisk ligger i denne modellen — og det vet verktøyet allerede, fordi det leter
+flere steder enn i det konfigurerte og holder rede på hvor det fant hver verdi.
+
+```bash
+tfm-sjekk oppsett rie.ifc riv.ifc > tfm-sjekk.toml
+```
+
+Kommandoen kjører ingen kontroller og trenger verken master eller kodetabeller.
+Den skriver et utkast som bare inneholder det som avviker fra standardverdiene,
+med belegget for hvert forslag i en kommentar over det:
+
+```toml
+# TFM-forekomst: egenskapssett
+forekomst = [
+    "TFM11_Forekomst",
+    # 840 objekter, gjenkjent feltnavn i et egenskapssett som ikke er konfigurert
+    "Data",
+]
+```
+
+Antallet er ikke pynt. Forskjellen mellom et egenskapssett brukt på 840 objekter
+og ett brukt på 2 er forskjellen mellom en prosjektkonvensjon og en tilfeldighet,
+og det er du som avgjør hvilken av dem det er. **Les fila før du tar den i bruk.**
+
+Forslaget dekker også `ifc_klasser`, men bare klasser utenfor omfanget som *har*
+TFM-verdier. Det er svaret på «0 av 412»: at en klasse finnes i fila betyr
+ingenting, men at objektene er merket betyr at noen mente de skulle med.
+
+Med `--ut` skrives fila i stedet for skjermen, og en fil som finnes fra før
+røres ikke uten `--overskriv`.
+
 ### Prøve BCF-en i en viewer
 
 `eksempler/visning.ifc` har samme innhold som elektromodellen, men med

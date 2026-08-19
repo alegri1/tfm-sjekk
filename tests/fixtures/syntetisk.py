@@ -55,6 +55,64 @@ def lag_modell(
     return sti
 
 
+def lag_modell_pa_avveie(sti: Path, schema: str = "IFC4") -> Path:
+    """Skriver en modell der TFM-verdiene ligger utenfor standardoppsettet.
+
+    De tre tilfellene `tfm-sjekk oppsett` finnes for, ett objekt hver:
+
+    1. Riktig feltnavn (`TFM`) i et egenskapssett ingen har konfigurert (`Data`)
+       — verdiuttrekket finner den, men bare gjennom et gjenkjent feltnavn.
+    2. Ukjent feltnavn (`Merking`) i det konfigurerte egenskapssettet — en
+       gjetning, godtatt fordi verdien er gjenkjennelig som en TFM-ID.
+    3. En merket `IfcBuildingElementProxy`, altså utstyr eksportert i en klasse
+       som ligger utenfor omfanget.
+
+    I tillegg et objekt med et fabrikatnavn i det konfigurerte egenskapssettet.
+    Det skal forkastes, og forkastelsen skal ikke bli til et forslag: å foreslå
+    feltet ville gjort en riktig avvisning til varig konfigurasjon.
+    """
+    f = ifcopenshell.file(schema=schema)
+
+    def lag(klasse: str, navn: str, pset_navn: str, felt: str, verdi: str):
+        element = f.create_entity(klasse, GlobalId=guid.new(), Name=navn)
+        egenskap = f.create_entity(
+            "IfcPropertySingleValue",
+            Name=felt,
+            NominalValue=f.create_entity("IfcLabel", verdi),
+        )
+        pset = f.create_entity(
+            "IfcPropertySet", GlobalId=guid.new(), Name=pset_navn, HasProperties=[egenskap]
+        )
+        f.create_entity(
+            "IfcRelDefinesByProperties",
+            GlobalId=guid.new(),
+            RelatedObjects=[element],
+            RelatingPropertyDefinition=pset,
+        )
+        return element
+
+    lag("IfcFlowTerminal", "Riktig felt, ukjent pset", "Data", "TFM", GYLDIG)
+    lag(
+        "IfcFlowTerminal",
+        "Ukjent felt, riktig pset",
+        "TFM11_Forekomst",
+        "Merking",
+        "++115080=3600.001.04-JVZ002%JVZ.001.008",
+    )
+    lag(
+        "IfcBuildingElementProxy",
+        "Merket proxy",
+        "TFM11_Forekomst",
+        "TFM",
+        "++115080=3600.001.04-JVZ003%JVZ.001.008",
+    )
+    lag("IfcFlowTerminal", "Fabrikat i TFM-settet", "TFM11_Forekomst", "Fabrikat", "Systemair")
+
+    sti.parent.mkdir(parents=True, exist_ok=True)
+    f.write(str(sti))
+    return sti
+
+
 def _punkt(f, x: float = 0.0, y: float = 0.0, z: float = 0.0):
     return f.create_entity("IfcCartesianPoint", Coordinates=(x, y, z))
 

@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tests"))
 
-from fixtures.syntetisk import lag_elektromodell, lag_modell
+from fixtures.syntetisk import lag_elektromodell, lag_modell, lag_modell_pa_avveie
 
 HER = Path(__file__).parent
 
@@ -104,6 +104,12 @@ if __name__ == "__main__":
         sti = lag_modell(objekter, HER / navn)
         print(f"skrev {sti}")
     print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-elektro.ifc')}")
+
+    # Egen modell for «tfm-sjekk oppsett»: verdiene ligger utenfor
+    # standardoppsettet, slik at kommandoen har noe å foreslå. Den holdes
+    # utenfor «demo-*.ifc» med vilje — tas den med i en kontrollkjøring, er den
+    # bare tre objekter med merkelige psett-navn, og det demonstrerer ingenting.
+    print(f"skrev {lag_modell_pa_avveie(HER / 'avveie.ifc')}")
 
     # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
     # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:
