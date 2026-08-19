@@ -181,6 +181,17 @@ ingenting, men at objektene er merket betyr at noen mente de skulle med.
 Med `--ut` skrives fila i stedet for skjermen, og en fil som finnes fra før
 røres ikke uten `--overskriv`.
 
+Demoen lager en modell med verdiene bevisst på avveie, så du kan se hele runden:
+
+```bash
+uv run tfm-sjekk sjekk eksempler/avveie.ifc            # 3 av 4 i omfanget
+uv run tfm-sjekk oppsett eksempler/avveie.ifc --ut forslag.toml
+uv run tfm-sjekk sjekk eksempler/avveie.ifc --config forslag.toml   # 4 av 4
+```
+
+Den fjerde er en `IfcBuildingElementProxy` med TFM-verdi — utstyr eksportert i
+feil klasse. Forslaget finner den, og etter at det er tatt i bruk er den med.
+
 ### Prøve BCF-en i en viewer
 
 `eksempler/visning.ifc` har samme innhold som elektromodellen, men med

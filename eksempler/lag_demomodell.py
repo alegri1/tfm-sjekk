@@ -1,6 +1,18 @@
-"""Lager en liten demomodell med tilsiktede feil.
+"""Lager små demomodeller med tilsiktede feil.
 
     uv run python eksempler/lag_demomodell.py
+
+Fem filer, med hver sin jobb:
+
+    demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc   kontrollene K1-K9 og T1
+    avveie.ifc                                     «tfm-sjekk oppsett»
+    visning.ifc                                    BCF-en prøvd i en viewer
+
+Bare de tre første er merket «demo-», og det er med vilje: globben under skal
+treffe akkurat dem. De to andre har verdier som ville forstyrret en
+kontrollkjøring — avveie.ifc ligger utenfor oppsettet, og visning.ifc er en
+kopi av elektromodellen som ville gitt K6-duplikater av hver komponent.
+
     uv run tfm-sjekk eksempler/demo-*.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
         --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
