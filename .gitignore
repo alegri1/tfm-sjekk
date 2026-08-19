@@ -23,7 +23,15 @@ __pycache__/
 # Slash-kommandoer og skills fra `openspec init`. Regenereres med
 # `openspec update`, og hvilke AI-verktøy hver enkelt bruker er deres eget
 # valg. Spesifikasjonene selv ligger i openspec/ og hører til i repoet.
-.claude/
+#
+# Unntaket er prosjektets egen ferdighet: den er prosjektkunnskap, ikke
+# verktøyoppsett, og lister hvilke konsumenter som må prøves før noe kalles
+# ferdig. Git kan ikke ta inn igjen en fil under en utelukket katalog, så
+# mønsteret må gå katalog for katalog i stedet for `.claude/`.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/verifiser-hos-konsumenten/
 
 # Rapporter. Skråstreken foran er ikke pynt: uten den traff «rapport/» også
 # src/tfm_sjekk/rapport/, og hele rapportpakken lå utenfor versjonskontroll.
