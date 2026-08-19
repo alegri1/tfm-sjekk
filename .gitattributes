@@ -1,0 +1,11 @@
+# Skallskript må ha LF, uansett hva den enkelte har satt core.autocrlf til.
+#
+# Med autocrlf=true — standard på Windows — sjekkes de ut med CRLF, og da
+# brekker de. Shebang-linja blir «#!/usr/bin/env bash\r», og en heredoc leter
+# etter avslutteren «PY» mens fila inneholder «PY\r», som aldri matcher.
+# Skriptet virket i arbeidstreet her og ville feilet i en fersk klone.
+*.sh text eol=lf
+
+# Samme for filer GitHub Actions og Linux leser direkte.
+*.yml text eol=lf
+*.yaml text eol=lf
