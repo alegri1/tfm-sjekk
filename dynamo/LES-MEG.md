@@ -19,8 +19,7 @@ tfm-sjekk sjekk ... --ut rapport
    │  Dynamo                                       │
    │                                               │
    │  File Path ─────────────────────────> IN[0]   │
-   │  All Elements of Category ──────────> IN[1]   │
-   │    └─ GetParameterValueByName(TFM) ─> IN[2]   │
+   │  GetParameterValueByName(TFM) ──────> IN[1]   │
    │                                               │
    │            tfm_til_revit.py                   │
    │                    │                          │
@@ -47,11 +46,12 @@ grafen på nytt, og radene forsvinner.
 ## Grafen
 
 1. **Python Script**-node, lim inn hele `tfm_til_revit.py`. Sett antall inputs
-   til 3.
+   til **2**.
 2. `File Path` → `IN[0]` — pek på `rapport/funn.csv`
-3. `All Elements of Category` → `IN[1]`
-4. Samme elementer gjennom `Element.GetParameterValueByName` med TFM-parameteren
-   deres → `IN[2]`
+3. `All Elements of Category` → `Element.GetParameterValueByName` med
+   TFM-parameteren → `IN[1]`
+4. Elementene selv går rett til `Element.SetParameterByName` — de skal ikke
+   innom Python-noden.
 5. `OUT` er en liste med to ting. Bruk `List.GetItemAtIndex`:
    - indeks 0 → avvikstekstene → `Element.SetParameterByName("TFM_Avvik")`
    - indeks 1 → tallene → en `Watch`-node
@@ -94,7 +94,7 @@ Følgen er at to slags funn ikke kan festes til et element:
 Begge telles i `funn_uten_nokkel`, så du ser hvor mange det gjelder.
 
 Har modellen en `IfcGUID`-parameter fra eksporten, kan du sende **den** som
-`IN[2]` i stedet for TFM-verdien. Da matches det på `global_id`-kolonnen, og
+`IN[1]` i stedet for TFM-verdien. Da matches det på `global_id`-kolonnen, og
 også K1-funnene treffer. Prøv det — det er den bedre veien hvis den finnes.
 
 ## Hva som er prøvd, og hva som ikke er det

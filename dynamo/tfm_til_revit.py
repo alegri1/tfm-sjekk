@@ -7,14 +7,18 @@ leveransen — rettingen er det, og den skjer i Revit.
 
 BRUK I DYNAMO
 
-    File Path ─────────────────────────────────> IN[0]  sti til funn.csv
-    All Elements of Category ──────────────────> IN[1]  elementene
-      └─ Element.GetParameterValueByName(TFM) ─> IN[2]  TFM-verdien deres
+    File Path ───────────────────────────────> IN[0]  sti til funn.csv
+    Element.GetParameterValueByName(TFM) ────> IN[1]  TFM-verdien per element
 
-    OUT er en liste like lang som IN[1]: avvikstekst der det finnes funn,
-    tom streng ellers. Koble den til Element.SetParameterByName med en
-    tekstparameter, f.eks. «TFM_Avvik», og lag en schedule som filtrerer på
-    at den ikke er tom.
+    Elementene selv skal ikke inn hit. Send dem rett til
+    Element.SetParameterByName sammen med OUT[0].
+
+    OUT[0] er en liste like lang som IN[1]: avvikstekst der det finnes funn,
+    tom streng ellers. Bruk en tekstparameter, f.eks. «TFM_Avvik», og lag en
+    schedule som filtrerer på at den ikke er tom.
+
+    OUT[1] er tallene. Les dem — en kobling som treffer null elementer ser
+    nøyaktig ut som en modell uten avvik.
 
 HVORFOR MATCHE PÅ TFM-VERDIEN OG IKKE PÅ GUID
 
@@ -28,11 +32,15 @@ i IFC-fila, og den er nettopp det brukeren skal rette. Prisen er at objekter
 uten TFM-verdi ikke kan kobles — men de trenger heller ingen kobling: i Revit
 finner du dem ved å filtrere på tom TFM-parameter.
 
-Har modellen en «IfcGUID»-parameter fra eksporten, kan du sende den som IN[2]
+Har modellen en «IfcGUID»-parameter fra eksporten, kan du sende den som IN[1]
 i stedet. Da matches det på GlobalId, og også K1-funnene treffer.
 
 Skrevet for både IronPython 2.7 og CPython3, som er de to Dynamo kjører.
 """
+
+# Uten denne er "..." bytes i Python 2, og alt under knekker på første «».
+# I Python 3 er den et null-tiltak.
+from __future__ import unicode_literals
 
 import csv
 import io
@@ -40,7 +48,10 @@ import io
 # --- Ren logikk. Ingen Revit-avhengighet, slik at den kan prøves utenfor Dynamo. ---
 
 SKILLETEGN = ";"
+BOM = "﻿"
 MAKS_PER_ELEMENT = 5
+
+PY2 = str is bytes
 
 
 def les_funn(tekst):
@@ -50,10 +61,29 @@ def les_funn(tekst):
     heter den første kolonnen «﻿kontroll» og oppslag på «kontroll» feiler
     uten at noe krasjer — den slags feil er stille og dyr.
     """
-    if tekst[:1] == "﻿":
+    if tekst[:1] == BOM:
         tekst = tekst[1:]
     linjer = tekst.splitlines()
-    return [rad for rad in csv.DictReader(linjer, delimiter=SKILLETEGN)]
+
+    if PY2:
+        # csv-modulen i Python 2 tar bytes, ikke unicode. Meldingene her er
+        # fulle av «» og æøå, og uten denne omveien får du UnicodeEncodeError
+        # på første rad — inne i Dynamo, der stakksporet er vondt å lese.
+        # Skilletegnet må også være bytes; Python 2 godtar ikke unicode der.
+        rader = csv.DictReader(
+            [linje.encode("utf-8") for linje in linjer],
+            delimiter=SKILLETEGN.encode("utf-8"),
+        )
+        return [
+            dict(
+                (navn.decode("utf-8"), (verdi or b"").decode("utf-8"))
+                for navn, verdi in rad.items()
+                if navn is not None
+            )
+            for rad in rader
+        ]
+
+    return list(csv.DictReader(linjer, delimiter=SKILLETEGN))
 
 
 def les_fil(sti):
@@ -173,13 +203,17 @@ def statistikk(funn, verdier):
 
 # --- Dynamo-skallet. Kjøres bare inne i Dynamo. ---
 
-if __name__ == "__main__" and "IN" in globals():  # pragma: no cover - krever Dynamo
-    sti = IN[0]  # noqa: F821
-    elementer = IN[1]  # noqa: F821
-    verdier = IN[2]  # noqa: F821
+# Ingen sjekk på __name__. Dynamo eksekverer noden, og hva __name__ settes til
+# varierer mellom IronPython- og CPython-motoren — er den ikke «__main__», ville
+# blokka aldri kjørt og Dynamo meldt at OUT ikke finnes. At «IN» er der, er det
+# eneste sikre tegnet på at vi er i Dynamo. Ved import fra en test finnes den
+# ikke, og blokka hoppes over.
+if "IN" in globals():  # pragma: no cover - krever Dynamo
+    _sti = IN[0]  # noqa: F821
+    _verdier = IN[1]  # noqa: F821
 
-    funn = les_fil(sti)
-    tall = statistikk(funn, verdier)
+    _funn = les_fil(_sti)
 
-    # Tallene først: traff koblingen ingenting, skal det være det du ser.
-    OUT = (avvikstekster(funn, verdier), tall)
+    # Liste, ikke tuppel: List.GetItemAtIndex regner med en liste.
+    # Indeks 0 er tekstene, indeks 1 er tallene — les tallene.
+    OUT = [avvikstekster(_funn, _verdier), statistikk(_funn, _verdier)]
