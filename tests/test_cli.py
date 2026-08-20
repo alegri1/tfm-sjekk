@@ -222,3 +222,42 @@ def test_fil_som_heter_som_en_kommando_gar_til_sjekk(tmp_path):
 def test_oppsett_listes_i_hjelpeteksten():
     resultat = kjor(["--help"])
     assert "oppsett" in uten_ansi(resultat.stdout)
+
+
+def test_oppsett_foreslar_grammatikk_for_tidligfase(tmp_path):
+    """Uttrekket er feilfritt, men grammatikken avviser alt.
+
+    Verktøyet vet hvilken regel som avviser dem, og skal si det.
+    """
+    from fixtures.syntetisk import lag_tidligfasemodell
+
+    modell = lag_tidligfasemodell(tmp_path / "tidligfase.ifc")
+    resultat = kjor(["oppsett", str(modell)])
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert "krev_plassering = false" in resultat.stdout
+    assert "[grammatikk]" in resultat.stdout
+    assert "dekker modellene som de er" not in uten_ansi(resultat.stderr)
+
+
+def test_grammatikkforslaget_virker_som_config(tmp_path):
+    """Rundturen: fem syntaksfunn skal bli til duplikatet som lå under dem."""
+    from fixtures.syntetisk import lag_tidligfasemodell
+
+    modell = lag_tidligfasemodell(tmp_path / "tidligfase.ifc")
+    forslag = tmp_path / "forslag.toml"
+    assert kjor(["oppsett", str(modell), "--ut", str(forslag)]).returncode == 0
+
+    uten = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "a")])
+    med = kjor(["sjekk", str(modell), "--config", str(forslag), "--ut", str(tmp_path / "b")])
+    assert "5 feil" in uten.stdout
+    assert "2 feil" in med.stdout
+
+
+def test_oppsett_med_grammatikk_i_cp1252_konsoll(tmp_path):
+    """Kommentarene bruker «» og norske tegn."""
+    from fixtures.syntetisk import lag_tidligfasemodell
+
+    modell = lag_tidligfasemodell(tmp_path / "tidligfase.ifc")
+    resultat = kjor(["oppsett", str(modell)], koding="cp1252")
+    assert resultat.returncode == 0, resultat.stdout + resultat.stderr
+    assert "krev_plassering = false" in resultat.stdout

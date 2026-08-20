@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from tfm_sjekk.config import Konfigurasjon
 from tfm_sjekk.modell import Kilde
-from tfm_sjekk.oppsett.modell import Foreslatt, Oppsettforslag, Verditype
+from tfm_sjekk.oppsett.modell import (
+    Foreslatt,
+    ForeslattGrammatikk,
+    Oppsettforslag,
+    Verditype,
+)
 
 _HVORDAN: dict[Kilde, str] = {
     Kilde.GJENKJENT_FELT: "gjenkjent feltnavn i et egenskapssett som ikke er konfigurert",
@@ -85,6 +90,14 @@ def til_toml(forslag: Oppsettforslag, config: Konfigurasjon | None = None) -> st
         ]
         linjer += _liste("ifc_klasser", config.ifc_klasser, forslag.klasser)
 
+    # «[grammatikk]» er en tabell og må stå etter alle toppnivånøklene, av
+    # samme grunn som ifc_klasser må stå før dem. Rekkefølgen her er derfor:
+    # toppnivånøkler, så grammatikk, så pset.
+    if forslag.grammatikk:
+        linjer += ["", "[grammatikk]"]
+        for g in forslag.grammatikk:
+            linjer += _grammatikklinjer(g)
+
     if forslag.psett or forslag.feltnavn:
         linjer += ["", "[pset]"]
         for verditype in Verditype:
@@ -99,6 +112,34 @@ def til_toml(forslag: Oppsettforslag, config: Konfigurasjon | None = None) -> st
                 linjer += _liste(attributt, getattr(config.pset, attributt), foreslatte)
 
     return "\n".join(linjer) + "\n"
+
+
+_OM_INNSTILLING: dict[str, str] = {
+    "krev_plassering": "plasseringen («++»-delen)",
+    "krev_komponenttype": "komponenttypen («%»-delen)",
+}
+
+
+def _grammatikklinjer(g: ForeslattGrammatikk) -> list[str]:
+    """Én innstilling, med begge tallene over seg.
+
+    Ett tall alene kan ikke skille en fase fra en feil: «43 verdier løses» ser
+    likt ut enten de to øvrige parser fint eller det er 40 av dem.
+    """
+    hva = _OM_INNSTILLING.get(g.innstilling, g.innstilling)
+    parser = (
+        f"{_antall(g.parser_alt, 'verdi', 'verdier')} parser som de skal"
+        if g.parser_alt
+        else "ingen andre verdier parser"
+    )
+    return [
+        "",
+        f"# {_antall(g.loser, 'verdi', 'verdier')} feiler bare fordi {hva} mangler.",
+        f"# Til sammenligning: {parser}.",
+        "# Er dette en tidlig fase, er linja under riktig. Er det en merkefeil,",
+        "# skal den strykes — verktøyet kan ikke se forskjellen, det kan du.",
+        f"{g.innstilling} = {str(g.verdi).lower()}",
+    ]
 
 
 def _topptekst(forslag: Oppsettforslag) -> list[str]:

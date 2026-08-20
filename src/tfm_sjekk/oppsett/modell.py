@@ -59,6 +59,23 @@ class Foreslatt(BaseModel):
     )
 
 
+class ForeslattGrammatikk(BaseModel):
+    """En grammatikkinnstilling verktøyet mener bør slås av.
+
+    Begge tallene følger med, og det er ikke pynt: ett tall alene kan ikke skille
+    en fase fra en feil. «43 verdier løses» ser likt ut enten de to øvrige parser
+    fint eller det er 40 av dem. 43 mot 2 er en modell uten byggnummer ennå;
+    3 mot 40 er tre objekter merket feil.
+    """
+
+    model_config = {"frozen": True}
+
+    innstilling: str = Field(description="Feltnavnet i `Grammatikk`, f.eks. krev_plassering")
+    verdi: bool = Field(default=False, description="Verdien som foreslås")
+    loser: int = Field(description="Verdier som parser når innstillingen slås av")
+    parser_alt: int = Field(description="Verdier som allerede parser uten den")
+
+
 class Oppsettforslag(BaseModel):
     """Alt verktøyet har grunnlag for å foreslå, som ren data.
 
@@ -80,6 +97,10 @@ class Oppsettforslag(BaseModel):
         default_factory=list,
         description="IFC-klasser utenfor omfanget som har TFM-merkede objekter",
     )
+    grammatikk: list[ForeslattGrammatikk] = Field(
+        default_factory=list,
+        description="Grammatikkinnstillinger som får alle verdiene til å parse",
+    )
 
     lest: int = Field(default=0, description="Objekter lest i alt")
     med_tfm: int = Field(default=0, description="Objekter med en TFM-forekomstverdi")
@@ -87,7 +108,12 @@ class Oppsettforslag(BaseModel):
 
     def har_noe(self) -> bool:
         """Om forslaget inneholder noe å ta stilling til."""
-        return bool(self.klasser) or any(self.psett.values()) or any(self.feltnavn.values())
+        return (
+            bool(self.klasser)
+            or bool(self.grammatikk)
+            or any(self.psett.values())
+            or any(self.feltnavn.values())
+        )
 
     def fant_grunnlag(self) -> bool:
         """Om modellene i det hele tatt hadde TFM-verdier å utlede noe av.

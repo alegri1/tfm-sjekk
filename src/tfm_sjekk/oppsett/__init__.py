@@ -13,8 +13,20 @@ funnet — helt ut i fila som skrives.
 
 from __future__ import annotations
 
-from tfm_sjekk.oppsett.modell import Foreslatt, Oppsettforslag, Verditype
+from tfm_sjekk.oppsett.modell import (
+    Foreslatt,
+    ForeslattGrammatikk,
+    Oppsettforslag,
+    Verditype,
+)
 from tfm_sjekk.oppsett.toml_ut import til_toml
 from tfm_sjekk.oppsett.utled import utled
 
-__all__ = ["Foreslatt", "Oppsettforslag", "Verditype", "til_toml", "utled"]
+__all__ = [
+    "Foreslatt",
+    "ForeslattGrammatikk",
+    "Oppsettforslag",
+    "Verditype",
+    "til_toml",
+    "utled",
+]

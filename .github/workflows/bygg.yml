@@ -51,7 +51,7 @@ jobs:
           uv run python eksempler/lag_demomodell.py
 
           arbeid=$(mktemp -d)
-          cp eksempler/demo-*.ifc eksempler/avveie.ifc eksempler/FIKTIV-*.csv tfm-sjekk.toml "$arbeid/"
+          cp eksempler/demo-*.ifc eksempler/avveie.ifc eksempler/tidligfase.ifc eksempler/FIKTIV-*.csv tfm-sjekk.toml "$arbeid/"
           cd "$arbeid"
 
           # Utdata fanges i en variabel framfor å røres til grep. Stegets shell
@@ -130,6 +130,18 @@ jobs:
             *) echo "forslaget ble lest, men tok ikke effekt:"; echo "$med"; exit 1 ;;
           esac
           echo "binæren skrev et oppsettforslag som virket da det ble tatt i bruk"
+
+          # Grammatikkforslaget: uttrekket er feilfritt, men hver verdi avvises
+          # av én regel. Prøven er at forslaget faktisk fjerner de fem
+          # syntaksfunnene og lar duplikatet under dem komme fram.
+          "$exe" oppsett tidligfase.ifc --ut fase.toml
+          grep -q "krev_plassering = false" fase.toml             || { echo "foreslo ikke krev_plassering"; cat fase.toml; exit 1; }
+
+          uten=$("$exe" sjekk tidligfase.ifc --ut ut4 2>&1 || true)
+          med=$("$exe" sjekk tidligfase.ifc --config fase.toml --ut ut5 2>&1 || true)
+          case "$uten" in *"5 feil"*) ;; *) echo "uventet: $uten"; exit 1 ;; esac
+          case "$med" in *"2 feil"*) ;; *) echo "forslaget tok ikke effekt: $med"; exit 1 ;; esac
+          echo "binæren fant grammatikkinnstillingen selv"
 
       - uses: actions/upload-artifact@v4
         with:

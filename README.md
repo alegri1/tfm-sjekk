@@ -235,12 +235,29 @@ uv run tfm-sjekk sjekk eksempler/tidligfase.ifc --config eksempler/tidligfase.to
 # 2 feil — et ekte K6-duplikat som lå skjult under støyen
 ```
 
-Hele oppsettet er én linje:
+Du trenger ikke kjenne innstillingen på forhånd — verktøyet finner den selv:
+
+```bash
+uv run tfm-sjekk oppsett eksempler/tidligfase.ifc
+```
 
 ```toml
 [grammatikk]
+
+# 5 verdier feiler bare fordi plasseringen («++»-delen) mangler.
+# Til sammenligning: ingen andre verdier parser.
+# Er dette en tidlig fase, er linja under riktig. Er det en merkefeil,
+# skal den strykes — verktøyet kan ikke se forskjellen, det kan du.
 krev_plassering = false
 ```
+
+Begge tallene står der med hensikt. 5 mot 0 er en modell som ikke har fått
+byggnummer ennå. Var det 3 som feilet mens 40 parset, ville det vært tre objekter
+merket feil — og da skal forslaget strykes.
+
+Forslaget gis bare når innstillingen får **hver eneste** verdi til å parse. Løser
+den bare noen av dem, er det merkefeil og ikke fase, og verktøyet foreslår
+ingenting.
 
 Merk hva som *ikke* skjer: en TFM-ID med feil plassering avvises fortsatt.
 Valgfri betyr at delen kan utelates, ikke at den kan være feil. Og K6 måler

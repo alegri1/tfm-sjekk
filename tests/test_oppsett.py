@@ -12,7 +12,7 @@ import tomllib
 
 import pytest
 
-from tfm_sjekk.config import Konfigurasjon, PsetOppsett
+from tfm_sjekk.config import Grammatikk, Konfigurasjon, PsetOppsett
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.modell import IfcObjekt, Kilde, Verdikilde
 from tfm_sjekk.oppsett import Verditype, til_toml, utled
@@ -407,3 +407,107 @@ def test_verdier_i_ukjent_pset_og_ukjent_felt_er_usynlige(tmp_path):
     ut = til_toml(f)
     assert "ingen av objektene hadde TFM-verdi" in ut
     assert "verdiene lå der oppsettet sa" not in ut
+
+
+# --- Grammatikkforslag ---
+
+
+def grammatikk_kontekst(verdier: list[str], config: Konfigurasjon | None = None) -> Kontekst:
+    return Kontekst.bygg(
+        [objekt(f"g{i}", tfm=v) for i, v in enumerate(verdier)],
+        config or Konfigurasjon(),
+    )
+
+
+def test_tidligfase_uten_plassering_foreslas():
+    f = utled(grammatikk_kontekst(["=3600.001.04-JVZ001", "=4310.001.12-QLF001"]))
+    assert [(g.innstilling, g.verdi) for g in f.grammatikk] == [("krev_plassering", False)]
+    assert f.har_noe()
+
+
+def test_blandede_feil_gir_ingen_anvisning():
+    """En innstilling som løser noen av feilene peker på merkefeil, ikke fase."""
+    f = utled(
+        grammatikk_kontekst(
+            [
+                "=3600.001.04-JVZ001",  # mangler plassering
+                "++115080=36000.001.04-JVZ001",  # systemkoden har fem siffer
+            ]
+        )
+    )
+    assert f.grammatikk == []
+
+
+def test_innstilling_som_allerede_er_i_bruk_foreslas_ikke():
+    config = Konfigurasjon(grammatikk=Grammatikk(krev_plassering=False))
+    f = utled(grammatikk_kontekst(["=3600.001.04-JVZ001"], config))
+    assert f.grammatikk == []
+    assert not f.har_noe()
+
+
+def test_avvikende_sifferantall_foreslas_ikke():
+    """Å endre et sifferantall sier hva standarden er, ikke hvilken fase vi er i."""
+    f = utled(grammatikk_kontekst(["++1150800=3600.001.04-JVZ001"] * 3))
+    assert f.grammatikk == []
+
+
+def test_to_kandidater_kan_sla_til_samtidig():
+    config = Konfigurasjon(grammatikk=Grammatikk(krev_komponenttype=True))
+    f = utled(grammatikk_kontekst(["=3600.001.04-JVZ001"], config))
+    assert {g.innstilling for g in f.grammatikk} == {"krev_plassering", "krev_komponenttype"}
+
+
+def test_begge_tallene_star_i_fila():
+    verdier = ["=3600.001.04-JVZ001"] * 3 + ["++115080=3600.001.04-JVZ002"] * 2
+    ut = til_toml(utled(grammatikk_kontekst(verdier)))
+    assert "3 verdier feiler" in ut
+    assert "2 verdier parser" in ut
+
+
+def test_forslag_med_bare_grammatikk_er_ikke_tomt():
+    ut = til_toml(utled(grammatikk_kontekst(["=3600.001.04-JVZ001"])))
+    assert "verdiene lå der oppsettet sa" not in ut
+    assert "krev_plassering = false" in ut
+
+
+def test_sammensatt_forslag_overlever_en_tur_gjennom_konfigurasjonen():
+    """Alle tre delene skal være i kraft — ikke bare stå i fila.
+
+    En toppnivånøkkel skrevet etter en tabelloverskrift havner inne i tabellen.
+    Fila er da fortsatt gyldig TOML og gyldig konfigurasjon, og verdien
+    forsvinner uten et ord. Prøven er derfor på utfallet, ikke på rekkefølgen.
+    """
+    objekter = [
+        objekt("a", tfm="=3600.001.04-JVZ001"),
+        objekt(
+            "b",
+            tfm="=3600.001.04-JVZ002",
+            kilde=Verdikilde(kilde=Kilde.GJENKJENT_FELT, pset="Data", felt="TFM"),
+        ),
+        objekt("c", klasse="IfcBuildingElementProxy", tfm="=3600.001.04-JVZ003"),
+    ]
+    forslag = utled(Kontekst.bygg(objekter, Konfigurasjon()))
+    assert forslag.grammatikk and forslag.psett and forslag.klasser
+
+    lest = Konfigurasjon.model_validate(tomllib.loads(til_toml(forslag)))
+    assert lest.grammatikk.krev_plassering is False
+    assert "Data" in lest.pset.forekomst
+    assert "IfcBuildingElementProxy" in lest.ifc_klasser
+
+
+def test_grammatikken_tas_i_bruk_og_forslaget_blir_tomt():
+    verdier = ["=3600.001.04-JVZ001", "=4310.001.12-QLF001"]
+    forste = utled(grammatikk_kontekst(verdier))
+    ny_config = Konfigurasjon.model_validate(tomllib.loads(til_toml(forste)))
+
+    etter = Kontekst.bygg([objekt(f"g{i}", tfm=v) for i, v in enumerate(verdier)], ny_config)
+    assert len(etter.parsede) == 2
+    assert not utled(etter).har_noe()
+
+
+def test_det_minste_settet_vinner():
+    """Løser én innstilling alt, skal ikke den andre bli med på lasset."""
+    config = Konfigurasjon(grammatikk=Grammatikk(krev_komponenttype=True))
+    # Verdiene har komponenttype, men mangler plassering. Da holder én bryter.
+    f = utled(grammatikk_kontekst(["=3600.001.04-JVZ001%JVZ.001.008"] * 3, config))
+    assert [g.innstilling for g in f.grammatikk] == ["krev_plassering"]

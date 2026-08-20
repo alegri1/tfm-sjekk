@@ -13,11 +13,18 @@ altså allerede i konteksten.
 from __future__ import annotations
 
 from collections import Counter
+from itertools import combinations
 
-from tfm_sjekk.config import PsetOppsett
+from tfm_sjekk.config import Grammatikk, PsetOppsett
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.modell import Kilde
-from tfm_sjekk.oppsett.modell import Foreslatt, Oppsettforslag, Verditype
+from tfm_sjekk.oppsett.modell import (
+    Foreslatt,
+    ForeslattGrammatikk,
+    Oppsettforslag,
+    Verditype,
+)
+from tfm_sjekk.parser import ParseFeil, parse
 
 
 def _konfigurert(pset: PsetOppsett, verditype: Verditype) -> tuple[list[str], list[str]]:
@@ -80,6 +87,7 @@ def utled(kontekst: Kontekst) -> Oppsettforslag:
         psett=psett,
         feltnavn=feltnavn,
         klasser=_klasser_utenfor_omfanget(kontekst),
+        grammatikk=_grammatikkforslag(kontekst),
         lest=len(kontekst.objekter),
         med_tfm=sum(1 for o in kontekst.objekter if o.tfm_forekomst),
         kildefiler=list(kontekst.kildefiler),
@@ -108,3 +116,70 @@ def _klasser_utenfor_omfanget(kontekst: Kontekst) -> list[Foreslatt]:
         teller[objekt.ifc_klasse] += 1
 
     return _sortert(teller)
+
+
+# Delene som kan gjøres valgfrie, og bryteren som gjør det. Sifferantall og
+# andre formkrav står bevisst ikke her: å gjøre en del valgfri sier hvilken fase
+# modellen er i, mens et endret sifferantall sier hva standarden er — og en
+# systematisk feilmerking ville da blitt velsignet som konfigurasjon og aldri
+# meldt igjen.
+KANDIDATER = ("krev_plassering", "krev_komponenttype")
+
+
+def _grammatikkforslag(kontekst: Kontekst) -> list[ForeslattGrammatikk]:
+    """Det minste settet innstillinger som får hver feilende verdi til å parse.
+
+    Settet prøves, det gjettes ikke: grammatikken bygges på nytt med
+    innstillingene slått av, og hver verdi som feiler forsøkes parset igjen.
+
+    Alternativet — å sammenligne feilmeldingene og se om de er like — ville
+    bygget beslutningen på norsk brukertekst som skal kunne omformuleres uten at
+    oppførselen endres. Prøven her spør dessuten om nøyaktig det vi vil vite,
+    «løser dette settet problemet?», framfor et stedfortredende spørsmål om
+    hvorfor det oppsto.
+
+    Settene prøves fra minst til størst, så ingen innstilling blir med uten å
+    trengs. Kravet er at *alle* verdier går igjennom: et sett som løser noen av
+    feilene peker på merkefeil, ikke på fase.
+
+    Første utkast prøvde kandidatene hver for seg. Da fikk en modell som manglet
+    både plassering og komponenttype ingen anvisning i det hele tatt — den
+    tidligste modellen av alle, og nettopp den dette er laget for.
+    """
+    feilende = [
+        objekt.tfm_forekomst
+        for objekt in kontekst.objekter
+        if objekt.global_id in kontekst.parsefeil and objekt.tfm_forekomst
+    ]
+    if not feilende:
+        return []
+
+    gjeldende = kontekst.config.grammatikk
+    # Er en bryter allerede av, er det ingenting å foreslå — samme regel som for
+    # egenskapssett og feltnavn, og det som gjør at et forslag brukt om igjen
+    # blir tomt.
+    mulige = [k for k in KANDIDATER if getattr(gjeldende, k)]
+
+    for storrelse in range(1, len(mulige) + 1):
+        for sett in combinations(mulige, storrelse):
+            kandidat = gjeldende.model_copy(update=dict.fromkeys(sett, False))
+            if not all(_parser(verdi, kandidat) for verdi in feilende):
+                continue
+            return [
+                ForeslattGrammatikk(
+                    innstilling=innstilling,
+                    verdi=False,
+                    loser=len(feilende),
+                    parser_alt=len(kontekst.parsede),
+                )
+                for innstilling in sett
+            ]
+    return []
+
+
+def _parser(verdi: str, g: Grammatikk) -> bool:
+    try:
+        parse(verdi, g)
+    except ParseFeil:
+        return False
+    return True
