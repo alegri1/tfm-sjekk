@@ -2,19 +2,20 @@
 
     uv run python eksempler/lag_demomodell.py
 
-Sju filer, med hver sin jobb:
+Åtte filer, med hver sin jobb:
 
     demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc   kontrollene K1-K9 og T1
     avveie.ifc                                     «tfm-sjekk oppsett»
     blindsone.ifc                                  grensen for hva oppsett ser
     tidligfase.ifc                                 merking uten plassering
     visning.ifc                                    BCF-en prøvd i en viewer
+    visning-2x3.ifc                                samme, men til import i Revit
 
 Bare de tre første er merket «demo-», og det er med vilje: globben under skal
-treffe akkurat dem. De fire andre har verdier som ville forstyrret en
+treffe akkurat dem. De fem andre har verdier som ville forstyrret en
 kontrollkjøring — avveie.ifc og blindsone.ifc ligger utenfor oppsettet,
-tidligfase.ifc krever sitt eget oppsett for å gi mening, og visning.ifc er en
-kopi av elektromodellen som ville gitt K6-duplikater av hver eneste komponent.
+tidligfase.ifc krever sitt eget oppsett for å gi mening, og de to visning-filene
+er kopier av elektromodellen som ville gitt K6-duplikater av hver komponent.
 
     uv run tfm-sjekk eksempler/demo-*.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
@@ -120,6 +121,36 @@ ELEKTRO = [
     }
 ]
 
+
+def _til_2x3(fordelinger):
+    """Bytter IFC4-klassene mot dem som finnes i IFC 2x3.
+
+    IfcLamp, IfcOutlet og IfcElectricDistributionBoard kom med IFC4. I 2x3 er
+    alt utstyr IfcFlowTerminal, og en tavle er IfcElectricDistributionPoint.
+    """
+    kart = {
+        "IfcLamp": "IfcFlowTerminal",
+        "IfcOutlet": "IfcFlowTerminal",
+        "IfcElectricDistributionBoard": "IfcElectricDistributionPoint",
+    }
+    ut = []
+    for fordeling in fordelinger:
+        ny_fordeling = dict(fordeling)
+        ny_fordeling["klasse"] = kart.get(
+            fordeling.get("klasse", "IfcElectricDistributionBoard"),
+            "IfcElectricDistributionPoint",
+        )
+        ny_fordeling["objekter"] = [
+            dict(o, klasse=kart.get(o.get("klasse", "IfcFlowTerminal"), "IfcFlowTerminal"))
+            for o in fordeling.get("objekter", [])
+        ]
+        ut.append(ny_fordeling)
+    return ut
+
+
+ELEKTRO_2X3 = _til_2x3(ELEKTRO)
+
+
 if __name__ == "__main__":
     for navn, objekter in (("demo-rie.ifc", RIE), ("demo-riv.ifc", RIV)):
         sti = lag_modell(objekter, HER / navn)
@@ -151,3 +182,10 @@ if __name__ == "__main__":
     # hver eneste komponentforekomst i to filer. Riktig oppførsel, ubrukelig
     # demo — 39 funn i stedet for 17.
     print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'visning.ifc', geometri=True)}")
+
+    # Samme modell i IFC 2x3. Revits IFC-importør åpner 2x3 langt mer pålitelig
+    # enn IFC4, så det er denne du bruker hvis du vil ha modellen inn i Revit og
+    # prøve Dynamo-grafen. Klassene er byttet ut: IfcLamp, IfcOutlet og
+    # IfcElectricDistributionBoard finnes ikke i 2x3.
+    sti = lag_elektromodell(ELEKTRO_2X3, HER / "visning-2x3.ifc", schema="IFC2X3", geometri=True)
+    print(f"skrev {sti}")

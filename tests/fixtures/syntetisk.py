@@ -315,6 +315,10 @@ def lag_elektromodell(
         f = ifcopenshell.template.create(
             schema_identifier=schema,
             project_name="FIKTIVT demoprosjekt 115080",
+            # CoordinationView er MVD-en Revits IFC-importor forventer.
+            # Standardverdien i ifcopenshell er ReferenceView, som er en
+            # lese-MVD; med den apner ikke Revit fila.
+            mvd="CoordinationView_V2.0",
             # Fast tidsstempel: fila skal kunne sammenlignes mellom kjoringer.
             timestring="2026-01-01T12:00:00",
         )
@@ -398,7 +402,14 @@ def lag_elektromodell(
             if kurs is None:
                 continue
             if kurs not in kretser:
-                krets = f.create_entity("IfcDistributionCircuit", GlobalId=guid.new(), Name=kurs)
+                # Kretsklassen heter ikke det samme i de to skjemaene, og
+                # IFC4-navnet finnes rett og slett ikke i 2x3.
+                krets_klasse = (
+                    "IfcDistributionCircuit"
+                    if schema.startswith("IFC4")
+                    else "IfcElectricalCircuit"
+                )
+                krets = f.create_entity(krets_klasse, GlobalId=guid.new(), Name=kurs)
                 kretser[kurs] = [krets, []]
             kretser[kurs][1].append(objekt)
 
