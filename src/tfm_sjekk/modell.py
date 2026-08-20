@@ -88,7 +88,13 @@ class TfmId(BaseModel):
 
     raa: str = Field(description="Original streng, uendret")
 
-    plassering: str = Field(description="Byggnummer, normalt 6 siffer")
+    plassering: str | None = Field(
+        default=None,
+        description=(
+            "Byggnummer, normalt 6 siffer. None når grammatikken har gjort delen "
+            "valgfri og modellen ikke har fått byggnummer ennå."
+        ),
+    )
     systemkode: str = Field(description="NS 3451 tabell 8, normalt 4 siffer")
     system_lopenummer: str
     undernummer: str = Field(
@@ -117,8 +123,16 @@ class TfmId(BaseModel):
 
         K6 sjekker unikhet på denne, ikke på `komponentforekomst` alene —
         samme løpenummer kan gjenbrukes i et annet bygg.
+
+        Mangler plasseringen, bygges nøkkelen av delene som finnes. En ID med
+        plassering og en uten havner da i hvert sitt nøkkelrom og kolliderer
+        ikke. Alternativet — å normalisere plasseringen bort for alle — ville
+        meldt to bygg med samme system og komponent som duplikat, og et falskt
+        funn i en unikhetskontroll er dyrere enn et uteblitt: det lærer brukeren
+        å overse kontrollen, og da er også de ekte funnene tapt.
         """
-        return f"++{self.plassering}={self.systemforekomst}-{self.komponentforekomst}"
+        start = f"++{self.plassering}" if self.plassering is not None else ""
+        return f"{start}={self.systemforekomst}-{self.komponentforekomst}"
 
     @property
     def komponenttype(self) -> str | None:

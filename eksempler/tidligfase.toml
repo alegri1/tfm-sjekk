@@ -1,0 +1,11 @@
+# Oppsett for en modell i tidligfase.
+#
+# Byggnummeret er ikke bestemt ennå, mens systemet og komponenten er merket og
+# skal kunne kontrolleres. Uten dette får hvert eneste objekt et syntaksfunn om
+# en del prosjektet ikke har tatt stilling til, og de ekte feilene drukner.
+#
+# Sett verdien tilbake til true når plasseringen er ført inn — da fanges de
+# objektene som ennå mangler den.
+
+[grammatikk]
+krev_plassering = false

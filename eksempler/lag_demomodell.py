@@ -2,18 +2,19 @@
 
     uv run python eksempler/lag_demomodell.py
 
-Seks filer, med hver sin jobb:
+Sju filer, med hver sin jobb:
 
     demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc   kontrollene K1-K9 og T1
     avveie.ifc                                     «tfm-sjekk oppsett»
     blindsone.ifc                                  grensen for hva oppsett ser
+    tidligfase.ifc                                 merking uten plassering
     visning.ifc                                    BCF-en prøvd i en viewer
 
 Bare de tre første er merket «demo-», og det er med vilje: globben under skal
-treffe akkurat dem. De tre andre har verdier som ville forstyrret en
-kontrollkjøring — avveie.ifc og blindsone.ifc ligger utenfor oppsettet, og
-visning.ifc er en kopi av elektromodellen som ville gitt K6-duplikater av hver
-eneste komponent.
+treffe akkurat dem. De fire andre har verdier som ville forstyrret en
+kontrollkjøring — avveie.ifc og blindsone.ifc ligger utenfor oppsettet,
+tidligfase.ifc krever sitt eget oppsett for å gi mening, og visning.ifc er en
+kopi av elektromodellen som ville gitt K6-duplikater av hver eneste komponent.
 
     uv run tfm-sjekk eksempler/demo-*.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
@@ -35,6 +36,7 @@ from fixtures.syntetisk import (
     lag_modell,
     lag_modell_i_blindsonen,
     lag_modell_pa_avveie,
+    lag_tidligfasemodell,
 )
 
 HER = Path(__file__).parent
@@ -135,6 +137,10 @@ if __name__ == "__main__":
     # verdiuttrekket ingen holdepunkter, og verktøyet ser ingenting — enda
     # modellen er merket helt korrekt.
     print(f"skrev {lag_modell_i_blindsonen(HER / 'blindsone.ifc')}")
+
+    # Merket uten plassering. Kjørt med standardoppsettet gir den fem
+    # syntaksfunn om «++»-delen; med eksempler/tidligfase.toml forsvinner de.
+    print(f"skrev {lag_tidligfasemodell(HER / 'tidligfase.ifc')}")
 
     # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
     # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:

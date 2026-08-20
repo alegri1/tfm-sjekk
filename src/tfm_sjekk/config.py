@@ -29,6 +29,16 @@ class Grammatikk(BaseModel):
     type_lopenummer_siffer: int = 3
     type_undernummer_siffer: int = 3
 
+    krev_plassering: bool = Field(
+        default=True,
+        description=(
+            "Om ++-delen må være til stede. En tidlig modell har ikke alltid fått "
+            "byggnummer, mens systemet og komponenten er merket og skal kunne "
+            "kontrolleres. Standarden krever den, slik at et eksisterende oppsett "
+            "ikke endrer oppførsel."
+        ),
+    )
+
     krev_komponenttype: bool = Field(
         default=False,
         description="Om %-delen må være til stede. Mange prosjekter utelater den.",

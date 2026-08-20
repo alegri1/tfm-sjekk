@@ -220,6 +220,36 @@ Grensen er bevisst. Alternativet er å skanne hvert felt i hvert egenskapssett o
 stole på at verdien *ser ut som* en TFM-ID — en langt løsere slutning enn de
 øvrige, og en beslutning som fortjener sin egen vurdering.
 
+### Modeller i tidligfase
+
+En tidlig modell har ikke alltid fått byggnummer. Systemet og komponenten er
+merket, men `++115080`-delen er ikke bestemt ennå. Med standardoppsettet gir det
+et syntaksfunn på hvert eneste objekt — om en del prosjektet ikke har tatt
+stilling til.
+
+```bash
+uv run tfm-sjekk sjekk eksempler/tidligfase.ifc
+# 5 feil — alle «Mangler ++-delen»
+
+uv run tfm-sjekk sjekk eksempler/tidligfase.ifc --config eksempler/tidligfase.toml
+# 2 feil — et ekte K6-duplikat som lå skjult under støyen
+```
+
+Hele oppsettet er én linje:
+
+```toml
+[grammatikk]
+krev_plassering = false
+```
+
+Merk hva som *ikke* skjer: en TFM-ID med feil plassering avvises fortsatt.
+Valgfri betyr at delen kan utelates, ikke at den kan være feil. Og K6 måler
+unikhet på delene som finnes, så to bygg med samme system og komponent regnes
+ikke som duplikater bare fordi plasseringen er valgfri.
+
+Sett verdien tilbake til `true` når byggnummeret er ført inn — da fanges de
+objektene som fortsatt mangler det.
+
 ### Prøve BCF-en i en viewer
 
 `eksempler/visning.ifc` har samme innhold som elektromodellen, men med

@@ -158,6 +158,32 @@ def lag_modell_i_blindsonen(sti: Path, schema: str = "IFC4", antall: int = 40) -
     return sti
 
 
+TIDLIGFASE = [
+    "=3600.001.04-JVZ001%JVZ.001.008",
+    "=3600.001.04-JVZ002",
+    "=3600.001.05-JVZ003",
+    # K6: ekte duplikat av JVZ001. Med standardoppsettet parser ingen av de to,
+    # så duplikatet er usynlig — det drukner i fem syntaksfunn om en del
+    # prosjektet ikke har tatt stilling til. Det er hele poenget med modellen.
+    "=3600.001.04-JVZ001",
+    "=4310.001.12-QLF001",
+]
+
+
+def lag_tidligfasemodell(sti: Path, schema: str = "IFC4") -> Path:
+    """Skriver en modell merket uten plassering — tidligfase.
+
+    Byggnummeret er ikke bestemt ennå, mens systemet og komponenten er merket.
+    Fra §11-samtalen 2026-08-20: «tidlig modell har ikke krav til f.eks.
+    plassering».
+
+    Med standardoppsettet gir hvert eneste objekt et syntaksfunn om «++»-delen.
+    Med `krev_plassering = false` forsvinner de, og de ekte feilene blir synlige.
+    Det er hele poenget med fila: forskjellen skal kunne ses, ikke bare leses om.
+    """
+    return lag_modell([("IfcFlowTerminal", tfm) for tfm in TIDLIGFASE], sti, schema=schema)
+
+
 def _punkt(f, x: float = 0.0, y: float = 0.0, z: float = 0.0):
     return f.create_entity("IfcCartesianPoint", Coordinates=(x, y, z))
 

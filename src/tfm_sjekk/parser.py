@@ -168,9 +168,13 @@ def bygg_monster(g: Grammatikk, streng: bool = True) -> re.Pattern[str]:
     if not g.krev_komponenttype:
         type_del = f"(?:{type_del})?"
 
+    plassering_del = rf"\+\+(?P<plassering>\d{siffer(g.plassering_siffer)})"
+    if not g.krev_plassering:
+        plassering_del = f"(?:{plassering_del})?"
+
     monster = (
         (
-            rf"^\+\+(?P<plassering>\d{siffer(g.plassering_siffer)})"
+            rf"^{plassering_del}"
             rf"=(?P<systemkode>\d{siffer(g.systemkode_siffer)})"
             rf"\.(?P<system_lopenummer>\d{siffer(g.system_lopenummer_siffer)})"
             rf"\.(?P<undernummer>\d{undernummer})"
@@ -223,6 +227,29 @@ def parse_valgfri(streng: str | None, g: Grammatikk | None = None) -> TfmId | No
         return None
 
 
+def _pakrevde_markorer(g: Grammatikk) -> tuple[str, ...]:
+    """Markørene en gyldig TFM-ID må ha, gitt grammatikken.
+
+    Leses av `_forklar` slik at meldingen ikke kan etterlyse en del mønsteret
+    har gjort valgfri. Skrevet hver for seg ville de to kommet i utakt.
+    """
+    if g.krev_plassering:
+        return MARKORER
+    return tuple(m for m in MARKORER if m != "++")
+
+
+def _formmal(g: Grammatikk) -> str:
+    """Den forventede formen, bygget av grammatikken som faktisk gjelder."""
+    start = f"++{'N' * g.plassering_siffer}" if g.krev_plassering else ""
+    return (
+        f"{start}"
+        f"={'N' * g.systemkode_siffer}"
+        f".{'N' * g.system_lopenummer_siffer}"
+        f".{'N' * g.undernummer_siffer_min}"
+        f"-{'B' * g.komponentkode_bokstaver}{'N' * g.komponent_lopenummer_siffer}"
+    )
+
+
 def _forklar(raa: str, g: Grammatikk) -> str:
     """Peker på hvilken del som ryker.
 
@@ -235,7 +262,7 @@ def _forklar(raa: str, g: Grammatikk) -> str:
         # presis anvisning om et felt som aldri inneholdt en TFM-ID.
         return (
             f"«{raa}» ser ikke ut som en TFM-ID. Sjekk at riktig felt er lest — "
-            f"forventet formen ++NNNNNN=NNNN.NNN.NN-BBBNNN."
+            f"forventet formen {_formmal(g)}."
         )
 
     beskrivelser = {
@@ -243,11 +270,11 @@ def _forklar(raa: str, g: Grammatikk) -> str:
         "=": f"systemforekomst ({g.systemkode_siffer} siffer + løpenummer + undernummer)",
         "-": f"komponentforekomst ({g.komponentkode_bokstaver} bokstaver + løpenummer)",
     }
-    for markor in MARKORER:
+    for markor in _pakrevde_markorer(g):
         if markor not in raa:
             return f"Mangler «{markor}»-delen: {beskrivelser[markor]}"
 
-    if not raa.startswith("++"):
+    if g.krev_plassering and not raa.startswith("++"):
         return "TFM-ID må starte med «++»"
 
     if g.krev_komponenttype and "%" not in raa:
@@ -259,10 +286,5 @@ def _forklar(raa: str, g: Grammatikk) -> str:
 
     return (
         f"«{raa}» følger ikke TFM-grammatikken. Forventet formen "
-        f"++{'N' * g.plassering_siffer}"
-        f"={'N' * g.systemkode_siffer}"
-        f".{'N' * g.system_lopenummer_siffer}"
-        f".{'N' * g.undernummer_siffer_min}"
-        f"-{'B' * g.komponentkode_bokstaver}{'N' * g.komponent_lopenummer_siffer}"
-        f" (N=siffer, B=bokstav)"
+        f"{_formmal(g)} (N=siffer, B=bokstav)"
     )

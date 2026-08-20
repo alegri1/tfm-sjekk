@@ -11,6 +11,11 @@ undernummer_siffer_min = 2
 undernummer_siffer_maks = 3
 komponentkode_bokstaver = 3
 komponent_lopenummer_siffer = 3
+# Sett false i tidligfase, når byggnummeret ikke er bestemt ennå. Da godtas
+# «=3600.001.04-JVZ001» uten «++»-delen. En feil plassering avvises fortsatt —
+# valgfri betyr at delen kan utelates, ikke at den kan være feil.
+krev_plassering = true
+
 # Sett true hvis prosjektet krever %-delen (komponenttype) på alle objekter.
 krev_komponenttype = false
 

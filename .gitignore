@@ -45,6 +45,7 @@ eksempler/demo-*.ifc
 eksempler/visning.ifc
 eksempler/avveie.ifc
 eksempler/blindsone.ifc
+eksempler/tidligfase.ifc
 
 # JURIDISK (§8): kodetabellene fra NS 3451 / NS 3457-serien er betalt
 # materiale fra Standard Norge og skal ALDRI i dette repoet. Bare filer
