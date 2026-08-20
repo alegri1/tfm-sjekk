@@ -193,6 +193,26 @@ def _plassering(f, x: float = 0.0, y: float = 0.0, z: float = 0.0, forelder=None
     return f.create_entity("IfcLocalPlacement", PlacementRelTo=forelder, RelativePlacement=akse)
 
 
+def _sett_eierhistorikk(f) -> None:
+    """Gir hver IfcRoot-entitet prosjektets eierhistorikk.
+
+    I IFC 2x3 er `OwnerHistory` PÅKREVD på IfcRoot. IFC4 gjorde den valgfri, og
+    ifcopenshell setter den ikke av seg selv når entiteter opprettes for hånd.
+    Resultatet er en fil som er gyldig IFC4 og ugyldig 2x3 — og en streng
+    importør, som Revits, kan avvise den uten å si hvorfor.
+
+    Gjøres som et etterpass over hele fila framfor ved hver `create_entity`.
+    Da kan ingen ny entitet gli inn uten, slik de 94 av 95 gjorde her.
+    """
+    prosjekt = f.by_type("IfcProject")
+    if not prosjekt or prosjekt[0].OwnerHistory is None:
+        return
+    historikk = prosjekt[0].OwnerHistory
+    for entitet in f.by_type("IfcRoot"):
+        if entitet.OwnerHistory is None:
+            entitet.OwnerHistory = historikk
+
+
 def _romlig_struktur(f) -> dict:
     """Prosjekt → tomt → bygg → etasje, slik en viewer forventer det.
 
@@ -430,6 +450,7 @@ def lag_elektromodell(
             RelatedElements=rom["innhold"],
             RelatingStructure=rom["etasje"],
         )
+        _sett_eierhistorikk(f)
 
     sti.parent.mkdir(parents=True, exist_ok=True)
     f.write(str(sti))

@@ -244,3 +244,53 @@ def test_typeegenskaper_leses_ikke(tmp_path):
         objekt = next(o for o in les_modell(sti) if o.ifc_klasse == "IfcFlowTerminal")
         assert objekt.tfm_forekomst is None, f"{schema}: typeegenskaper leses nå — oppdater testen"
         assert objekt.kilder == {}
+
+
+def test_modell_med_geometri_har_eierhistorikk_overalt(tmp_path):
+    """I IFC 2x3 er OwnerHistory PÅKREVD på IfcRoot.
+
+    IFC4 gjorde den valgfri, og ifcopenshell setter den ikke av seg selv når
+    entiteter opprettes for hånd. Resultatet var en fil som var gyldig IFC4 og
+    ugyldig 2x3 — 94 av 95 entiteter uten — og Revit avviste den uten å si
+    hvorfor. Ingen feilmelding er verre enn en gal en.
+
+    Gjelder bare modellene med geometri: det er de som skal kunne åpnes i en
+    viewer eller importeres i Revit.
+    """
+    import ifcopenshell
+    from fixtures.syntetisk import lag_elektromodell
+
+    # Tavleklassen finnes ikke i begge skjemaene: IfcElectricDistributionBoard
+    # kom med IFC4, og 2x3 har IfcElectricDistributionPoint.
+    tavle = {"IFC4": "IfcElectricDistributionBoard", "IFC2X3": "IfcElectricDistributionPoint"}
+
+    for schema in ("IFC4", "IFC2X3"):
+        spek = [
+            {
+                "navn": "Fordeling 1",
+                "klasse": tavle[schema],
+                "tfm": "++115080=4310.001.00-QLF100",
+                "objekter": [
+                    {
+                        "klasse": "IfcFlowTerminal",
+                        "tfm": "++115080=4310.001.12-QLF101",
+                        "kurs": "Kurs 12",
+                    }
+                ],
+            }
+        ]
+        sti = lag_elektromodell(spek, tmp_path / f"g-{schema}.ifc", schema=schema, geometri=True)
+        f = ifcopenshell.open(str(sti))
+        uten = [r.is_a() for r in f.by_type("IfcRoot") if r.OwnerHistory is None]
+        assert not uten, f"{schema}: mangler OwnerHistory på {sorted(set(uten))}"
+
+
+def test_geometrimodellen_bruker_coordinationview(tmp_path):
+    """ReferenceView er en lese-MVD. Revits importør forventer CoordinationView."""
+    from fixtures.syntetisk import lag_elektromodell
+
+    spek = [{"navn": "F", "tfm": "++115080=4310.001.00-QLF100", "objekter": []}]
+    sti = lag_elektromodell(spek, tmp_path / "mvd.ifc", geometri=True)
+    hode = sti.read_text(encoding="utf-8").splitlines()[2]
+    assert "CoordinationView_V2.0" in hode
+    assert "ReferenceView" not in hode
