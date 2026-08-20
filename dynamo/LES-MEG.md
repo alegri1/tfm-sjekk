@@ -107,8 +107,12 @@ uv run python eksempler/lag_demomodell.py
 uv run tfm-sjekk sjekk eksempler/visning-2x3.ifc --ut rapport-2x3
 ```
 
-Åpne så `eksempler/visning-2x3.ifc` i Revit — `File → Open → IFC` — og bruk
-`rapport-2x3/funn.csv` som `IN[0]`.
+Åpne så `eksempler/visning-2x3.ifc` i Revit og bruk `rapport-2x3/funn.csv`
+som `IN[0]`.
+
+**Bruk `File → Open → IFC…`**, ikke `File → Open → Project`. Prosjektdialogen tar
+imot filnavnet og gjør så ingenting — uten feilmelding. IFC har sin egen
+oppføring i Open-undermenyen.
 
 **Bruk 2x3-fila, ikke `visning.ifc`.** De har samme innhold, men Revits
 IFC-importør åpner IFC 2x3 langt mer pålitelig enn IFC4, og 2x3-fila er skrevet
@@ -118,16 +122,20 @@ med `CoordinationView_V2.0` — MVD-en importøren forventer. IFC4-fila bruker
 Fordelen med denne veien: verdiene på begge sider kommer fra samme fil, så
 treffer ikke koblingen, er det skriptet som er galt — ikke dataene.
 
-**Finn parameternavnet først.** Hva Revit kaller TFM-egenskapen etter en
-IFC-import avhenger av importinnstillingene. Kjør denne i en Python-node med ett
-element som `IN[0]`:
+**Parameternavnet får settnavnet foran.** Revit 2027 importerer
+`TFM11_Forekomst`-settets `TFM`-egenskap som parameteren
+
+    TFM11_Forekomst.TFM
+
+Det er den strengen `Element.GetParameterValueByName` skal ha — ikke `TFM`.
+Bekreftet ved import av `visning-2x3.ifc` i Revit 2027.
+
+Er du i tvil, eller på en annen Revit-versjon, list navnene selv. Python-node
+med ett element som `IN[0]`:
 
 ```python
 OUT = sorted(p.Name for p in IN[0].Parameters)
 ```
-
-Se etter `TFM`, eventuelt noe som `TFM11_Forekomst.TFM`. Det navnet er det du
-gir `Element.GetParameterValueByName`.
 
 ## Hva som er prøvd, og hva som ikke er det
 
