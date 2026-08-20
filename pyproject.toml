@@ -49,6 +49,13 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # RUF001/002/003: norske tegn (æøå) i strenger og docstrings er tilsiktet.
 ignore = ["RUF001", "RUF002", "RUF003"]
 
+[tool.ruff.lint.per-file-ignores]
+# dynamo/ kjører inne i Dynamo, som bruker IronPython 2.7 eller CPython3
+# avhengig av versjon og nodetype. UP-reglene moderniserer til py312 og ville
+# gjort fila ukjørbar på den eldste av dem. Konsumenten bestemmer, ikke
+# målversjonen i denne fila.
+"dynamo/*.py" = ["UP"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"

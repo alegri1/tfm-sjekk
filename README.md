@@ -267,6 +267,16 @@ ikke som duplikater bare fordi plasseringen er valgfri.
 Sett verdien tilbake til `true` når byggnummeret er ført inn — da fanges de
 objektene som fortsatt mangler det.
 
+### Funn tilbake til Revit
+
+BCF fungerer i en viewer, men rettingen skjer i Revit. `dynamo/` inneholder et
+Python-skript for en Dynamo-graf som leser `funn.csv` og skriver avviksteksten
+inn i en parameter på hvert element — da får du en schedule som tømmer seg selv
+etter hvert som du retter.
+
+Ingen plugin, ingen installasjon. Se [dynamo/LES-MEG.md](dynamo/LES-MEG.md) for
+oppsett, og for hvilke to slags funn som ikke kan kobles til et element.
+
 ### Prøve BCF-en i en viewer
 
 `eksempler/visning.ifc` har samme innhold som elektromodellen, men med
