@@ -137,6 +137,33 @@ med ett element som `IN[0]`:
 OUT = sorted(p.Name for p in IN[0].Parameters)
 ```
 
+## Runden etter en retting krever riktig eksportoppsett
+
+`tfm-sjekk` leser en IFC-fil, ikke Revit-modellen. Retter du i Revit, må du
+eksportere på nytt før verktøyet ser endringen.
+
+**Og en eksport med standardoppsett inneholder ingen TFM.** Det er prøvd:
+en modell med åtte merkede objekter, eksportert med Revits standardinnstillinger,
+ga en IFC med bare `Pset_DistributionFlowElementCommon` og
+`Pset_QuantityTakeOff`. Verktøyet meldte åtte K1-feil på åtte objekter, og
+`tfm-sjekk oppsett` svarte «ingenting å bygge på» — helt korrekt, for verdiene
+var ikke i fila.
+
+Revits IFC-eksportør tar bare med sine egne standard-psett med mindre den får
+beskjed om noe annet. `revit/TFM-egenskapssett.txt` i dette repoet er en ferdig
+utfylt kartleggingsfil som legger TFM, TFM-type og MMI i egenskapssett med de
+navnene verktøyet leter etter.
+
+    File > Export > IFC > Edit setup > Property Sets
+    kryss av «Export user defined property sets» og pek på fila
+
+Kolonnene i fila skilles med **tabulator**. Med mellomrom leses den uten
+feilmelding og uten virkning.
+
+Dette er et engangsoppsett per prosjekt, og det er en BIM-koordinator-oppgave.
+Det er også et spørsmål verdt å stille tidlig: *hvordan er IFC-eksporten deres
+satt opp, og kommer TFM-parameteren med?*
+
 ## Hva som er prøvd, og hva som ikke er det
 
 **Prøvd**, i `tests/test_dynamo.py`, mot filer skrevet av verktøyets egen

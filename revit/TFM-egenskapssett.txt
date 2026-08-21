@@ -1,0 +1,34 @@
+#
+# Egenskapssett for TFM ved IFC-eksport fra Revit.
+#
+# Uten en fil som denne tar Revits IFC-eksportør bare med sine egne
+# standard-psett. TFM-parameteren blir da liggende igjen i modellen, og
+# eksporten inneholder ingen TFM i det hele tatt — verktøyet melder K1 på
+# hvert eneste objekt. Det er prøvd: en eksport med standardoppsett ga
+# åtte K1-feil på åtte objekter.
+#
+# Slik tas den i bruk:
+#     File > Export > IFC > Edit setup > Property Sets
+#     kryss av «Export user defined property sets» og pek på denne fila
+#
+# Formatet er Autodesks eget, dokumentert i
+# AddIns\IFCExporterUI\DefaultUserDefinedParameterSets.txt:
+#
+#     PropertySet:<tab><navn><tab>I eller T<tab><IFC-klasser, komma>
+#     <tab><egenskapsnavn><tab><datatype><tab><Revit-parameter om ulikt>
+#
+# VIKTIG: kolonnene skilles med TABULATOR, ikke mellomrom. Er de skilt med
+# mellomrom, leses fila uten feilmelding og uten virkning.
+#
+# Navnet til høyre er Revit-parameteren. Heter den noe annet hos dere,
+# er det den kolonnen som skal endres — ikke de to første.
+#
+
+PropertySet:	TFM11_Forekomst	I	IfcDistributionElement,IfcFlowTerminal,IfcFlowController,IfcFlowMovingDevice,IfcFlowSegment,IfcFlowFitting,IfcEnergyConversionDevice,IfcDistributionControlElement,IfcElectricDistributionPoint,IfcBuildingElementProxy
+	TFM	Text	TFM11_Forekomst.TFM
+
+PropertySet:	TFM11_Type	I	IfcDistributionElement,IfcFlowTerminal,IfcFlowController,IfcFlowMovingDevice,IfcFlowSegment,IfcFlowFitting,IfcEnergyConversionDevice,IfcDistributionControlElement,IfcElectricDistributionPoint,IfcBuildingElementProxy
+	TFMType	Text	TFM11_Type.TFMType
+
+PropertySet:	MMI	I	IfcDistributionElement,IfcFlowTerminal,IfcFlowController,IfcFlowMovingDevice,IfcFlowSegment,IfcFlowFitting,IfcEnergyConversionDevice,IfcDistributionControlElement,IfcElectricDistributionPoint,IfcBuildingElementProxy
+	MMI	Text	MMI.MMI
