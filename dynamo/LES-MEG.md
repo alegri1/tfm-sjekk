@@ -176,10 +176,37 @@ svarte «oppsettet dekker modellene som de er», og `sjekk` gikk fra åtte
 K1-feil til null — de gjenværende funnene var de ekte: T1-spriket og
 MMI-avviket, som begge overlevde runden gjennom Revit.
 
-Ett funn kom til: K8 melder «fant 1 fordeling, men ingen kursgrupper».
-Revit eksporterte ikke kretsgrupperingen, så K8s kurskontroller har ikke noe
-å arbeide på. Kontrollen sier fra om det framfor å tie — uten den linja ville
-en tom K8-rapport sett ut som at kursene var i orden.
+### Relasjonene overlever ikke denne runden
+
+Ett funn kom til: K8 melder «fant 1 fordeling, men ingen kursgrupper». Talt
+opp mot originalen:
+
+    IfcElectricalCircuit        4  ->  0
+    IfcGroup                    4  ->  0
+    IfcRelAssignsToGroup        4  ->  0
+    IfcDistributionPort        14  ->  0
+    IfcRelConnectsPorts         7  ->  0
+    IfcRelNests                14  ->  0
+
+Objektene og TFM-verdiene overlevde. Strukturen mellom dem gjorde ikke.
+
+**Tapet skjer ved import, ikke ved eksport.** Objektene kommer inn i Revit som
+`Generic Models` — IFC-importen lager geometri, ikke elektriske systemer. En
+Generic Model kan ikke ligge på en kurs i Revit, så det fantes ingen kurs å
+skrive ut igjen. Det finnes heller ingen eksportinnstilling for det; søk i
+tilleggets ressursstrenger gir ingen treff på system, circuit eller group.
+
+Konsekvensen for verktøyet: **K8 kan bare arbeide på en IFC eksportert fra en
+modell som har ekte MEP-systemer.** Går modellen veien om en IFC-import, er
+K8 ute av spill uansett hvor godt merkingen ellers er.
+
+Om en ekte Revit-modell med virkelige elektriske kurser eksporterer dem som
+IfcElectricalCircuit, vet vi ikke. Det kan bare en ekte modell svare på, og
+det er et spørsmål verdt å stille: *kommer kursgrupperingen med i eksporten
+deres?*
+
+Kontrollen sier uansett fra framfor å tie. Uten den linja ville en tom
+K8-rapport sett ut som at kursene var i orden.
 
 Dette er et engangsoppsett per prosjekt, og det er en BIM-koordinator-oppgave.
 Det er også et spørsmål verdt å stille tidlig: *hvordan er IFC-eksporten deres
