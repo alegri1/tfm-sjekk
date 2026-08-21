@@ -154,11 +154,32 @@ beskjed om noe annet. `revit/TFM-egenskapssett.txt` i dette repoet er en ferdig
 utfylt kartleggingsfil som legger TFM, TFM-type og MMI i egenskapssett med de
 navnene verktøyet leter etter.
 
-    File > Export > IFC > Edit setup > Property Sets
-    kryss av «Export user defined property sets» og pek på fila
+    File > Export > IFC > Edit setup > fanen «Parameter Mapping»
+    kryss av «Export user defined property sets»
+    filvalget dukker opp ETTER avkryssingen — pek på fila der
+
+Fanen het «Property Sets» i eldre Revit. I 2027 er den delt i Category
+Mapping, Property Mapping og Parameter Mapping, og det er den siste som
+gjelder. Filvalget er skjult til boksen er krysset av.
 
 Kolonnene i fila skilles med **tabulator**. Med mellomrom leses den uten
 feilmelding og uten virkning.
+
+**Prøvd 2026-08-21.** Med fila på plass ga eksporten:
+
+    [TFM11_Forekomst]  TFM        8 objekter
+    [TFM11_Type]       TFMType    2 objekter
+    [MMI]              MMI        8 objekter
+
+altså nøyaktig navnene standardoppsettet leter etter. `tfm-sjekk oppsett`
+svarte «oppsettet dekker modellene som de er», og `sjekk` gikk fra åtte
+K1-feil til null — de gjenværende funnene var de ekte: T1-spriket og
+MMI-avviket, som begge overlevde runden gjennom Revit.
+
+Ett funn kom til: K8 melder «fant 1 fordeling, men ingen kursgrupper».
+Revit eksporterte ikke kretsgrupperingen, så K8s kurskontroller har ikke noe
+å arbeide på. Kontrollen sier fra om det framfor å tie — uten den linja ville
+en tom K8-rapport sett ut som at kursene var i orden.
 
 Dette er et engangsoppsett per prosjekt, og det er en BIM-koordinator-oppgave.
 Det er også et spørsmål verdt å stille tidlig: *hvordan er IFC-eksporten deres

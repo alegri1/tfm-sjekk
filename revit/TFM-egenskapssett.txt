@@ -7,9 +7,22 @@
 # hvert eneste objekt. Det er prøvd: en eksport med standardoppsett ga
 # åtte K1-feil på åtte objekter.
 #
-# Slik tas den i bruk:
-#     File > Export > IFC > Edit setup > Property Sets
-#     kryss av «Export user defined property sets» og pek på denne fila
+# Slik tas den i bruk i Revit 2027:
+#     File > Export > IFC > Edit setup
+#     > fanen «Parameter Mapping»
+#     > kryss av «Export user defined property sets»
+#     > filvalget dukker først opp ETTER avkryssingen — pek på denne fila
+#
+# Merk at fanen ikke heter «Property Sets» lenger. Den het det i eldre
+# versjoner; i 2027 er innholdet delt i Category Mapping, Property Mapping og
+# Parameter Mapping, og det er den siste som gjelder her.
+#
+# PRØVD 2026-08-21 i Revit 2027. Eksporten fikk da:
+#     [TFM11_Forekomst]  TFM        8 objekter
+#     [TFM11_Type]       TFMType    2 objekter
+#     [MMI]              MMI        8 objekter
+# altså nøyaktig navnene standardoppsettet i tfm-sjekk.toml leter etter.
+# Uten fila ga samme modell åtte K1-feil på åtte merkede objekter.
 #
 # Formatet er Autodesks eget, dokumentert i
 # AddIns\IFCExporterUI\DefaultUserDefinedParameterSets.txt:
