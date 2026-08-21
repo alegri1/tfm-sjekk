@@ -145,9 +145,18 @@ nøkkel, at MMI-verdien i et K9-funn ikke forveksles med en TFM-ID, at et funn
 uten egen nøkkel finner den hos en søskenrad, rekkefølgen ut, nedkortingen ved
 mange funn, og at tallene skiller null treff fra ingen avvik.
 
-**Ikke prøvd:** selve Dynamo-kjøringen. Her finnes verken Revit eller Dynamo.
-Skallet nederst i skriptet — `IN`/`OUT` — er skrevet etter Dynamos konvensjon,
-men det er du som er den første som kjører det.
+**Prøvd i Dynamo**, 2026-08-21, i Revit 2027 med Python-motoren `PythonNet3`
+(som er CPython3 under nytt navn — nyere Dynamo har droppet IronPython 2.7).
+Grafen kjørte mot `visning-2x3.ifc` importert i Revit og ga de ventede tallene:
+
+    elementer            8
+    elementer_med_tfm    8
+    funn_i_fila          5
+    elementer_med_avvik  4
+    funn_uten_nokkel     0
+
+**Fortsatt uprøvd:** Python 2-grenen i `les_funn`. Den kan ikke kjøres her, og
+Dynamo-versjonen over bruker den ikke. Den står igjen for eldre Dynamo.
 
 Skriptet er skrevet for både IronPython 2.7 og CPython3, siden Dynamo bruker
 begge avhengig av versjon og nodetype. Derfor ingen f-strenger og ingen
