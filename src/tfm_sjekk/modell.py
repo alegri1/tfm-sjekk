@@ -254,7 +254,22 @@ class Funn(BaseModel):
     global_id: str | None = None
     ifc_klasse: str | None = None
     kildefil: str | None = None
-    verdi: str | None = Field(default=None, description="Den aktuelle TFM-verdien, om relevant")
+    tfm: str | None = Field(
+        default=None,
+        description=(
+            "Objektets egen TFM-forekomstverdi, uansett hva funnet handler om. "
+            "Dette er nøkkelen noe utenfor verktøyet kan koble funnet til objektet "
+            "med. Tom når funnet ikke gjelder et objekt, eller objektet mangler TFM."
+        ),
+    )
+    verdi: str | None = Field(
+        default=None,
+        description=(
+            "Verdien funnet handler om. For de fleste kontroller er det TFM-verdien, "
+            "men ikke alltid: K9 melder om MMI og legger MMI-verdien her. Bruk `tfm` "
+            "når du trenger objektets identitet."
+        ),
+    )
     posisjon: tuple[float, float, float] | None = Field(
         default=None, description="Objektets plassering, til kameraet i BCF-viewpointet"
     )
@@ -284,6 +299,11 @@ class Funn(BaseModel):
             global_id=objekt.global_id,
             ifc_klasse=objekt.ifc_klasse,
             kildefil=objekt.kildefil,
+            # Ingen parameter for `tfm`, med vilje. `verdi` kan overstyres av
+            # kontrollen som melder, og det var nettopp den overstyrbarheten som
+            # gjorde den ubrukelig som nøkkel. Et felt som skal kunne stoles på,
+            # må ikke kunne settes av den som melder funnet.
+            tfm=objekt.tfm_forekomst,
             verdi=verdi if verdi is not None else objekt.tfm_forekomst,
             posisjon=objekt.posisjon,
         )

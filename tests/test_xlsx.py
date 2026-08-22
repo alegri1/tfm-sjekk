@@ -64,10 +64,20 @@ def test_funn_uten_objekt_gir_tomme_celler(tmp_path):
 
 
 def test_overskriftsraden_er_frosset_og_filtrerbar(tmp_path):
-    """Det første en BIM-koordinator gjør er å filtrere på kontroll eller fag."""
+    """Det første en BIM-koordinator gjør er å filtrere på kontroll eller fag.
+
+    Området utledes av kolonnelista framfor å stå som «A1:G3». En bokstav skrevet
+    for hånd er antall kolonner kodet som en litteral, og den ville brutt hver
+    gang rapporten fikk et felt til — uten at noe var galt.
+    """
+    from openpyxl.utils import get_column_letter
+
+    from tfm_sjekk.rapport.csv_rapport import KOLONNER
+
     a = ark(tmp_path)
+    siste = get_column_letter(len(KOLONNER))
     assert a.freeze_panes == "A2"
-    assert a.auto_filter.ref == "A1:G3"
+    assert a.auto_filter.ref == f"A1:{siste}3"
 
 
 def test_meldingskolonnen_brytes(tmp_path):

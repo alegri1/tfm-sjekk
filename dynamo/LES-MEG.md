@@ -73,6 +73,29 @@ som** en modell uten avvik. Det er samme tvetydighet som «ingen funn» kontra
 Er `elementer_med_avvik` 0 mens `funn_i_fila` er 17, har koblingen bommet — ikke
 modellen din.
 
+## To felter som ligner, og som ikke er det samme
+
+`funn.csv` har to felter med TFM-verdier, og forskjellen mellom dem er hele
+grunnen til at koblingen virker:
+
+| Felt | Betyr |
+|---|---|
+| `tfm` | **Objektets egen TFM-verdi.** Alltid den samme for et gitt objekt, uansett hva funnet handler om. Dette er nøkkelen. |
+| `verdi` | **Verdien funnet handler om.** For de fleste kontroller det samme som over — men K9 melder om MMI og legger MMI-verdien her. |
+
+For et K9-funn står det `++115080=4310.001.14-QLF105` i `tfm` og `200` i `verdi`.
+Kobler du på `verdi`, fester K9-funn seg aldri til noe element.
+
+`OUT[1]` har et felt `nokkel_fra` som sier hvilken vei skriptet gikk:
+
+    "tfm-kolonnen"            rapporten har feltet — dette er det normale
+    "utledet av søskenrader"  eldre rapport uten feltet, svakere resultat
+
+Den utledede veien virker for et objekt som har minst ett funn der `verdi` *er*
+TFM-ID-en. Har objektet bare et K9-funn, finnes ingen søskenrad å låne nøkkelen
+fra, og funnet faller ut i stillhet. Ser du `utledet av søskenrader`, kjør
+`tfm-sjekk` på nytt så rapporten får feltet.
+
 ## Hva som ikke kan kobles, og hvorfor
 
 Koblingen skjer på **TFM-verdien**, ikke på GUID. Begge sider har TFM-verdien

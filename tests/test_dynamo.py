@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "dynamo"))
 from tfm_til_revit import (
     avvikstekster,
     grupper,
+    har_tfm_kolonne,
     les_funn,
     ligner_tfm,
     sammendrag,
@@ -96,13 +97,47 @@ def test_ligner_tfm(verdi, ventet):
     assert ligner_tfm(verdi) is ventet
 
 
-def test_mmi_verdi_blir_ikke_en_nokkel(tmp_path):
-    """K9 legger MMI-verdien i «verdi»-kolonnen, ikke TFM-ID-en.
+def test_element_med_bare_et_k9_funn_kobles(tmp_path):
+    """Tilfellet som falt ut i stillhet før «tfm»-kolonnen fantes.
 
-    Uten denne skillelinja ville «200» blitt behandlet som en TFM-ID å koble på.
+    K9 legger MMI-verdien i «verdi». Uten en egen kolonne for elementets TFM
+    hadde et element med BARE et K9-funn ingen nøkkel og ingen søskenrad å låne
+    en fra — funnet forsvant uten et ord.
     """
     funn = [Funn.for_objekt("K9", Alvorlighet.INFO, "MMI avviker", objekt(), verdi="200")]
-    assert tfm_per_element(csv_funn(funn, tmp_path)) == {}
+    rader = csv_funn(funn, tmp_path)
+    assert tfm_per_element(rader) == {"a": TFM}
+    assert avvikstekster(rader, [TFM])[0].startswith("K9")
+
+
+def test_mmi_verdien_blir_fortsatt_ikke_en_nokkel(tmp_path):
+    """«200» skal aldri behandles som en TFM-ID å koble på."""
+    funn = [Funn.for_objekt("K9", Alvorlighet.INFO, "MMI avviker", objekt(), verdi="200")]
+    rader = csv_funn(funn, tmp_path)
+    assert "200" not in grupper(rader)
+
+
+def test_uten_tfm_kolonnen_utledes_nokkelen_som_for(tmp_path):
+    """En rapport fra før kolonnen fantes skal fortsatt virke.
+
+    Da faller koblingen tilbake på søskenrad-utledningen, og statistikken sier
+    fra om at den gjorde det.
+    """
+    o = objekt()
+    funn = [
+        Funn.for_objekt("K8", Alvorlighet.FEIL, "kursnummer", o),
+        Funn.for_objekt("K9", Alvorlighet.INFO, "MMI avviker", o, verdi="200"),
+    ]
+    gamle = [{k: v for k, v in rad.items() if k != "tfm"} for rad in csv_funn(funn, tmp_path)]
+
+    assert not har_tfm_kolonne(gamle)
+    assert tfm_per_element(gamle) == {"a": TFM}
+    assert statistikk(gamle, [TFM])["nokkel_fra"] == "utledet av søskenrader"
+
+
+def test_statistikken_sier_at_kolonnen_ble_brukt(tmp_path):
+    rader = csv_funn([Funn.for_objekt("K2", Alvorlighet.FEIL, "m", objekt())], tmp_path)
+    assert statistikk(rader, [TFM])["nokkel_fra"] == "tfm-kolonnen"
 
 
 def test_soskenrad_gir_nokkelen_til_et_funn_uten_egen(tmp_path):

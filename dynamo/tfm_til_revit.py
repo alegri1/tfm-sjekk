@@ -105,19 +105,37 @@ def ligner_tfm(verdi):
     return sum(1 for m in ("++", "=", "-") if m in verdi) >= 2
 
 
-def tfm_per_element(funn):
-    """Elementets egen TFM-ID, lært av alle radene som deler global_id.
+def har_tfm_kolonne(funn):
+    """Om rapporten har «tfm»-kolonnen, som alltid er elementets egen TFM-ID."""
+    return bool(funn) and "tfm" in funn[0]
 
-    Har et element både et K2-funn (der «verdi» er TFM-ID-en) og et K9-funn
-    (der den er MMI), gir søskenraden nøkkelen begge trenger. Uten dette ville
-    K9-funn aldri festet seg til noe element, og de ville forsvunnet i stillhet.
+
+def tfm_per_element(funn):
+    """Elementets egen TFM-ID, per global_id.
+
+    Er «tfm»-kolonnen der, leses den rett fram. Den er garantert å være
+    elementets egen verdi uansett hva funnet handler om.
+
+    Er den ikke det — en rapport fra før kolonnen fantes — utledes nøkkelen av
+    søskenrader med samme global_id: har elementet både et K2-funn (der «verdi»
+    er TFM-ID-en) og et K9-funn (der den er MMI), gir K2-raden nøkkelen begge
+    trenger. Det virker for de fleste, men ikke for et element som BARE har et
+    K9-funn — da finnes ingen søskenrad, og funnet faller ut i stillhet.
     """
     ut = {}
+    fra_kolonne = har_tfm_kolonne(funn)
     for rad in funn:
         gid = (rad.get("global_id") or "").strip()
-        verdi = (rad.get("verdi") or "").strip()
-        if gid and ligner_tfm(verdi):
-            ut[gid] = verdi
+        if not gid:
+            continue
+        if fra_kolonne:
+            verdi = (rad.get("tfm") or "").strip()
+            if verdi:
+                ut[gid] = verdi
+        else:
+            verdi = (rad.get("verdi") or "").strip()
+            if ligner_tfm(verdi):
+                ut[gid] = verdi
     return ut
 
 
@@ -130,10 +148,13 @@ def grupper(funn, nokkel="verdi"):
     etter_gid = tfm_per_element(funn)
     ut = {}
     for rad in funn:
-        verdi = (rad.get(nokkel) or "").strip()
-        if not ligner_tfm(verdi):
-            # Kan raden knyttes til et element som har TFM et annet sted?
-            verdi = etter_gid.get((rad.get("global_id") or "").strip(), "")
+        gid = (rad.get("global_id") or "").strip()
+        # Elementets egen TFM har forrang: den er den samme for alle rader som
+        # deler global_id, og den er riktig også når funnet handler om noe annet.
+        verdi = etter_gid.get(gid, "")
+        if not verdi:
+            kandidat = (rad.get(nokkel) or "").strip()
+            verdi = kandidat if ligner_tfm(kandidat) else ""
         if not verdi:
             continue
         ut.setdefault(verdi, []).append(rad)
@@ -192,6 +213,7 @@ def statistikk(funn, verdier):
     ukoblede = len(funn) - sum(len(v) for v in etter_verdi.values())
     return {
         "funn_i_fila": len(funn),
+        "nokkel_fra": "tfm-kolonnen" if har_tfm_kolonne(funn) else "utledet av søskenrader",
         "funn_uten_nokkel": ukoblede,
         "elementer": len(verdier),
         "elementer_med_tfm": len(lest),

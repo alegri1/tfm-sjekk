@@ -17,7 +17,19 @@ from pathlib import Path
 
 from tfm_sjekk.modell import Funn
 
-KOLONNER = ["kontroll", "alvorlighet", "melding", "global_id", "ifc_klasse", "kildefil", "verdi"]
+# «tfm» står før «verdi»: objektets identitet ved siden av de andre
+# identitetsfeltene, ikke i den andre enden av raden. De to er like for de
+# fleste funn — se beskrivelsene i `Funn`.
+KOLONNER = [
+    "kontroll",
+    "alvorlighet",
+    "melding",
+    "global_id",
+    "ifc_klasse",
+    "kildefil",
+    "tfm",
+    "verdi",
+]
 SKILLETEGN = ";"
 
 

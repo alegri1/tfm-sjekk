@@ -28,6 +28,10 @@ OVERSKRIFTER = {
     "global_id": ("GlobalId", 24),
     "ifc_klasse": ("IFC-klasse", 22),
     "kildefil": ("Fil", 20),
+    # «TFM» og «TFM-verdi» ligner på hverandre med vilje. Feltene *er* like for
+    # de aller fleste funn; det er unntaket som er poenget, og et navn som
+    # skjulte likheten ville vært mer forvirrende enn opplysende.
+    "tfm": ("TFM", 38),
     "verdi": ("TFM-verdi", 38),
 }
 
