@@ -5,6 +5,11 @@ name: bygg
 #
 # Bygges på main og på tag, ikke på hver PR — det tar noen minutter per
 # plattform. Poenget er at main alltid skal være mulig å slippe.
+#
+# På tag går binærene videre til en GitHub-utgivelse. Uten den lever de
+# bare som kjøringsartefakter: de utløper etter 90 dager, og den som skal
+# laste dem ned må være logget på GitHub. En BIM-koordinator som får en
+# lenke skal kunne følge den.
 
 on:
   push:
@@ -148,3 +153,88 @@ jobs:
           name: ${{ matrix.navn }}
           path: dist/${{ matrix.fil }}
           if-no-files-found: error
+
+  utgivelse:
+    # Taggen skal være leveransen. Uten dette steget lever binærene bare som
+    # kjøringsartefakter: de utløper etter 90 dager, og den som skal laste dem
+    # ned må være logget på GitHub og finne fram til en kjøringsside.
+    #
+    # `needs` er hele poenget. En utgivelse skal ikke kunne inneholde en binær
+    # som ikke ble prøvd — røyktesten over er det som gjør filene utgivelige.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: binaer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # taggens egen melding blir utgivelsesteksten
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: nedlastet
+
+      # To av de tre heter «tfm-sjekk» og ville kollidert på navn i utgivelsen.
+      # Plattformen må uansett stå i filnavnet — det er det den som laster ned
+      # trenger å se.
+      - name: Navngi binærene etter plattform
+        run: |
+          mkdir -p utgivelse
+          mv nedlastet/tfm-sjekk-linux/tfm-sjekk       utgivelse/tfm-sjekk-linux
+          mv nedlastet/tfm-sjekk-macos/tfm-sjekk       utgivelse/tfm-sjekk-macos
+          mv nedlastet/tfm-sjekk-windows/tfm-sjekk.exe utgivelse/tfm-sjekk-windows.exe
+          ls -l utgivelse
+
+      - name: Utgi
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          # Taggen styrer både tittel og tekst, delt slik git deler den:
+          # første linje er emnet, resten er brødteksten. Skrives teksten
+          # her i stedet, kan tagg og utgivelse komme fra hverandre uten
+          # at noen ser det.
+          tittel=$(git tag -l --format='%(contents:subject)' "$tag")
+          test -n "$tittel" || tittel="tfm-sjekk $tag"
+          git tag -l --format='%(contents:body)' "$tag" > tekst.md
+
+          cat >> tekst.md <<'SLUTT'
+
+          ---
+
+          ## Nedlasting
+
+          Binærene under trenger ingen Python-installasjon (§6).
+
+          | Plattform | Fil |
+          |---|---|
+          | Windows | `tfm-sjekk-windows.exe` |
+          | macOS | `tfm-sjekk-macos` |
+          | Linux | `tfm-sjekk-linux` |
+
+          På macOS og Linux må fila gjøres kjørbar først. Kjørerettigheten
+          overlever ikke nedlastingen:
+
+              chmod +x tfm-sjekk-macos
+
+          macOS legger i tillegg en usignert binær i karantene, og sier bare at
+          fila ikke kan åpnes. Slik slippes den ut:
+
+              xattr -d com.apple.quarantine tfm-sjekk-macos
+
+          Har du Python på maskinen, er `uv tool install tfm-sjekk` enklere.
+          SLUTT
+
+          # Kjøres steget om igjen, skal filene byttes ut — ikke feile på at
+          # utgivelsen allerede finnes.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$tittel" --notes-file tekst.md
+            gh release upload "$tag" utgivelse/* --clobber
+          else
+            gh release create "$tag" utgivelse/* \
+              --title "$tittel" \
+              --notes-file tekst.md
+          fi
+          gh release view "$tag"
