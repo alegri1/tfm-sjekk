@@ -82,11 +82,15 @@ tolkningene varierer mellom prosjekter, og da må regelsettet være data.
 pipx install tfm-sjekk
 ```
 
-**Uten Python:** last ned den frittstående binæren fra siste kjøring av
-`bygg`-arbeidsflyten under Actions — artefaktene heter `tfm-sjekk-windows`,
-`tfm-sjekk-macos` og `tfm-sjekk-linux`. Én fil, ingen installasjon. Mange
-BIM-koordinatorer har ikke Python og får ikke lov til å installere det heller
-(§6).
+**Uten Python:** last ned den frittstående binæren fra
+[siste utgivelse](https://github.com/alegri1/tfm-sjekk/releases/latest) —
+`tfm-sjekk-windows.exe`, `tfm-sjekk-macos` eller `tfm-sjekk-linux`. Én fil,
+ingen installasjon, og lenka virker uten GitHub-konto. Mange BIM-koordinatorer
+har ikke Python og får ikke lov til å installere det heller (§6).
+
+På macOS og Linux må fila gjøres kjørbar etter nedlasting — `chmod +x
+tfm-sjekk-macos` — og macOS krever i tillegg `xattr -d com.apple.quarantine
+tfm-sjekk-macos`, siden binæren er usignert.
 
 Bygge den selv:
 
