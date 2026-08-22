@@ -15,6 +15,31 @@ from pydantic import BaseModel, Field
 
 from tfm_sjekk.modell import Alvorlighet
 
+OPPSETTNAVN = "tfm-sjekk.toml"
+
+
+def finn_oppsett(modeller: list[Path], arbeidskatalog: Path | None = None) -> Path | None:
+    """Leter etter tfm-sjekk.toml: hos modellen først, så i arbeidskatalogen.
+
+    Rekkefølgen følger av hvor brukeren er. Ved dra-og-slipp er arbeidskatalogen
+    programmets egen mappe, som ikke har med prosjektet å gjøre — det er samme
+    innsikt som ligger bak at rapporten legges hos modellen og ikke hos exe-en.
+
+    Bare to steder, begge til å peke på i en setning. Et søk oppover i
+    mappetreet kunne plukket opp en fil langt unna, og da er «hvilken fil ble
+    lest» ikke lenger noe man kan svare på uten å kjøre.
+    """
+    steder = []
+    if modeller:
+        steder.append(Path(modeller[0]).resolve().parent)
+    steder.append(Path(arbeidskatalog) if arbeidskatalog else Path.cwd())
+
+    for mappe in steder:
+        kandidat = mappe / OPPSETTNAVN
+        if kandidat.is_file():
+            return kandidat
+    return None
+
 
 class Grammatikk(BaseModel):
     """Sifferantall i TFM-ID-en. Se §1 for standardoppsettet."""
@@ -156,8 +181,39 @@ class Konfigurasjon(BaseModel):
 
     kontroller: dict[str, KontrollOppsett] = {}
 
+    tfm_master: Path | None = Field(default=None, description="TFM-master, XLSX eller CSV (K7)")
+    systemtabell: Path | None = Field(
+        default=None, description="Din egen CSV med NS 3451 tabell 8 (K3, K4)"
+    )
+    komponenttabell: Path | None = Field(
+        default=None, description="Din egen CSV med NS 3457-8 (K5)"
+    )
+
+    kilde: Path | None = Field(
+        default=None,
+        exclude=True,
+        description=(
+            "Konfigurasjonsfila dette ble lest fra. Relative stier over løses mot "
+            "mappa den ligger i — objektet som bærer stiene må bære opphavet sitt, "
+            "ellers kan de ikke tolkes."
+        ),
+    )
+
     def oppsett_for(self, kontroll_id: str) -> KontrollOppsett:
         return self.kontroller.get(kontroll_id, KontrollOppsett())
+
+    def sti(self, felt: str) -> Path | None:
+        """En sti fra konfigurasjonen, løst mot fila den står i.
+
+        Relativt til konfigurasjonsfila, ikke til arbeidskatalogen: oppsettet
+        hører til prosjektet, sammen med tabellene det peker på. Tolket mot
+        arbeidskatalogen ville samme fil gitt ulikt resultat avhengig av hvor
+        terminalen tilfeldigvis sto, og den kunne ikke sendes til en kollega.
+        """
+        verdi: Path | None = getattr(self, felt)
+        if verdi is None or verdi.is_absolute() or self.kilde is None:
+            return verdi
+        return (self.kilde.parent / verdi).resolve()
 
     @classmethod
     def les(cls, sti: Path | None) -> Konfigurasjon:
@@ -166,4 +222,6 @@ class Konfigurasjon(BaseModel):
             return cls()
         with sti.open("rb") as f:
             data = tomllib.load(f)
-        return cls.model_validate(data)
+        oppsett = cls.model_validate(data)
+        oppsett.kilde = sti.resolve()
+        return oppsett

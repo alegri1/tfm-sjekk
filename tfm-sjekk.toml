@@ -3,6 +3,16 @@
 # Alle verdier under er standardverdier — fila trengs bare der prosjektet
 # avviker. §14: TFM-tolkningene varierer, så regelsettet leveres som data.
 
+# Stiene til mastera og kodetabellene. Ligger de her, blir kommandoen bare
+# «tfm-sjekk sjekk modell.ifc». Relativt til DENNE fila, ikke til der du står,
+# slik at mappa kan flyttes og sendes videre.
+#
+# Se eksempler/tfm-sjekk-full.toml for en utfylt variant.
+#
+# tfm_master = "TFM-master.xlsx"
+# systemtabell = "tabeller/min-ns3451.csv"
+# komponenttabell = "tabeller/min-ns3457-8.csv"
+
 [grammatikk]
 plassering_siffer = 6
 systemkode_siffer = 4

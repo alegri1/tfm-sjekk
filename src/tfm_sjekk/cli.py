@@ -18,7 +18,7 @@ from typing import Annotated
 
 import typer
 
-from tfm_sjekk.config import Konfigurasjon
+from tfm_sjekk.config import Konfigurasjon, finn_oppsett
 from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import alle_kontroller, kjor_alle
@@ -65,6 +65,50 @@ def _tal_konsollens_kodeside() -> None:
             rekonfigurer(encoding="utf-8", errors="replace")
 
 
+def _les_oppsett(
+    config: Path | None, modeller: list[Path], til_stderr: bool = False
+) -> Konfigurasjon:
+    """Finner og leser konfigurasjonen, og sier hvilken fil det ble.
+
+    Meldingslinja er ikke pynt. Automatisk oppslag betyr at en fil brukeren ikke
+    visste om kan endre resultatet; uten en linje som sier hvilken, kan to
+    kjøringer av samme kommando gi ulikt svar uten at noe forklarer hvorfor.
+    Det er samme feil som en kontroll som hopper over i stillhet.
+
+    `til_stderr` fordi «oppsett» skriver ren TOML til stdout. En diagnoselinje
+    der ville gjort «tfm-sjekk oppsett modell.ifc > tfm-sjekk.toml» til en fil
+    som ikke lar seg lese — og omdirigeringen er dokumentert i README.
+    """
+    valgt = config or finn_oppsett(modeller)
+    if valgt is None:
+        typer.echo("Oppsett: ingen funnet, bruker standardverdiene", err=til_stderr)
+        return Konfigurasjon()
+
+    typer.echo(f"Oppsett: {valgt}", err=til_stderr)
+    return Konfigurasjon.les(valgt)
+
+
+def _fra_oppsett(flagg: Path | None, oppsett: Konfigurasjon, felt: str, hva: str) -> Path | None:
+    """Flagget vinner over fila. En sti fra fila som ikke finnes er en feil.
+
+    Uten den siste regelen ville en skrivefeil gitt «K7: hoppet over» — nøyaktig
+    det samme som når du bevisst kjørte uten master. Brukeren ville trodd hun
+    kjørte med, og fått en rapport uten K7-funn som ser ren ut.
+    """
+    if flagg is not None:
+        return flagg
+    løst = oppsett.sti(felt)
+    if løst is None:
+        return None
+    if not løst.is_file():
+        raw = getattr(oppsett, felt)
+        raise typer.BadParameter(
+            f"{hva} i oppsettet finnes ikke: «{raw}» → {løst}",
+            param_hint=felt,
+        )
+    return løst
+
+
 @app.command()
 def sjekk(
     modeller: Annotated[
@@ -102,7 +146,10 @@ def sjekk(
     ] = False,
 ) -> None:
     """Kjører kontrollene K1–K9 på modellen(e)."""
-    oppsett = Konfigurasjon.les(config)
+    oppsett = _les_oppsett(config, list(modeller))
+    systemtabell = _fra_oppsett(systemtabell, oppsett, "systemtabell", "Systemtabellen")
+    komponenttabell = _fra_oppsett(komponenttabell, oppsett, "komponenttabell", "Komponenttabellen")
+    master = _fra_oppsett(master, oppsett, "tfm_master", "TFM-mastera")
 
     # Valideres før modellene leses: en skrivefeil her skal ikke koste en full
     # kjøring før den oppdages.
@@ -190,7 +237,7 @@ def oppsett(
     Kjører ingen kontroller, og trenger verken master eller kodetabeller. Dette
     er førstegangsmøtet med et prosjekt: du har en fagmodell og ingenting annet.
     """
-    gjeldende = Konfigurasjon.les(config)
+    gjeldende = _les_oppsett(config, list(modeller), til_stderr=True)
 
     typer.echo(f"Leser {len(modeller)} modell(er)…", err=True)
     objekter = les_modeller(list(modeller), gjeldende, parallelt=not sekvensielt)

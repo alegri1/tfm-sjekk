@@ -1,0 +1,18 @@
+# Et fullt prosjektoppsett: stiene til mastera og kodetabellene ligger her,
+# slik at kommandoen blir «tfm-sjekk sjekk modell.ifc» og ingenting mer.
+#
+# Stiene er relative til DENNE fila, ikke til der du står når du kjører. Da
+# kan mappa flyttes eller sendes videre uten at noe brekker.
+#
+# Fila finnes automatisk når den heter «tfm-sjekk.toml» og ligger enten hos
+# modellen eller i arbeidskatalogen. Kjøringen sier hvilken den leste.
+#
+# Prøv den slik, fra repoets rot:
+#     uv run tfm-sjekk sjekk eksempler/demo-*.ifc --config eksempler/tfm-sjekk-full.toml
+
+tfm_master = "FIKTIV-tfm-master.csv"
+systemtabell = "FIKTIV-systemkoder.csv"
+komponenttabell = "FIKTIV-komponentkoder.csv"
+
+[kontroller.K4]
+alvorlighet = "advarsel"

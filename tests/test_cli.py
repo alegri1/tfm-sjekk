@@ -17,7 +17,17 @@ from conftest import uten_ansi
 from fixtures.syntetisk import GYLDIG, lag_modell, lag_modell_pa_avveie
 
 
-def kjor(argumenter: list[str], koding: str | None = None) -> subprocess.CompletedProcess:
+def kjor(
+    argumenter: list[str],
+    koding: str | None = None,
+    mappe: Path | None = None,
+) -> subprocess.CompletedProcess:
+    """Kjører CLI-en som egen prosess.
+
+    `mappe` setter arbeidskatalogen. Den betyr noe siden verktøyet leter etter
+    «tfm-sjekk.toml» der: uten den kjører testene fra repoets rot, som har en —
+    og da prøver de noe annet enn de tror.
+    """
     miljo = dict(os.environ)
     if koding:
         miljo["PYTHONIOENCODING"] = koding
@@ -28,6 +38,7 @@ def kjor(argumenter: list[str], koding: str | None = None) -> subprocess.Complet
         encoding="utf-8",
         errors="replace",
         env=miljo,
+        cwd=str(mappe) if mappe else None,
     )
 
 
@@ -261,3 +272,84 @@ def test_oppsett_med_grammatikk_i_cp1252_konsoll(tmp_path):
     resultat = kjor(["oppsett", str(modell)], koding="cp1252")
     assert resultat.returncode == 0, resultat.stdout + resultat.stderr
     assert "krev_plassering = false" in resultat.stdout
+
+
+# --- Oppsettet finnes uten flagg ---
+
+
+def prosjekt(tmp_path):
+    """En mappe som ligner et ekte prosjekt: modeller, tabeller, oppsett."""
+    import shutil
+
+    eks = Path(__file__).parent.parent / "eksempler"
+    (tmp_path / "modeller").mkdir()
+    (tmp_path / "tabeller").mkdir()
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "modeller" / "rie.ifc")
+    shutil.copy(eks / "FIKTIV-systemkoder.csv", tmp_path / "tabeller" / "ns3451.csv")
+    shutil.copy(eks / "FIKTIV-tfm-master.csv", tmp_path / "TFM-master.csv")
+    (tmp_path / "modeller" / "tfm-sjekk.toml").write_text(
+        'tfm_master = "../TFM-master.csv"\nsystemtabell = "../tabeller/ns3451.csv"\n',
+        encoding="utf-8",
+    )
+    return modell
+
+
+def test_full_kjoring_uten_et_eneste_flagg(tmp_path):
+    """Poenget med hele endringen: kommandoen skal kunne skrives fra hodet."""
+    modell = prosjekt(tmp_path)
+    resultat = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")])
+    ut = uten_ansi(resultat.stdout)
+    assert "tfm-sjekk.toml" in ut
+    assert "K3: hoppet over" not in ut  # tabellen ble funnet via oppsettet
+    assert "K7: hoppet over" not in ut  # mastera også
+
+
+def test_kjoringen_sier_hvilket_oppsett_den_leste(tmp_path):
+    modell = prosjekt(tmp_path)
+    resultat = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")])
+    linjer = uten_ansi(resultat.stdout).splitlines()
+    assert linjer[0].startswith("Oppsett: ")
+    assert "modeller" in linjer[0]
+
+
+def test_uten_oppsett_sies_det_ogsaa(tmp_path):
+    tom = tmp_path / "tom"
+    tom.mkdir()
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "ren.ifc")
+    resultat = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")], mappe=tom)
+    assert "ingen funnet" in uten_ansi(resultat.stdout).splitlines()[0]
+
+
+def test_flagget_vinner_over_oppsettet(tmp_path):
+    """Flagget er det brukeren skrev nettopp nå."""
+    modell = prosjekt(tmp_path)
+    annen = tmp_path / "annen.toml"
+    annen.write_text("[grammatikk]\nplassering_siffer = 7\n", encoding="utf-8")
+
+    resultat = kjor(["sjekk", str(modell), "--config", str(annen), "--ut", str(tmp_path / "ut")])
+    ut = uten_ansi(resultat.stdout)
+    assert "annen.toml" in ut.splitlines()[0]
+    assert "K7: hoppet over" in ut  # den andre fila oppgir ingen master
+
+
+def test_skrivefeil_i_sti_er_en_feil_ikke_et_hopp(tmp_path):
+    """Uten dette ville en skrivefeil gitt «K7: hoppet over».
+
+    Det er nøyaktig det samme verktøyet melder når du bevisst kjørte uten
+    master — og brukeren ville trodd hun kjørte med.
+    """
+    modell = prosjekt(tmp_path)
+    (tmp_path / "modeller" / "tfm-sjekk.toml").write_text(
+        'tfm_master = "../TFM-mastr.csv"\n', encoding="utf-8"
+    )
+    resultat = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")])
+    ut = uten_ansi(resultat.stdout + resultat.stderr)
+    assert resultat.returncode == 2
+    assert "TFM-mastr.csv" in ut
+    assert "hoppet over" not in ut
+
+
+def test_oppsett_kommandoen_finner_ogsaa_fila(tmp_path):
+    modell = prosjekt(tmp_path)
+    resultat = kjor(["oppsett", str(modell)])
+    assert "tfm-sjekk.toml" in uten_ansi(resultat.stderr)

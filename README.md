@@ -114,13 +114,34 @@ ferdig, og du hadde ikke rukket å lese noe.
 ## Bruk
 
 ```bash
+tfm-sjekk sjekk rie.ifc riv.ifc
+```
+
+Så kort fordi prosjektets oppsett ligger i `tfm-sjekk.toml` ved siden av
+modellene. Fila finnes automatisk — hos modellen først, ellers i mappa du står i
+— og kjøringen sier hvilken den leste:
+
+```toml
+tfm_master = "TFM-master.xlsx"
+systemtabell = "tabeller/min-ns3451.csv"
+komponenttabell = "tabeller/min-ns3457-8.csv"
+```
+
+Stiene er relative til oppsettsfila, ikke til der du står, så mappa kan flyttes
+og sendes videre. Har du ikke laget et oppsett ennå, oppgir du det samme som
+flagg:
+
+```bash
 tfm-sjekk sjekk rie.ifc riv.ifc \
     --systemtabell min-ns3451.csv \
     --komponenttabell min-ns3457-8.csv \
     --master tfm-master.xlsx \
-    --config tfm-sjekk.toml \
     --ut rapport/
 ```
+
+Et flagg vinner alltid over fila. Og peker en sti i oppsettet på noe som ikke
+finnes, stopper kjøringen — den hopper ikke over kontrollen som om du hadde
+valgt å kjøre uten.
 
 Flere filer federeres og kontrolleres samlet — det er slik K6 finner duplikater
 på tvers av fagmodeller. Exit-kode 0 ved ingen feil, 1 ved feil, slik at verktøyet
