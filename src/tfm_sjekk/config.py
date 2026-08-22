@@ -126,6 +126,27 @@ class ElektroOppsett(BaseModel):
         "IfcElectricalCircuit",  # IFC 2x3
     ]
 
+    # Klassene som BÆRER kurser framfor å ligge på en. K8a krever kursnummer av
+    # elektroobjekter, og et kabelrør har ikke noe kursnummer å ha — det fører
+    # dem. Samme argument som allerede gjelder fordelinger: tavla er roten
+    # kursene går ut fra.
+    #
+    # De fire siste finnes bare i IFC4. Det er ufarlig å liste dem: treff går
+    # mot objektets egen arvekjede, så et navn som ikke finnes i skjemaet
+    # matcher aldri noe.
+    #
+    # Segment og Fitting er brede og dekker også VVS-rør. Det gjør ingenting —
+    # K8a gjelder bare NS 3451 kapittel 4 og 5, så en ventilasjonskanal er
+    # allerede utenfor.
+    foring_klasser: list[str] = [
+        "IfcFlowSegment",
+        "IfcFlowFitting",
+        "IfcCableCarrierSegment",  # IFC4
+        "IfcCableCarrierFitting",  # IFC4
+        "IfcCableSegment",  # IFC4
+        "IfcCableFitting",  # IFC4
+    ]
+
 
 class MasterOppsett(BaseModel):
     """Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).

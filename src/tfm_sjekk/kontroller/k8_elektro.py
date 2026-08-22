@@ -59,6 +59,11 @@ class K8Elektro(Kontroll):
                 # ligger på en kurs. «=4310.001.00» er riktig merking av en
                 # tavle, og K8b bruker nettopp systemdelen av den.
                 continue
+            if k.er_foringsvei(objekt):
+                # Samme argument, andre enden: et kabelrør bærer kurser og
+                # ligger ikke på en. Uten dette unntaket ga en ekte modell med
+                # 2439 objekter 1018 funn om rør og bend, og 11 om ekte feil.
+                continue
             # For elektro tolkes undernummeret som kurs-/sløyfenummer, og
             # «000» betyr i praksis at det ikke er satt.
             if tfm.kurs.strip("0") == "":

@@ -117,6 +117,16 @@ ELEKTRO = [
                 "kurs": "Kurs 13",
                 "mmi": "300",
             },
+            # Kabelrør merket «.00», som IKKE skal gi funn: en føringsvei
+            # bærer kurser og ligger ikke på en. Uten dette objektet finnes
+            # tilfellet ikke i noen modell i repoet — og det var nettopp det
+            # som gjorde at en ekte modell ga 1018 falske funn før noen så det.
+            {
+                "klasse": "IfcFlowSegment",
+                "tfm": "++115080=4310.001.00-QLK001",
+                "kurs": "Kurs 12",
+                "mmi": "300",
+            },
         ],
     }
 ]

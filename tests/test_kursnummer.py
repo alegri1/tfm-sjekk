@@ -1,0 +1,160 @@
+"""Tester for evnen «kursnummer» — når undernummeret skal være utfylt.
+
+To slags objekter er unntatt, og av samme grunn: fordelingen er roten kursene
+går ut fra, og føringsveien er det som bærer dem. Ingen av dem ligger på en
+kurs.
+
+Uten det andre unntaket ga en ekte Revit-eksport med 2439 objekter 1018 funn om
+kabelrør og 11 om ekte feil.
+"""
+
+from __future__ import annotations
+
+from tfm_sjekk.config import ElektroOppsett, Konfigurasjon
+from tfm_sjekk.kontekst import Kontekst
+from tfm_sjekk.kontroller.k8_elektro import K8Elektro
+from tfm_sjekk.modell import IfcObjekt
+
+UTEN_KURS = "++115080=4320.001.00-QLF001"
+MED_KURS = "++115080=4320.001.12-QLF002"
+
+
+def objekt(
+    global_id: str = "a",
+    klasse: str = "IfcLamp",
+    supertyper: tuple[str, ...] = ("IfcFlowTerminal", "IfcDistributionElement", "IfcProduct"),
+    tfm: str = UTEN_KURS,
+) -> IfcObjekt:
+    return IfcObjekt(
+        global_id=global_id,
+        ifc_klasse=klasse,
+        ifc_supertyper=list(supertyper),
+        kildefil="rie.ifc",
+        tfm_forekomst=tfm,
+    )
+
+
+def k8(objekter: list[IfcObjekt], config: Konfigurasjon | None = None) -> list:
+    k = Kontekst.bygg(objekter, config or Konfigurasjon())
+    return K8Elektro().kjor(k)
+
+
+def kursfunn(funn: list) -> list:
+    return [f for f in funn if "kurs-/sløyfenummer" in f.melding]
+
+
+# --- Kursnummer kreves av elektroobjekter ---
+
+
+def test_lampe_uten_kursnummer_meldes():
+    assert len(kursfunn(k8([objekt()]))) == 1
+
+
+def test_lampe_med_kursnummer_meldes_ikke():
+    assert kursfunn(k8([objekt(tfm=MED_KURS)])) == []
+
+
+def test_andre_fag_er_upavirket():
+    """Undernummeret betyr noe annet utenfor kapittel 4 og 5."""
+    vvs = objekt(tfm="++115080=3600.001.00-JVZ001")
+    assert kursfunn(k8([vvs])) == []
+
+
+# --- Objekter som ikke ligger på en kurs er unntatt ---
+
+
+def test_fordelingen_er_roten():
+    tavle = objekt(
+        klasse="IfcElectricDistributionBoard",
+        supertyper=("IfcDistributionElement", "IfcProduct"),
+        tfm="++115080=4310.001.00-QLF100",
+    )
+    assert kursfunn(k8([tavle])) == []
+
+
+def test_foringsvei_baerer_kurser():
+    ror = objekt(
+        klasse="IfcFlowSegment",
+        supertyper=("IfcDistributionFlowElement", "IfcDistributionElement", "IfcProduct"),
+        tfm="++115080=4360.001.00-QLK001",
+    )
+    assert kursfunn(k8([ror])) == []
+
+
+def test_bend_er_ogsaa_foringsvei():
+    bend = objekt(
+        klasse="IfcFlowFitting",
+        supertyper=("IfcDistributionFlowElement", "IfcDistributionElement", "IfcProduct"),
+        tfm="++115080=4360.001.00-QLK002",
+    )
+    assert kursfunn(k8([bend])) == []
+
+
+def test_utstyr_er_ikke_unntatt():
+    """Lampe i samme system som røret meldes fortsatt."""
+    ror = objekt("a", "IfcFlowSegment", ("IfcDistributionElement",), "++115080=4360.001.00-QLK001")
+    lampe = objekt("b", tfm="++115080=4320.001.00-QLF001")
+    assert len(kursfunn(k8([ror, lampe]))) == 1
+
+
+# --- Konfigurerbart, med en standardliste som virker ---
+
+
+def test_standardlista_dekker_det_vanlige():
+    assert {"IfcFlowSegment", "IfcFlowFitting"} <= set(ElektroOppsett().foring_klasser)
+
+
+def test_prosjektet_kan_utvide_lista():
+    config = Konfigurasjon(elektro=ElektroOppsett(foring_klasser=["IfcSpesialRor"]))
+    spesial = objekt(klasse="IfcSpesialRor", supertyper=("IfcProduct",))
+    assert kursfunn(k8([spesial], config)) == []
+
+
+def test_klassenavn_som_ikke_finnes_er_ufarlig():
+    """Lista kan nevne IFC4-klasser selv når fila er 2x3.
+
+    Treff går mot objektets egen arvekjede, så et navn som ikke finnes i
+    skjemaet matcher aldri noe — det gir ingen feil.
+    """
+    config = Konfigurasjon(elektro=ElektroOppsett(foring_klasser=["IfcFinnesIkke"]))
+    assert len(kursfunn(k8([objekt()], config))) == 1
+
+
+# --- Unntaket gjelder bare kravet om kursnummer ---
+
+
+def test_foringsvei_teller_fortsatt_i_koblingsgrafen():
+    """En lampe koblet til en fordeling GJENNOM et kabelrør.
+
+    Utelot vi føringsveien fra grafen, ville lampen mistet fordelingen sin, og
+    K8b kunne ikke sett at den hører til et annet system.
+    """
+    tavle = IfcObjekt(
+        global_id="tavle",
+        ifc_klasse="IfcElectricDistributionBoard",
+        ifc_supertyper=["IfcDistributionElement", "IfcProduct"],
+        kildefil="rie.ifc",
+        tfm_forekomst="++115080=4310.001.00-QLF100",
+        tilkoblet=["ror"],
+    )
+    ror = IfcObjekt(
+        global_id="ror",
+        ifc_klasse="IfcFlowSegment",
+        ifc_supertyper=["IfcDistributionElement", "IfcProduct"],
+        kildefil="rie.ifc",
+        tfm_forekomst="++115080=4360.001.00-QLK001",
+        tilkoblet=["tavle", "lampe"],
+    )
+    lampe = IfcObjekt(
+        global_id="lampe",
+        ifc_klasse="IfcLamp",
+        ifc_supertyper=["IfcFlowTerminal", "IfcDistributionElement", "IfcProduct"],
+        kildefil="rie.ifc",
+        # Annet system enn tavla — det er dette K8b skal se
+        tfm_forekomst="++115080=4999.001.12-QLF001",
+        tilkoblet=["ror"],
+    )
+    funn = k8([tavle, ror, lampe])
+    assert any("tilkoblet fordelingen" in f.melding for f in funn), (
+        "lampen mistet fordelingen sin gjennom kabelrøret"
+    )

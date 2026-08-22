@@ -164,6 +164,15 @@ class Kontekst(BaseModel):
     def er_fordeling(self, objekt: IfcObjekt) -> bool:
         return any(objekt.er_av_type(k) for k in self.config.elektro.fordeling_klasser)
 
+    def er_foringsvei(self, objekt: IfcObjekt) -> bool:
+        """Bærer objektet kurser framfor å ligge på en?
+
+        Egen metode, ikke slått sammen med `er_fordeling` til én
+        `ligger_pa_kurs`. Kortere hadde det blitt, men når et objekt ikke
+        flagges er spørsmålet alltid hvilket av de to unntakene som slo til.
+        """
+        return any(objekt.er_av_type(k) for k in self.config.elektro.foring_klasser)
+
 
 def _bygg_fordelinger(objekter: list[IfcObjekt], config: Konfigurasjon) -> dict[str, list[str]]:
     """Finner hvilke objekter som henger på hvilken fordeling.

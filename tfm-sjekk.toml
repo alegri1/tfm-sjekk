@@ -79,6 +79,21 @@ krets_klasser = [
     "IfcElectricalCircuit",    # IFC 2x3
 ]
 
+# Klassene som BÆRER kurser framfor å ligge på en. K8 krever kursnummer av
+# elektroobjekter, og et kabelrør har ikke noe kursnummer å ha. Samme grunn som
+# at fordelinger er unntatt: tavla er roten kursene går ut fra.
+#
+# Kjørt uten dette ga en ekte modell med 2439 objekter 1018 funn om rør og bend,
+# og 11 om ekte feil.
+foring_klasser = [
+    "IfcFlowSegment",
+    "IfcFlowFitting",
+    "IfcCableCarrierSegment",  # IFC4
+    "IfcCableCarrierFitting",  # IFC4
+    "IfcCableSegment",         # IFC4
+    "IfcCableFitting",         # IFC4
+]
+
 [master]
 # Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).
 # Det er kolonneoverskriftene som gjenkjennes, ikke arknavnene: alle ark i
