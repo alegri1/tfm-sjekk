@@ -229,22 +229,54 @@ def test_tekst_krasjer_ikke_paa_et_objekt():
     assert tekst(Element()) == "<Revit.Elements.Family>"
 
 
-def test_alle_ukjente_leses_som_feilkobling():
+def test_alle_ukjente_gir_en_advarsel():
     """Den vanligste feilen: IN[0] gir noe annet enn familienavn.
 
     Uten dette ville sammendraget sagt «2426 familier står ikke i tabellen»,
     som leses som at tabellen er fattig — ikke som at grafen er feilkoblet.
+    Det er forskjellen mellom å lete i FAMILIER og å lete i ledningene.
     """
     familier = ["Revit.Elements.Family"] * 3
     kurser = ["1", "2", "3"]
-    tall = statistikk(familier, kurser, merk(familier, kurser, PLASSERING))
-    linjer = sammendrag(tall)
-    assert any("feilkoblet" in ln for ln in linjer)
+    linjer = sammendrag(statistikk(familier, kurser, merk(familier, kurser, PLASSERING)))
+    assert any(ln.startswith("ADVARSEL") for ln in linjer)
 
 
-def test_noen_ukjente_leses_ikke_som_feilkobling():
+def test_noen_ukjente_gir_ingen_advarsel():
+    """En fattig tabell er ikke en feil. Den skal ikke rope."""
     familier = ["Downlight", "Ukjent"]
     kurser = ["1", "2"]
     linjer = sammendrag(statistikk(familier, kurser, merk(familier, kurser, PLASSERING)))
-    assert not any("feilkoblet" in ln for ln in linjer)
+    assert not any(ln.startswith("ADVARSEL") for ln in linjer)
     assert any("står ikke i tabellen" in ln for ln in linjer)
+
+
+def test_advarselen_viser_verdien_som_faktisk_kom_inn():
+    """Et tall sier at noe er galt. Bare verdien sier hva.
+
+    Dynamos «Family and Type» gir et Revit-objekt, ikke en streng. Skriptet
+    gjør det om til visningsformen, deler på første kolon, og sitter igjen med
+    «Family Type» — som ingen familie heter. Det skjedde i Revit 2027, på 588
+    av 588 elementer, og advarselen sa den gang bare at IN[0] var feilkoblet.
+    """
+    objekt = 'Family Type: 18" D x 15" H, Family: Pendant-Dome'
+    familier = [objekt] * 3
+    kurser = ["1", "2", "3"]
+    linjer = sammendrag(statistikk(familier, kurser, merk(familier, kurser, PLASSERING)))
+    assert any(objekt in ln for ln in linjer), "verdien står ikke i sammendraget"
+    assert any("Revit-objekt" in ln for ln in linjer)
+
+
+def test_tom_verdi_peker_paa_parameternavnet():
+    """Tomt betyr at parameteren ikke finnes — ikke at objektet er feil slag."""
+    familier = ["", "", ""]
+    linjer = sammendrag(statistikk(familier, ["1"] * 3, merk(familier, ["1"] * 3, PLASSERING)))
+    assert any("Parameternavnet" in ln for ln in linjer)
+    assert not any("Revit-objekt" in ln for ln in linjer)
+
+
+def test_et_ekte_men_ukjent_navn_peker_paa_tabellen():
+    familier = ["Vindusvasker 3000"] * 3
+    linjer = sammendrag(statistikk(familier, ["1"] * 3, merk(familier, ["1"] * 3, PLASSERING)))
+    assert any("FAMILIER" in ln for ln in linjer)
+    assert not any("Revit-objekt" in ln for ln in linjer)

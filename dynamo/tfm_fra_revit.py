@@ -216,6 +216,9 @@ def statistikk(familienavn, kursnumre, tfm_er):
         "uten_kurs": uten_kurs,
         "unike_tfm": len(set(tfm_er)),
         "systemforekomster": len({t.split("-")[0] for t in tfm_er}),
+        # Den første verdien, ordrett. Er noe feilkoblet, er dette det eneste
+        # som sier HVA som kom inn — et tall kan si at noe er galt, men ikke hva.
+        "forste_familie": familienavn[0] if familienavn else "",
     }
 
 
@@ -238,11 +241,22 @@ def sammendrag(tall):
     linjer.append("{0} systemforekomster.".format(tall["systemforekomster"]))
     linjer.append("{0} uten kursnummer — de får undernummer «00».".format(tall["uten_kurs"]))
     if tall["ukjent_familie"] == n:
-        linjer.append(
-            "ADVARSEL: ingen av de {0} familienavnene står i tabellen. Det "
-            "skjer nesten alltid fordi IN[0] er feilkoblet — sjekk med en "
-            "Watch-node at du faktisk får familienavn og ikke noe annet.".format(n)
-        )
+        linjer.append("ADVARSEL: ingen av de {0} familienavnene står i tabellen.".format(n))
+        første = tall["forste_familie"]
+        linjer.append('  Første verdi inn: "{0}"'.format(første))
+        if not første:
+            linjer.append(
+                "  Tom. Parameternavnet i Code Block-en finnes ikke på disse "
+                "elementene, eller anførselstegnene mangler."
+            )
+        elif ":" in første or "," in første:
+            linjer.append(
+                "  Det ser ut som et Revit-objekt, ikke et navn. Legg en "
+                "Element.Name inn før IN[0] — og en FamilyType.Family foran den "
+                "om du kom fra «Family and Type»."
+            )
+        else:
+            linjer.append("  Legg navnet inn i FAMILIER om det er et ekte familienavn.")
     elif tall["ukjent_familie"]:
         linjer.append(
             "{0} familier står ikke i tabellen og fikk {1}. Legg dem inn i "

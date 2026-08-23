@@ -210,30 +210,48 @@ elementene før du har sett på noe.
 
 Koble `Categories` → `category`.
 
-**6. Les de to parameterne.** To `Element.GetParameterValueByName`-noder, begge
-med `All Elements of Category` inn i `element`. Navnet gis av en `Code Block`
-(dobbeltklikk på lerretet):
+**6. Les familienavnet og kursnummeret.** De to kommer ikke like enkelt.
 
-    "Family and Type";     -> parameterName på den første
-    "Circuit Number";      -> parameterName på den andre
+**Kursnummeret** er én node: `Element.GetParameterValueByName` med
+`All Elements of Category` inn i `element`, og en `Code Block` med
 
-Anførselstegnene og semikolonet må begge være der. `Family and Type;` uten
-anførselstegn er ikke teksten «Family and Type» — Dynamo leser det som et navn
-på noe, lager en inngangsport av det, og sender null videre. Kjennetegnet er at
-Code Block-en får en ny port på venstre side.
+    "Circuit Number";
+
+inn i `parameterName`. Anførselstegnene og semikolonet må begge være der.
+`Circuit Number;` uten anførselstegn er ikke teksten «Circuit Number» — Dynamo
+leser det som et navn på noe, lager en inngangsport av det, og sender null
+videre. Kjennetegnet er at Code Block-en får en ny port på venstre side.
+
+**Familienavnet krever tre noder**, og det er verdt å vite hvorfor:
+
+    All Elements of Category
+        -> Element.ElementType        gir typen, ikke familien
+        -> FamilyType.Family          gir familien, som objekt
+        -> Element.Name               gir navnet, som tekst
+
+`Element.GetParameterValueByName("Family and Type")` ser ut som en snarvei, men
+returnerer et Revit-objekt framfor en streng. En `Watch` viser det som
+
+    Family Type: 18" D x 15" H, Family: Pendant-Dome
+
+Familienavnet står der, men det er Dynamos visningsform — ikke data. Skriptet
+deler på første kolon og sitter igjen med «Family Type», som ingen familie
+heter, og alt faller til standardkoden. Det er prøvd i Revit 2027: 588 av 588
+elementer ble ukjente.
+
+Har du allerede en `Family and Type`-node, trenger du ikke rive den: send
+utgangen gjennom `FamilyType.Family` og `Element.Name`, så er du i mål.
 
 **7. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
 trykk `Run`. Du skal se familienavn i den ene (`Duplex Receptacle: 20A` eller
 liknende) og kursnumre i den andre (`1`, `6,8`, eller tomt).
 
-Er familienavnene tomme eller ser ut som `Revit.Elements.Family`, virker ikke
-`"Family and Type"` i din versjon. Prøv i denne rekkefølgen:
+Er familienavnene tomme, eller inneholder de kolon og komma, mangler et ledd i
+kjeden fra steg 6 — se etter `Element.Name` til slutt.
 
-    a)  Code Block:  "Family";
-    b)  Element.ElementType  ->  FamilyType.Family  ->  Element.Name
-
-Skriptet deler på kolon og bruker bare det som står før, så `Familie: Type`
-er like bra som `Familie` alene.
+Skriptet deler på kolon og bruker bare det som står før, så et navn på formen
+`Familie: Type` er like bra som `Familie` alene. Men `Family Type: ..., Family:
+...` er noe annet: der står familienavnet bakerst, og det leses ikke.
 
 **8. Python-noden.** Søk `Python Script`. Den kommer med to inputs; klikk `+` på
 noden én gang, så du har tre. Dobbeltklikk, lim inn hele `tfm_fra_revit.py`,
@@ -306,7 +324,7 @@ fortsatt, er det koblingen inn i `element` som er problemet.
 |---|---|
 | `No parameter found by that name` | Parameteren finnes ikke (steg 1), er ikke bundet til kategorien, eller `parameterName` mangler anførselstegn — `TFM;` lager en inngangsport og sender null, `"TFM";` sender navnet. |
 | Grafen skriver før du er klar | Kjøremodus står på `Automatic`. |
-| `ADVARSEL: ingen av familienavnene ...` | `IN[0]` gir noe annet enn navn. Se steg 7. |
+| `ADVARSEL: ingen av familienavnene ...` | `IN[0]` gir noe annet enn navn. Linja under advarselen viser den første verdien ordrett — inneholder den kolon og komma, er det et Revit-objekt og ikke et navn. Se steg 6. |
 | Skriptet kaster om ulik lengde | `IN[0]` og `IN[1]` kommer fra ulike elementlister. |
 | `SetParameterByName` feiler på noen få elementer | Den fikk `x[1]` — sammendraget — i stedet for `x[0]`. Utgangene står i feil rekkefølge. |
 | Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
