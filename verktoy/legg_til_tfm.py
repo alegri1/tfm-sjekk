@@ -51,24 +51,50 @@ PLASSERING = "115080"
 PSET_NAVN = "TFM11_Forekomst"
 FELT = "TFM"
 
-# Familienavn -> (systemkode, komponentkode). NS 3451 kapittel 4 er elkraft,
-# 5 er tele og automatisering. Kodene her er plausible, ikke autoritative —
-# innholdet i standardene skal ikke inn i dette repoet (§8).
+# Familienavn -> (systemkode, komponentkode).
+#
+# KODENE ER FUNNET PÅ — valgt så de ser plausible ut, og konsistente med
+# hverandre. Innholdet i NS 3451 og NS 3457-serien skal ikke inn i dette repoet
+# (§8).
+#
+# Samme tabell som i dynamo/tfm_fra_revit.py, som merker fra Revit-siden.
+# tests/test_merking.py passer på at de ikke driver fra hverandre.
 FAMILIER: dict[str, tuple[str, str]] = {
+    # Fordelinger, inntak og vern — det kursene går ut fra
     "Lighting and Appliance Panelboard": ("4310", "QLF"),
+    "PV Panelboard": ("4310", "QLF"),
+    "Switchboard": ("4310", "QLF"),
+    "Meter": ("4310", "QLM"),
+    "Disconnect Switch": ("4310", "QLA"),
+    "Dry Type Transformer": ("4310", "QLT"),
+    "Electrical Equipment": ("4310", "QLT"),
+    # Lys
     "Pendant-Dome": ("4320", "QLF"),
+    "Pendant Lamp": ("4320", "QLF"),
+    "Pendant Light": ("4320", "QLF"),
     "Recessed Lamp": ("4320", "QLF"),
     "Wall Lamp": ("4320", "QLF"),
     "Downlight": ("4320", "QLF"),
     "Ceiling Light": ("4320", "QLF"),
-    "Pendant Lamp": ("4320", "QLF"),
+    "Bollard Light": ("4320", "QLF"),
+    "Sconce Light": ("4320", "QLF"),
+    "Lighting-Exterior": ("4320", "QLF"),
     "Lighting Switches": ("4320", "QLB"),
+    # Uttak og tilkoblet utstyr
     "Duplex Receptacle": ("4330", "QLS"),
+    "Quadruplex Receptacle": ("4330", "QLS"),
     "High Voltage Receptacle": ("4330", "QLS"),
-    "Data Outlet": ("5300", "QTD"),
-    "Conduit": ("4360", "QLK"),
-    "Electrical Equipment": ("4310", "QLT"),
+    "Weather Proof Receptacle": ("4330", "QLS"),
     "Electrical Fixtures": ("4330", "QLS"),
+    "Hand Dryer": ("4330", "QLU"),
+    # Lokal produksjon
+    "PV Battery": ("4350", "QLP"),
+    "PV Inverter": ("4350", "QLP"),
+    # Føringsveier — bærer kurser og ligger ikke på en (se K8)
+    "Conduit": ("4360", "QLK"),
+    "Wiring Pull Box": ("4360", "QLK"),
+    # Tele og data
+    "Data Outlet": ("5300", "QTD"),
 }
 STANDARD = ("4390", "QLX")
 

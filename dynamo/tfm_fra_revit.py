@@ -53,30 +53,61 @@ from __future__ import unicode_literals
 
 # --- Ren logikk. Ingen Revit-avhengighet, slik at den kan prøves utenfor Dynamo. ---
 
+PY2 = str is bytes
+
 # Familienavn -> (systemkode, komponentkode).
 #
-# Denne tabellen er den samme som i verktoy/legg_til_tfm.py, og de to skal ikke
-# kunne drive fra hverandre: tests/test_merking.py sammenlikner dem. Kodene er
-# plausible, ikke autoritative — innholdet i NS 3451 og NS 3457-serien skal
-# ikke inn i dette repoet (§8).
+# KODENE ER FUNNET PÅ. De er valgt så de ser plausible ut i en rapport, og de er
+# konsistente med hverandre — ikke mer. NS 3451 og NS 3457-serien er betalte
+# standarder, og innholdet skal aldri inn i dette repoet (§8). Skal tabellen
+# brukes på et ekte prosjekt, er det prosjektets egne koder som hører hjemme her.
+#
+# Tabellen er den samme som i verktoy/legg_til_tfm.py, og de to skal ikke kunne
+# drive fra hverandre: tests/test_merking.py sammenlikner dem.
 #
 # Treff skjer på begynnelsen av familienavnet, slik at «Downlight 150mm» og
-# «Downlight 200mm» faller på samme kode.
+# «Downlight 200mm» faller på samme kode, og «Meter» dekker både «Meter Bank» og
+# «Meter Main». En nøkkel som er begynnelsen på en annen ville skygget for den;
+# tests/test_merking.py passer på at ingen gjør det.
+#
+# Familienavnene er Autodesks, fra Snowdon Towers. En norsk modell har andre —
+# det er FAMILIER du endrer da, ikke koden under.
 FAMILIER = [
+    # Fordelinger, inntak og vern — det kursene går ut fra
     ("Lighting and Appliance Panelboard", ("4310", "QLF")),
+    ("PV Panelboard", ("4310", "QLF")),
+    ("Switchboard", ("4310", "QLF")),
+    ("Meter", ("4310", "QLM")),
+    ("Disconnect Switch", ("4310", "QLA")),
+    ("Dry Type Transformer", ("4310", "QLT")),
+    ("Electrical Equipment", ("4310", "QLT")),
+    # Lys
     ("Pendant-Dome", ("4320", "QLF")),
+    ("Pendant Lamp", ("4320", "QLF")),
+    ("Pendant Light", ("4320", "QLF")),
     ("Recessed Lamp", ("4320", "QLF")),
     ("Wall Lamp", ("4320", "QLF")),
     ("Downlight", ("4320", "QLF")),
     ("Ceiling Light", ("4320", "QLF")),
-    ("Pendant Lamp", ("4320", "QLF")),
+    ("Bollard Light", ("4320", "QLF")),
+    ("Sconce Light", ("4320", "QLF")),
+    ("Lighting-Exterior", ("4320", "QLF")),
     ("Lighting Switches", ("4320", "QLB")),
+    # Uttak og tilkoblet utstyr
     ("Duplex Receptacle", ("4330", "QLS")),
+    ("Quadruplex Receptacle", ("4330", "QLS")),
     ("High Voltage Receptacle", ("4330", "QLS")),
-    ("Data Outlet", ("5300", "QTD")),
-    ("Conduit", ("4360", "QLK")),
-    ("Electrical Equipment", ("4310", "QLT")),
+    ("Weather Proof Receptacle", ("4330", "QLS")),
     ("Electrical Fixtures", ("4330", "QLS")),
+    ("Hand Dryer", ("4330", "QLU")),
+    # Lokal produksjon
+    ("PV Battery", ("4350", "QLP")),
+    ("PV Inverter", ("4350", "QLP")),
+    # Føringsveier — bærer kurser og ligger ikke på en (se K8)
+    ("Conduit", ("4360", "QLK")),
+    ("Wiring Pull Box", ("4360", "QLK")),
+    # Tele og data
+    ("Data Outlet", ("5300", "QTD")),
 ]
 STANDARD = ("4390", "QLX")
 
@@ -122,6 +153,27 @@ def tfm_id(plassering, systemkode, kurs, komponentkode, løpenummer):
     return "++{0}={1}.001.{2}-{3}{4:03d}".format(
         plassering, systemkode, kurs, komponentkode, løpenummer
     )
+
+
+def tekst(verdi):
+    """Det Dynamo sender inn, som en streng verktøyet kan regne med.
+
+    Revit gir null for en parameter som ikke er satt, og Dynamo sender den
+    videre som None. Uten dette ville «Circuit Number» på et ukoblet objekt
+    blitt strengen «None» — som inneholder ingen siffer, og dermed hadde
+    oppført seg riktig ved en ren tilfeldighet.
+
+    Noen noder gir et Revit-objekt framfor en streng. str() på det gir noe
+    ubrukelig, men ikke et krasj — og da sier statistikken fra, framfor at
+    grafen stopper med en meldingen ingen forstår.
+    """
+    if verdi is None:
+        return ""
+    if isinstance(verdi, bytes):
+        return verdi.decode("utf-8")
+    if PY2 and isinstance(verdi, str):
+        return verdi.decode("utf-8")
+    return verdi if isinstance(verdi, type("")) else "{0}".format(verdi)
 
 
 def merk(familienavn, kursnumre, plassering):
@@ -185,7 +237,13 @@ def sammendrag(tall):
         )
     linjer.append("{0} systemforekomster.".format(tall["systemforekomster"]))
     linjer.append("{0} uten kursnummer — de får undernummer «00».".format(tall["uten_kurs"]))
-    if tall["ukjent_familie"]:
+    if tall["ukjent_familie"] == n:
+        linjer.append(
+            "ADVARSEL: ingen av de {0} familienavnene står i tabellen. Det "
+            "skjer nesten alltid fordi IN[0] er feilkoblet — sjekk med en "
+            "Watch-node at du faktisk får familienavn og ikke noe annet.".format(n)
+        )
+    elif tall["ukjent_familie"]:
         linjer.append(
             "{0} familier står ikke i tabellen og fikk {1}. Legg dem inn i "
             "FAMILIER om kodene betyr noe for deg.".format(tall["ukjent_familie"], STANDARD[0])
@@ -198,11 +256,9 @@ def sammendrag(tall):
 # Ingen sjekk på __name__ — se begrunnelsen i tfm_til_revit.py. At «IN» finnes
 # er det eneste sikre tegnet på at vi kjører i Dynamo.
 if "IN" in globals():  # pragma: no cover - krever Dynamo
-    # Revit gir null for en parameter som ikke er satt. Uten dette ville
-    # «Circuit Number» på et ukoblet objekt blitt strengen «None».
-    _familier = [n if n else "" for n in (IN[0] or [])]  # noqa: F821
-    _kurser = [k if k else "" for k in (IN[1] or [])]  # noqa: F821
-    _plassering = IN[2]  # noqa: F821
+    _familier = [tekst(n) for n in (IN[0] or [])]  # noqa: F821
+    _kurser = [tekst(k) for k in (IN[1] or [])]  # noqa: F821
+    _plassering = tekst(IN[2])  # noqa: F821
 
     _tfm = merk(_familier, _kurser, _plassering)
 

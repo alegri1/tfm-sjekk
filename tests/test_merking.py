@@ -195,3 +195,56 @@ def test_tom_inndata_sier_fra():
 def test_sammendraget_advarer_om_duplikater():
     tall = statistikk(["a"], ["1"], ["++115080=4390.001.01-QLX001"] * 2)
     assert any("ADVARSEL" in ln for ln in sammendrag(tall))
+
+
+# --- Det Dynamo sender inn er ikke alltid en streng ---
+
+
+def test_tekst_haandterer_none():
+    """Revit gir null for en parameter som ikke er satt."""
+    from tfm_fra_revit import tekst
+
+    assert tekst(None) == ""
+
+
+def test_tekst_slipper_gjennom_strenger():
+    from tfm_fra_revit import tekst
+
+    assert tekst("Downlight") == "Downlight"
+    assert tekst("Kurs «6,8»") == "Kurs «6,8»"
+
+
+def test_tekst_krasjer_ikke_paa_et_objekt():
+    """En feilkoblet node kan gi et Revit-objekt framfor et navn.
+
+    Da skal grafen si fra gjennom statistikken, ikke stoppe med en
+    AttributeError ingen kan tolke.
+    """
+    from tfm_fra_revit import tekst
+
+    class Element:
+        def __repr__(self):
+            return "<Revit.Elements.Family>"
+
+    assert tekst(Element()) == "<Revit.Elements.Family>"
+
+
+def test_alle_ukjente_leses_som_feilkobling():
+    """Den vanligste feilen: IN[0] gir noe annet enn familienavn.
+
+    Uten dette ville sammendraget sagt «2426 familier står ikke i tabellen»,
+    som leses som at tabellen er fattig — ikke som at grafen er feilkoblet.
+    """
+    familier = ["Revit.Elements.Family"] * 3
+    kurser = ["1", "2", "3"]
+    tall = statistikk(familier, kurser, merk(familier, kurser, PLASSERING))
+    linjer = sammendrag(tall)
+    assert any("feilkoblet" in ln for ln in linjer)
+
+
+def test_noen_ukjente_leses_ikke_som_feilkobling():
+    familier = ["Downlight", "Ukjent"]
+    kurser = ["1", "2"]
+    linjer = sammendrag(statistikk(familier, kurser, merk(familier, kurser, PLASSERING)))
+    assert not any("feilkoblet" in ln for ln in linjer)
+    assert any("står ikke i tabellen" in ln for ln in linjer)

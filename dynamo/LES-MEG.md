@@ -165,6 +165,107 @@ i skriptet kjenner fjorten familienavn. Betyr kodene noe for deg, legg dine egne
 inn der. Tabellen er den samme som i `verktoy/legg_til_tfm.py`, og
 `tests/test_merking.py` passer på at de ikke driver fra hverandre.
 
+### Bygg grafen, steg for steg
+
+Skrevet for deg som ikke bruker Dynamo daglig. Ni steg, og du bygger lesesiden
+ferdig før du kobler til noe som skriver.
+
+**1. Åpne Dynamo.** I Revit: fanen `Manage` → `Dynamo`. Velg `New`.
+
+**2. Sett motoren.** Nederst til høyre i Dynamo-vinduet står Python-motoren.
+`PythonNet3` er riktig. Er den låst, er den allerede riktig.
+
+**3. Sett kjøremodus til Manual.** Nederst til venstre står `Automatic`. Bytt
+til `Manual`. Dette er det viktigste steget: i Automatic kjører grafen i det
+øyeblikket du kobler siste ledning, og en skrivenode skriver da til alle
+elementene før du har sett på noe.
+
+**4. Hent elementene.** To noder:
+
+- Søk `Categories` — en nedtrekksliste. Velg `Lighting Fixtures` til å begynne
+  med. Én kategori er nok til å få grafen til å virke; flere kommer i steg 9.
+- Søk `All Elements of Category`. Den ligger under `Revit → Selection`, ikke
+  under `Categories` — nedtrekkslista er bare en verdi, ikke et bibliotek.
+
+Koble `Categories` → `category`.
+
+**5. Les de to parameterne.** To `Element.GetParameterValueByName`-noder, begge
+med `All Elements of Category` inn i `element`. Navnet gis av en `Code Block`
+(dobbeltklikk på lerretet):
+
+    "Family and Type";     -> parameterName på den første
+    "Circuit Number";      -> parameterName på den andre
+
+Semikolonet må være der. Uten det er Code Block-en tom.
+
+**6. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
+trykk `Run`. Du skal se familienavn i den ene (`Duplex Receptacle: 20A` eller
+liknende) og kursnumre i den andre (`1`, `6,8`, eller tomt).
+
+Er familienavnene tomme eller ser ut som `Revit.Elements.Family`, virker ikke
+`"Family and Type"` i din versjon. Prøv i denne rekkefølgen:
+
+    a)  Code Block:  "Family";
+    b)  Element.ElementType  ->  FamilyType.Family  ->  Element.Name
+
+Skriptet deler på kolon og bruker bare det som står før, så `Familie: Type`
+er like bra som `Familie` alene.
+
+**7. Python-noden.** Søk `Python Script`. Den kommer med to inputs; klikk `+` på
+noden én gang, så du har tre. Dobbeltklikk, lim inn hele `tfm_fra_revit.py`,
+trykk `Save`. Koble:
+
+    familienavn        -> IN[0]
+    kursnumre          -> IN[1]
+    Code Block  "115080";   -> IN[2]
+
+**8. Skill ut de to utgangene.** Python-noden gir én liste med to ting i.
+
+    List.GetItemAtIndex(index = Code Block  0;)   -> TFM-ID-ene
+    List.GetItemAtIndex(index = Code Block  1;)   -> tallene  -> Watch
+
+`index` må komme fra en Code Block. Skriver du tallet i noden selv, tolkes det
+ikke som et tall.
+
+**Trykk `Run` nå, og les Watch-en.** Står det `2426 elementer merket` og et
+lavt tall for ukjente familier, er lesesiden ferdig. Står det `ADVARSEL: ingen
+av familienavnene står i tabellen`, er `IN[0]` feilkoblet — gå tilbake til
+steg 6.
+
+**9. Først nå kobler du skrivingen.** `Element.SetParameterByName`:
+
+    element         <- SAMME All Elements of Category som i steg 5
+    parameterName   <- Code Block  "TFM";
+    value           <- List.GetItemAtIndex(0)
+
+Elementene må komme fra den samme noden som parameterne ble lest fra. Henter du
+dem fra en annen node, kan rekkefølgen være en annen, og hvert element får
+naboens TFM-ID. Det er en feil ingen ser i grafen — dra ledningen fra utgangen
+du allerede bruker.
+
+Trykk `Run`. Sjekk et par elementer i Revit før du stoler på resten.
+
+**Flere kategorier.** Legg til én `Categories`-node per kategori, samle dem i en
+`List.Create`, og koble den inn i `All Elements of Category`. Du får da en liste
+med lister — legg en `List.Flatten` etter, ellers ser skriptet én rad per
+kategori i stedet for én per element.
+
+Aktuelle kategorier: `Electrical Fixtures`, `Electrical Equipment`,
+`Lighting Fixtures`, `Lighting Devices`, `Data Devices`, `Conduits`,
+`Conduit Fittings`.
+
+### Fellene, samlet
+
+| Symptom | Årsak |
+|---|---|
+| `No parameter found by that name` | Parameteren finnes ikke i dette prosjektet, eller er ikke bundet til kategorien. Den må være **Instance** og **Text**. |
+| Grafen skriver før du er klar | Kjøremodus står på `Automatic`. |
+| `ADVARSEL: ingen av familienavnene ...` | `IN[0]` gir noe annet enn navn. Se steg 6. |
+| Skriptet kaster om ulik lengde | `IN[0]` og `IN[1]` kommer fra ulike elementlister. |
+| Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
+| `Ingen elementer inn` | Kategorivalget traff ingenting. En tom liste ser ut som en ferdig merket modell. |
+| Verdiene kommer ikke ut i IFC-en | Kartleggingsfila mangler i eksportoppsettet, eller peker på et annet parameternavn. |
+
 ### Kursnummeret leses fra Revit, ikke fra IFC-en
 
 Kursen er det eneste leddet i ID-en som ikke kan utledes av objektet selv. I IFC

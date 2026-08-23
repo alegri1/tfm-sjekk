@@ -38,7 +38,7 @@
 #
 
 PropertySet:	TFM11_Forekomst	I	IfcDistributionElement,IfcFlowTerminal,IfcFlowController,IfcFlowMovingDevice,IfcFlowSegment,IfcFlowFitting,IfcEnergyConversionDevice,IfcDistributionControlElement,IfcElectricDistributionPoint,IfcBuildingElementProxy
-	TFM	Text	TFM11_Forekomst.TFM
+	TFM	Text	TFM
 
 PropertySet:	TFM11_Type	I	IfcDistributionElement,IfcFlowTerminal,IfcFlowController,IfcFlowMovingDevice,IfcFlowSegment,IfcFlowFitting,IfcEnergyConversionDevice,IfcDistributionControlElement,IfcElectricDistributionPoint,IfcBuildingElementProxy
 	TFMType	Text	TFM11_Type.TFMType
