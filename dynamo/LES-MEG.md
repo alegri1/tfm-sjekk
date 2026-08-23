@@ -120,6 +120,64 @@ Har modellen en `IfcGUID`-parameter fra eksporten, kan du sende **den** som
 `IN[1]` i stedet for TFM-verdien. Da matches det på `global_id`-kolonnen, og
 også K1-funnene treffer. Prøv det — det er den bedre veien hvis den finnes.
 
+## Merkingen den andre veien: `tfm_fra_revit.py`
+
+Grafen over skriver funn *tilbake*. Denne skriver merkingen *inn*, og trengs når
+modellen ikke har TFM fra før. En umerket modell gir K1 på hvert eneste objekt,
+og en rapport der alt er feil sier ingenting om noe.
+
+Halve TFM-ID-en ligger allerede i modellen. Familien sier hva objektet er, og
+`Circuit Number` sier hvilken kurs det henger på. Det som mangler er formatet.
+
+```
+Element.GetParameterValueByName("Family") ─────────> IN[0]
+Element.GetParameterValueByName("Circuit Number") ─> IN[1]
+Code Block  "115080";  ───────────────────────────> IN[2]
+
+OUT[0] ──> Element.SetParameterByName("TFM")   ← samme elementer inn i «element»
+OUT[1] ──> Watch
+```
+
+Parameteren må være **Tekst** og **Instance**, og den må hete det
+`revit/TFM-egenskapssett.txt` peker på — ellers kommer verdiene aldri ut i
+IFC-eksporten.
+
+**Den legger ikke inn feil med vilje.** `verktoy/legg_til_tfm.py` gjør det, fordi
+den bygger en fikstur av en fil. Denne skriver inn i en ekte modell, og det
+skiller seg. Det trengs heller ikke: en ekte modell har sine egne hull.
+
+### Prøvd mot Snowdon Towers
+
+Logikken er kjørt tørt mot Autodesks `Snowdon Towers Sample Electrical Solar`,
+2426 elementer:
+
+    2426 elementer merket, alle TFM-ID-er unike
+    69 systemforekomster
+    1021 uten kursnummer — de får undernummer «00»
+    140 familier står ikke i tabellen og fikk 4390
+
+Kjørt gjennom `tfm-sjekk` gir det **169 funn, alle K8**: objekter som ikke ligger
+på noen kurs. Null K1, null K2, null K6 — merkingen er ren, og hvert funn er et
+ekte hull i Autodesks modell.
+
+De 140 ukjente familiene er ikke en feil, men en fattigdom: `FAMILIER`-tabellen
+i skriptet kjenner fjorten familienavn. Betyr kodene noe for deg, legg dine egne
+inn der. Tabellen er den samme som i `verktoy/legg_til_tfm.py`, og
+`tests/test_merking.py` passer på at de ikke driver fra hverandre.
+
+### Kursnummeret leses fra Revit, ikke fra IFC-en
+
+Kursen er det eneste leddet i ID-en som ikke kan utledes av objektet selv. I IFC
+leses den av navnet på `IfcSystem` — men det navnet er nettopp Revits eget
+`Circuit Number`, skrevet ut ved eksport.
+
+Det er også den ene retningen som virker. Kurser overlever eksporten *ut* av
+Revit — Snowdon eksporterte 448 `IfcSystem` og 1405 objekter tilordnet en kurs —
+men ikke importen *inn* igjen. Se «Hva som ikke kan kobles, og hvorfor».
+
+Et objekt kan ligge på flere kurser; Revit skriver da «6,8». TFM har plass til
+én, og den første brukes. Det er en forenkling verdt å vite om.
+
 ## En Revit-modell å prøve mot
 
 Du trenger en `.rvt` med TFM-verdier for å kjøre grafen. Den enkleste er å la

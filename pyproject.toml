@@ -54,7 +54,10 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 # avhengig av versjon og nodetype. UP-reglene moderniserer til py312 og ville
 # gjort fila ukjørbar på den eldste av dem. Konsumenten bestemmer, ikke
 # målversjonen i denne fila.
-"dynamo/*.py" = ["UP"]
+# B905: zip(..., strict=) kom i 3.10 og finnes ikke i IronPython. merk() sjekker
+# lengdene selv og kaster med en melding som sier hva som er feilkoblet i grafen
+# — det er mer opplysende enn ValueError fra zip.
+"dynamo/*.py" = ["UP", "B905"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

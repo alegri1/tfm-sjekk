@@ -1,0 +1,211 @@
+# -*- coding: utf-8 -*-
+"""Bygger TFM-ID-er av det Revit-modellen allerede vet, til bruk i Dynamo.
+
+Motstykket til tfm_til_revit.py. Den skriver funn tilbake til modellen; denne
+skriver merkingen inn i utgangspunktet, slik at det finnes noe å kontrollere.
+
+Bakgrunnen er praktisk. En umerket modell gir K1 på hvert eneste objekt, og en
+rapport der alt er feil sier ingenting om noe. Samtidig ligger halve TFM-ID-en
+allerede i modellen: familien sier hva objektet er, og kursnummeret sier hvilken
+kurs det henger på. Det som mangler er formatet.
+
+BRUK I DYNAMO
+
+    Element.GetParameterValueByName("Family") ─────────> IN[0]  familienavn
+    Element.GetParameterValueByName("Circuit Number") ─> IN[1]  kursnumre
+    Code Block  "115080";  ───────────────────────────> IN[2]  plassering
+
+    Elementene selv skal ikke inn hit. Send dem rett til
+    Element.SetParameterByName sammen med OUT[0].
+
+    OUT[0] er en liste like lang som IN[0]: TFM-ID-en per element.
+    OUT[1] er tallene. Les dem før du stoler på resultatet.
+
+    Parameteren du skriver til må være Tekst og Instance, og den må hete det
+    kartleggingsfila revit/TFM-egenskapssett.txt peker på — ellers kommer
+    verdiene aldri ut i IFC-eksporten.
+
+DENNE LEGGER IKKE INN FEIL MED VILJE
+
+verktoy/legg_til_tfm.py gjør det, fordi den bygger en testfikstur av en fil.
+Denne skriver inn i en ekte Revit-modell, og en modell er ikke en fikstur. Det
+trengs heller ikke: en ekte modell har sine egne hull. Merket med denne ga
+Snowdon Towers 169 funn, alle K8 om objekter uten kursnummer — og ingen av dem
+var lagt inn av noen.
+
+HVORFOR KURSNUMMERET KOMMER FRA REVIT OG IKKE FRA IFC
+
+Kursen er det eneste leddet i TFM-ID-en som ikke kan utledes av objektet selv.
+I IFC leses den av navnet på IfcSystem — men det navnet er nettopp Revits eget
+«Circuit Number», skrevet ut ved eksport. Her leses den fra kilden i stedet for
+fra avtrykket.
+
+Det er også den ene retningen som virker. Kurser overlever eksporten ut av
+Revit, men ikke importen inn igjen: et objekt som har vært innom en IFC-import
+er en Generic Model uten kurs. Derfor merkes modellen der kursene finnes.
+
+Skrevet for både IronPython 2.7 og CPython3, som er de to Dynamo kjører.
+"""
+
+# Uten denne er "..." bytes i Python 2, og alt under knekker på første «».
+# I Python 3 er den et null-tiltak.
+from __future__ import unicode_literals
+
+# --- Ren logikk. Ingen Revit-avhengighet, slik at den kan prøves utenfor Dynamo. ---
+
+# Familienavn -> (systemkode, komponentkode).
+#
+# Denne tabellen er den samme som i verktoy/legg_til_tfm.py, og de to skal ikke
+# kunne drive fra hverandre: tests/test_merking.py sammenlikner dem. Kodene er
+# plausible, ikke autoritative — innholdet i NS 3451 og NS 3457-serien skal
+# ikke inn i dette repoet (§8).
+#
+# Treff skjer på begynnelsen av familienavnet, slik at «Downlight 150mm» og
+# «Downlight 200mm» faller på samme kode.
+FAMILIER = [
+    ("Lighting and Appliance Panelboard", ("4310", "QLF")),
+    ("Pendant-Dome", ("4320", "QLF")),
+    ("Recessed Lamp", ("4320", "QLF")),
+    ("Wall Lamp", ("4320", "QLF")),
+    ("Downlight", ("4320", "QLF")),
+    ("Ceiling Light", ("4320", "QLF")),
+    ("Pendant Lamp", ("4320", "QLF")),
+    ("Lighting Switches", ("4320", "QLB")),
+    ("Duplex Receptacle", ("4330", "QLS")),
+    ("High Voltage Receptacle", ("4330", "QLS")),
+    ("Data Outlet", ("5300", "QTD")),
+    ("Conduit", ("4360", "QLK")),
+    ("Electrical Equipment", ("4310", "QLT")),
+    ("Electrical Fixtures", ("4330", "QLS")),
+]
+STANDARD = ("4390", "QLX")
+
+# Undernummeret er to siffer. «00» betyr «ligger ikke på noen kurs» — det er en
+# ekte opplysning, ikke en manglende: tavler og føringsveier har den med rette,
+# og et uttak har det ikke.
+UTEN_KURS = "00"
+
+
+def familiekode(navn):
+    """(systemkode, komponentkode) for et familienavn.
+
+    Ukjente familier får STANDARD framfor å bli hoppet over. Et objekt uten TFM
+    gir K1, og da ser modellen umerket ut der den egentlig bare er ukjent for
+    denne tabellen. En kode verktøyet kan avvise er mer opplysende enn ingenting.
+    """
+    familie = (navn or "").split(":")[0].strip()
+    for nøkkel, koder in FAMILIER:
+        if familie.startswith(nøkkel):
+            return koder
+    return STANDARD
+
+
+def kursnummer(rå):
+    """Revits «Circuit Number» til to siffer.
+
+    Revit skriver kursnummeret som fritekst, og et objekt kan ligge på flere:
+    «6,8» betyr kurs 6 og kurs 8. TFM har plass til én, så den første brukes.
+    Det er en forenkling, og den er verdt å vite om — men tallet er ekte, og
+    det er mer enn et oppdiktet tall er.
+
+    Alt som ikke inneholder et siffer regnes som «ingen kurs».
+    """
+    første = (rå or "").split(",")[0]
+    sifre = "".join(c for c in første if c.isdigit())
+    if not sifre:
+        return UTEN_KURS
+    return sifre.zfill(2)[:2]
+
+
+def tfm_id(plassering, systemkode, kurs, komponentkode, løpenummer):
+    """Setter sammen ID-en slik grammatikken krever den."""
+    return "++{0}={1}.001.{2}-{3}{4:03d}".format(
+        plassering, systemkode, kurs, komponentkode, løpenummer
+    )
+
+
+def merk(familienavn, kursnumre, plassering):
+    """TFM-ID per element, i samme rekkefølge som inndataene.
+
+    Løpenummeret telles per systemforekomst — altså per kombinasjon av
+    systemkode og kurs. Det er det som gjør komponentforekomsten unik, og
+    dermed det som holder K6 i sjakk.
+    """
+    if len(familienavn) != len(kursnumre):
+        raise ValueError(
+            "IN[0] har {0} familienavn og IN[1] har {1} kursnumre. "
+            "De to listene må komme fra de samme elementene, i samme "
+            "rekkefølge.".format(len(familienavn), len(kursnumre))
+        )
+
+    tellere = {}
+    ut = []
+    for navn, rå in zip(familienavn, kursnumre):
+        systemkode, komponentkode = familiekode(navn)
+        kurs = kursnummer(rå)
+        forekomst = (systemkode, kurs)
+        tellere[forekomst] = tellere.get(forekomst, 0) + 1
+        ut.append(tfm_id(plassering, systemkode, kurs, komponentkode, tellere[forekomst]))
+    return ut
+
+
+def statistikk(familienavn, kursnumre, tfm_er):
+    """Tallene som avgjør om resultatet er til å stole på.
+
+    Særlig «ukjent_familie» og «uten_kurs»: er de høye, er ikke merkingen gal,
+    men den er fattig. Da er det FAMILIER-tabellen eller kursoppsettet i
+    modellen som skal ses på — ikke denne grafen.
+    """
+    ukjent = sum(1 for n in familienavn if familiekode(n) == STANDARD)
+    uten_kurs = sum(1 for k in kursnumre if kursnummer(k) == UTEN_KURS)
+    return {
+        "elementer": len(tfm_er),
+        "ukjent_familie": ukjent,
+        "uten_kurs": uten_kurs,
+        "unike_tfm": len(set(tfm_er)),
+        "systemforekomster": len({t.split("-")[0] for t in tfm_er}),
+    }
+
+
+def sammendrag(tall):
+    """Én lesbar linje per tall, til en Watch-node."""
+    n = tall["elementer"]
+    if not n:
+        return [
+            "Ingen elementer inn.",
+            "Sjekk at kategorivalget faktisk traff noe — en tom liste ser",
+            "nøyaktig ut som en modell der alt allerede er merket.",
+        ]
+
+    linjer = ["{0} elementer merket.".format(n)]
+    if tall["unike_tfm"] != n:
+        linjer.append(
+            "ADVARSEL: bare {0} av {1} TFM-ID-er er unike. Det skal ikke "
+            "kunne skje, og gir K6-funn.".format(tall["unike_tfm"], n)
+        )
+    linjer.append("{0} systemforekomster.".format(tall["systemforekomster"]))
+    linjer.append("{0} uten kursnummer — de får undernummer «00».".format(tall["uten_kurs"]))
+    if tall["ukjent_familie"]:
+        linjer.append(
+            "{0} familier står ikke i tabellen og fikk {1}. Legg dem inn i "
+            "FAMILIER om kodene betyr noe for deg.".format(tall["ukjent_familie"], STANDARD[0])
+        )
+    return linjer
+
+
+# --- Skallet. Kjøres bare i Dynamo. ---
+
+# Ingen sjekk på __name__ — se begrunnelsen i tfm_til_revit.py. At «IN» finnes
+# er det eneste sikre tegnet på at vi kjører i Dynamo.
+if "IN" in globals():  # pragma: no cover - krever Dynamo
+    # Revit gir null for en parameter som ikke er satt. Uten dette ville
+    # «Circuit Number» på et ukoblet objekt blitt strengen «None».
+    _familier = [n if n else "" for n in (IN[0] or [])]  # noqa: F821
+    _kurser = [k if k else "" for k in (IN[1] or [])]  # noqa: F821
+    _plassering = IN[2]  # noqa: F821
+
+    _tfm = merk(_familier, _kurser, _plassering)
+
+    # Liste, ikke tuppel: List.GetItemAtIndex regner med en liste.
+    # Indeks 0 er TFM-ID-ene, indeks 1 er tallene — les tallene.
+    OUT = [_tfm, sammendrag(statistikk(_familier, _kurser, _tfm))]
