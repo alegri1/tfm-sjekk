@@ -192,6 +192,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
+
+          # actions/checkout henter taggen som en lettvektsreferanse, selv med
+          # fetch-depth: 0. Da peker refs/tags/<tag> rett på commiten, og
+          # %(contents) faller tilbake på COMMIT-meldingen uten å si fra.
+          # Utgivelsen fikk da tittelen «Versjon 0.5.0» i stedet for taggens
+          # «tfm-sjekk 0.5.0», og Co-Authored-By-linja med på kjøpet.
+          git fetch --force --tags
+          if [ "$(git cat-file -t "$tag")" != tag ]; then
+            echo "::warning::$tag er ikke annotert — teksten blir commit-meldingen"
+          fi
           # Taggen styrer både tittel og tekst, delt slik git deler den:
           # første linje er emnet, resten er brødteksten. Skrives teksten
           # her i stedet, kan tagg og utgivelse komme fra hverandre uten
