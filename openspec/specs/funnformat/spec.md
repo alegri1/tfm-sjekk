@@ -51,23 +51,6 @@ leser som antar at de er like tar feil uten å merke det.
 - **AND** feltet for objektets TFM-verdi inneholder TFM-verdien
 - **AND** de to er ulike
 
-### Requirement: De maskinlesbare rapportene skal ha samme felter
-
-Rapportformatene som er ment for videre behandling SKAL tilby de samme feltene om
-hvert funn.
-
-Et felt som finnes i ett format og ikke i et annet er en felle for den som bytter
-mellom dem — og de brukes side om side: skript og Dynamo leser det ene, mennesker
-filtrerer i det andre.
-
-#### Scenario: Samme funn i to formater
-- **WHEN** de samme funnene skrives i begge de maskinlesbare formatene
-- **THEN** begge inneholder objektets TFM-verdi for hvert funn
-
-#### Scenario: Rapporten til lesing er unntatt
-- **WHEN** funnene vises i rapporten som er ment for lesing
-- **THEN** den trenger ikke feltet
-
 ### Requirement: En konsument skal kunne se hvor nøkkelen kom fra
 
 Et verktøy som knytter funn til objekter utenfor tfm-sjekk SKAL oppgi om det
@@ -85,3 +68,59 @@ resultat — og forskjellen skal være synlig framfor å måtte gjettes.
 - **WHEN** koblingen leser en eldre rapport uten feltet
 - **THEN** den utleder nøkkelen som før
 - **AND** den oppgir at nøkkelen ble utledet
+
+### Requirement: Alle rapportformatene skal bære objektets TFM-verdi
+
+Hvert rapportformat SKAL vise TFM-verdien til objektet funnet gjelder, uavhengig
+av hva funnet handler om.
+
+Et felt som finnes i ett format og ikke i et annet er en felle for den som bytter
+mellom dem — og de brukes side om side: skript og Dynamo leser det ene, mennesker
+filtrerer i det andre, og en BIM-koordinator åpner det tredje i en viewer.
+
+Rapporten til lesing og emnene til vieweren var tidligere fritatt, med den
+begrunnelsen at leseren ser TFM-verdien likevel. Det holder bare når funnet
+handler om TFM-verdien. Ellers identifiserer raden ikke lenger objektet sitt, og
+funnet er ikke til å handle på.
+
+#### Scenario: Samme funn i to maskinlesbare formater
+- **WHEN** de samme funnene skrives i begge de maskinlesbare formatene
+- **THEN** begge inneholder objektets TFM-verdi for hvert funn
+
+#### Scenario: Rapporten til lesing
+- **WHEN** funnene vises i rapporten som er ment for lesing
+- **THEN** hvert funn viser objektets TFM-verdi
+
+#### Scenario: Emnene til vieweren
+- **WHEN** funnene skrives som emner for en BCF-viewer
+- **THEN** hvert emne oppgir objektets TFM-verdi
+
+#### Scenario: Et K9-funn identifiserer objektet sitt
+- **WHEN** et K9-funn om et MMI-avvik vises i rapporten til lesing
+- **THEN** raden viser objektets TFM-verdi
+- **AND** MMI-verdien framgår av meldinga
+
+### Requirement: Et felt merket som TFM skal inneholde en TFM-verdi
+
+Ingen rapport SKAL merke en kolonne, en linje eller et felt som TFM når innholdet
+er noe annet enn objektets TFM-verdi.
+
+Dette gjelder uavhengig av om formatet er ment for lesing, for videre behandling
+eller for en viewer. Et verktøy som ikke kan svare skal si at det ikke kan svare;
+å svare feil under en selvsikker etikett er verre enn å la feltet være tomt. En
+leser som ser «TFM» over en verdi har ingen grunn til å tvile på den, og oppdager
+ikke at kolonnen av og til bærer noe helt annet.
+
+#### Scenario: Kontrollen melder om en annen verdi enn TFM
+- **WHEN** en kontroll melder om en verdi som ikke er objektets TFM-verdi
+- **THEN** feltet merket som TFM inneholder objektets TFM-verdi
+- **AND** ikke verdien kontrollen meldte om
+
+#### Scenario: Objektet mangler TFM-verdi
+- **WHEN** et funn gjelder et objekt uten TFM-verdi
+- **THEN** feltet merket som TFM er tomt
+- **AND** det er tomt framfor å vise en plassholdertekst
+
+#### Scenario: Funnet gjelder ikke et objekt
+- **WHEN** et funn ikke gjelder noe objekt i modellen
+- **THEN** feltet merket som TFM er tomt
