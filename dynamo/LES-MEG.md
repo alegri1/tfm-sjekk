@@ -216,6 +216,15 @@ Koble `Categories` → `category`.
 
 **6. Les familienavnet og kursnummeret.** De to kommer ikke like enkelt.
 
+**Alt forgrenes fra én og samme elementliste.** Har du flere kategorier, er det
+`List.Flatten` som er kilden; med én kategori er det `All Elements of Category`.
+Lag ikke en ny hentenode per gren. De fire listene som går inn i Python-noden må
+være i samme rekkefølge, ellers får element nr. 500 naboens kursnummer — og det
+er en feil som ikke synes noe sted. Skriptet stopper på ulik lengde, men kan
+ikke se en omstokking.
+
+I resten av dette steget står «elementlista» for den ene kilden.
+
 **Kursnummeret** er én node: `Element.GetParameterValueByName` med
 `All Elements of Category` inn i `element`, og en `Code Block` med
 
@@ -228,7 +237,7 @@ videre. Kjennetegnet er at Code Block-en får en ny port på venstre side.
 
 **Familienavnet krever tre noder**, og det er verdt å vite hvorfor:
 
-    All Elements of Category
+    elementlista
         -> Element.ElementType        gir typen, ikke familien
         -> FamilyType.Family          gir familien, som objekt
         -> Element.Name               gir navnet, som tekst
@@ -248,7 +257,7 @@ utgangen gjennom `FamilyType.Family` og `Element.Name`, så er du i mål.
 
 **Typenavnet også, som reserve.** Legg til en gren til:
 
-    All Elements of Category
+    elementlista
         -> Element.ElementType
         -> Element.Name               -> IN[3]
 
@@ -348,6 +357,7 @@ fortsatt, er det koblingen inn i `element` som er problemet.
 | Skriptet kaster om ulik lengde | `IN[0]` og `IN[1]` kommer fra ulike elementlister. |
 | `SetParameterByName` feiler på noen få elementer | Den fikk `x[1]` — sammendraget — i stedet for `x[0]`. Utgangene står i feil rekkefølge. |
 | Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
+| `Internal error ... Dereferencing a non-pointer` | En node fikk null. Nesten alltid en `All Elements of Category` uten kategori — forgren fra den du har i stedet for å lage en ny. |
 | `Ingen elementer inn` | Kategorivalget traff ingenting. En tom liste ser ut som en ferdig merket modell. |
 | `Asked to convert non-convertible types` på `FamilyType.Family` | Systemfamilier — kabelrør, kabelbroer, kanaler — har ikke familienavn. Riktig advarsel, ikke en feil. Koble typenavnet til `IN[3]`. |
 | Verdiene kommer ikke ut i IFC-en | Kartleggingsfila mangler i eksportoppsettet, eller peker på et annet parameternavn. |
