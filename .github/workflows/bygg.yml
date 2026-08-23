@@ -227,13 +227,29 @@ jobs:
           Har du Python på maskinen, er `uv tool install tfm-sjekk` enklere.
           SLUTT
 
+          # «Latest» regnes ut av når utgivelsen ble publisert, ikke av
+          # versjonsnummeret. Kjøres denne jobben om igjen på en eldre tag —
+          # for å fylle den ut i ettertid — kaprer den merkelappen, og
+          # /releases/latest/download begynner å levere en gammel binær.
+          # README-en peker dit. Derfor sies det uttrykkelig fra hver gang.
+          #
+          # Uten rørledning med vilje: «git tag | head -1» lar head lukke røret
+          # etter første linje, og i et steg med pipefail blir det SIGPIPE og
+          # en feil på noe som gikk bra. Det har skjedd i denne fila før.
+          read -r nyeste_tag <<< "$(git tag --sort=-v:refname)" || true
+          if [ "$tag" = "$nyeste_tag" ]; then
+            nyeste=--latest
+          else
+            nyeste=--latest=false
+          fi
+
           # Kjøres steget om igjen, skal filene byttes ut — ikke feile på at
           # utgivelsen allerede finnes.
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --title "$tittel" --notes-file tekst.md
+            gh release edit "$tag" "$nyeste" --title "$tittel" --notes-file tekst.md
             gh release upload "$tag" utgivelse/* --clobber
           else
-            gh release create "$tag" utgivelse/* \
+            gh release create "$tag" utgivelse/* "$nyeste" \
               --title "$tittel" \
               --notes-file tekst.md
           fi
