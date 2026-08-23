@@ -40,6 +40,14 @@ __pycache__/
 *.bcf
 *.bcfzip
 
+# Utdatamappa heter det brukeren skriver etter «--ut», og anvisningene i
+# README-en bruker et titalls navn: ut, ut-eksport, ut-snowdon, a1, bs. Å liste
+# dem er å glemme den neste — «eksempler/ut/» slapp gjennom og ble sjekket inn.
+# Filnavnene er derimot verktøyets egne og endrer seg ikke.
+rapport.html
+funn.csv
+funn.xlsx
+
 # Genererte demomodeller (lages av eksempler/lag_demomodell.py)
 eksempler/demo-*.ifc
 eksempler/visning.ifc
@@ -47,6 +55,7 @@ eksempler/visning-2x3.ifc
 eksempler/avveie.ifc
 eksempler/blindsone.ifc
 eksempler/tidligfase.ifc
+eksempler/foringsvei.ifc
 
 # JURIDISK (§8): kodetabellene fra NS 3451 / NS 3457-serien er betalt
 # materiale fra Standard Norge og skal ALDRI i dette repoet. Bare filer
