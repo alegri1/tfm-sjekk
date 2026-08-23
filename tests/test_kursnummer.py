@@ -158,3 +158,98 @@ def test_foringsvei_teller_fortsatt_i_koblingsgrafen():
     assert any("tilkoblet fordelingen" in f.melding for f in funn), (
         "lampen mistet fordelingen sin gjennom kabelrøret"
     )
+
+
+# --- Systemkoden kan si det IFC-klassen ikke sier ---
+#
+# En ekte Revit-eksport ga seksten koblingsbokser som IfcBuildingElementProxy.
+# TFM-en sa 4360 — kabelforing — mens klassen ikke sa noe. K8 trodde på klassen.
+
+
+def proxy(tfm: str = "++115080=4360.001.00-QLK001") -> IfcObjekt:
+    """Et objekt uten føringsvei-klasse. Slik en koblingsboks kom ut av Revit."""
+    return objekt(klasse="IfcBuildingElementProxy", supertyper=("IfcProduct",), tfm=tfm)
+
+
+def test_systemkoden_kan_frita_et_objekt_uten_foringsveiklasse():
+    config = Konfigurasjon(elektro=ElektroOppsett(foring_systemkoder=["4360"]))
+    assert kursfunn(k8([proxy()], config)) == []
+
+
+def test_uten_oppsett_meldes_det_som_for():
+    """Standardoppførselen skal ikke røre seg. Lista er tom til noen fyller den."""
+    assert len(kursfunn(k8([proxy()]))) == 1
+
+
+def test_standardlista_er_tom():
+    """Tom med vilje, av juridiske grunner (§8), ikke av forglemmelse.
+
+    Uten denne testen ville noen fylt lista i god tro første gang de så at den
+    var tom — og da hadde innholdet i NS 3451 ligget i repoet.
+    """
+    assert ElektroOppsett().foring_systemkoder == []
+
+
+def test_klassen_alene_holder():
+    """Standardlista over klasser skal virke selv når ingen kode er oppgitt."""
+    ror = objekt(
+        klasse="IfcFlowSegment",
+        supertyper=("IfcDistributionElement", "IfcProduct"),
+        tfm="++115080=4360.001.00-QLK001",
+    )
+    assert kursfunn(k8([ror])) == []
+
+
+def test_klassen_holder_ogsaa_naar_en_annen_kode_er_oppgitt():
+    """Å konfigurere systemkoder skal ikke slå av klasselista."""
+    config = Konfigurasjon(elektro=ElektroOppsett(foring_systemkoder=["4999"]))
+    ror = objekt(
+        klasse="IfcFlowSegment",
+        supertyper=("IfcDistributionElement", "IfcProduct"),
+        tfm="++115080=4360.001.00-QLK001",
+    )
+    assert kursfunn(k8([ror], config)) == []
+
+
+def test_en_annen_systemkode_meldes_fortsatt():
+    config = Konfigurasjon(elektro=ElektroOppsett(foring_systemkoder=["4360"]))
+    lampe = proxy(tfm="++115080=4320.001.00-QLF001")
+    assert len(kursfunn(k8([lampe], config))) == 1
+
+
+def test_unntaket_sprer_seg_ikke_til_koblingsgrafen():
+    """Et objekt unntatt på systemkoden skal fortsatt telle for K8b.
+
+    Samme prøve som for klasseunntaket: utelot vi objektet fra grafen, ville
+    lampen bak det mistet fordelingen sin.
+    """
+    config = Konfigurasjon(elektro=ElektroOppsett(foring_systemkoder=["4360"]))
+    tavle = IfcObjekt(
+        global_id="tavle",
+        ifc_klasse="IfcElectricDistributionBoard",
+        ifc_supertyper=["IfcDistributionElement", "IfcProduct"],
+        kildefil="rie.ifc",
+        tfm_forekomst="++115080=4310.001.00-QLF100",
+        tilkoblet=["boks"],
+    )
+    boks = IfcObjekt(
+        global_id="boks",
+        ifc_klasse="IfcBuildingElementProxy",
+        ifc_supertyper=["IfcProduct"],
+        kildefil="rie.ifc",
+        tfm_forekomst="++115080=4360.001.00-QLK001",
+        tilkoblet=["tavle", "lampe"],
+    )
+    lampe = IfcObjekt(
+        global_id="lampe",
+        ifc_klasse="IfcLamp",
+        ifc_supertyper=["IfcFlowTerminal", "IfcDistributionElement", "IfcProduct"],
+        kildefil="rie.ifc",
+        tfm_forekomst="++115080=4999.001.12-QLF001",
+        tilkoblet=["boks"],
+    )
+    funn = k8([tavle, boks, lampe], config)
+    assert kursfunn(funn) == [], "koblingsboksen skulle vært unntatt"
+    assert any("tilkoblet fordelingen" in f.melding for f in funn), (
+        "lampen mistet fordelingen sin gjennom koblingsboksen"
+    )

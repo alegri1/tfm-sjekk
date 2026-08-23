@@ -147,6 +147,18 @@ class ElektroOppsett(BaseModel):
         "IfcCableFitting",  # IFC4
     ]
 
+    # Systemkoder som ER føringsvei, uansett hvilken IFC-klasse objektet fikk.
+    #
+    # Klassen sier hva eksporten fikk til; systemkoden sier hva prosjektet har
+    # bestemt at objektet er. En ekte Revit-eksport ga seksten koblingsbokser
+    # som IfcBuildingElementProxy — TFM-en sa føringsvei, klassen sa ingenting.
+    #
+    # TOM MED VILJE. Hvilken kode som betyr føringsvei står i NS 3451, som er en
+    # betalt standard, og innholdet skal ikke ligge i verktøyet (§8). Mekanismen
+    # hører hjemme her; koden hører hjemme hos prosjektet. Se tfm-sjekk.toml for
+    # et utfylt eksempel.
+    foring_systemkoder: list[str] = []
+
 
 class MasterOppsett(BaseModel):
     """Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).

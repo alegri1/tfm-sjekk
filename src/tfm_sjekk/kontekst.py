@@ -164,14 +164,23 @@ class Kontekst(BaseModel):
     def er_fordeling(self, objekt: IfcObjekt) -> bool:
         return any(objekt.er_av_type(k) for k in self.config.elektro.fordeling_klasser)
 
-    def er_foringsvei(self, objekt: IfcObjekt) -> bool:
+    def er_foringsvei(self, objekt: IfcObjekt, tfm: TfmId | None = None) -> bool:
         """Bærer objektet kurser framfor å ligge på en?
+
+        To uavhengige kjennetegn, og det holder at ett av dem slår til.
+        IFC-klassen sier hva eksporten fikk til. Systemkoden sier hva prosjektet
+        har bestemt at objektet er — og når de to er uenige, er det prosjektet
+        som har svart. En koblingsboks som kom ut som IfcBuildingElementProxy er
+        fortsatt en koblingsboks.
 
         Egen metode, ikke slått sammen med `er_fordeling` til én
         `ligger_pa_kurs`. Kortere hadde det blitt, men når et objekt ikke
         flagges er spørsmålet alltid hvilket av de to unntakene som slo til.
         """
-        return any(objekt.er_av_type(k) for k in self.config.elektro.foring_klasser)
+        elektro = self.config.elektro
+        if any(objekt.er_av_type(k) for k in elektro.foring_klasser):
+            return True
+        return tfm is not None and tfm.systemkode in elektro.foring_systemkoder
 
 
 def _bygg_fordelinger(objekter: list[IfcObjekt], config: Konfigurasjon) -> dict[str, list[str]]:

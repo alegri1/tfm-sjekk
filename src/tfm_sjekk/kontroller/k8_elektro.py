@@ -59,10 +59,14 @@ class K8Elektro(Kontroll):
                 # ligger på en kurs. «=4310.001.00» er riktig merking av en
                 # tavle, og K8b bruker nettopp systemdelen av den.
                 continue
-            if k.er_foringsvei(objekt):
+            if k.er_foringsvei(objekt, tfm):
                 # Samme argument, andre enden: et kabelrør bærer kurser og
                 # ligger ikke på en. Uten dette unntaket ga en ekte modell med
                 # 2439 objekter 1018 funn om rør og bend, og 11 om ekte feil.
+                #
+                # TFM-en sendes med fordi IFC-klassen ikke alltid sier hva
+                # objektet er: seksten koblingsbokser kom ut av Revit som
+                # IfcBuildingElementProxy, med føringsvei-kode i TFM-en.
                 continue
             # For elektro tolkes undernummeret som kurs-/sløyfenummer, og
             # «000» betyr i praksis at det ikke er satt.

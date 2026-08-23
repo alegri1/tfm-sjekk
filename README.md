@@ -416,8 +416,9 @@ Dette er kontrollen som krever at man forstår både IFC og et kursopplegg, og
 den går i tre trinn:
 
 - **K8a** — for NS 3451 kapittel 4 og 5 skal undernummeret være utfylt; det er
-  kurs-/sløyfenummeret. Fordelinger er unntatt: tavla er roten kursene går ut
-  fra, ikke noe som selv ligger på en kurs, så `=4310.001.00` er riktig der.
+  kurs-/sløyfenummeret. Fordelinger og føringsveier er unntatt: tavla er roten
+  kursene går ut fra, kabelrøret bærer dem, og ingen av dem ligger selv på en
+  kurs. `=4310.001.00` er riktig merking av en tavle.
 - **K8b** — alt som mates fra en fordeling skal tilhøre fordelingens system.
   Sammenligningen går på systemet (`4310.001`), ikke på systemforekomsten
   (`4310.001.12`) — undernummeret er nettopp det som skal variere.
@@ -432,6 +433,17 @@ slik at en underfordeling blir sin egen rot.
 K8c trenger at kursene er gruppert i modellen (`IfcDistributionCircuit` /
 `IfcElectricalCircuit`). Mangler de, sier verktøyet fra én gang framfor å gjette.
 Klassenavnene ligger under `[elektro]` i `tfm-sjekk.toml`.
+
+En føringsvei kjennes igjen på to måter, og det holder at én av dem slår til.
+`foring_klasser` lister IFC-klassene og har en standardliste som virker.
+`foring_systemkoder` lister systemkodene og er **tom som standard** — hvilken
+kode som betyr føringsvei står i NS 3451, og innholdet skal ikke ligge i
+verktøyet (§8).
+
+Den andre trengs oftere enn man skulle tro. En ekte Revit-eksport ga seksten
+koblingsbokser som `IfcBuildingElementProxy`: TFM-en sa føringsvei, klassen sa
+ingenting, og uten systemkoden i oppsettet meldes de som objekter uten
+kursnummer.
 
 ## Excel: bruk `funn.xlsx`, ikke CSV-en
 

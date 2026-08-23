@@ -94,6 +94,23 @@ foring_klasser = [
     "IfcCableFitting",         # IFC4
 ]
 
+# Systemkodene som ER føringsvei, uansett hvilken IFC-klasse objektet fikk.
+#
+# Klassen over sier hva eksporten fikk til. Denne sier hva prosjektet har
+# bestemt at objektet er. Når de to er uenige, er det prosjektet som har svart:
+# en ekte Revit-eksport ga seksten koblingsbokser som IfcBuildingElementProxy —
+# TFM-en sa føringsvei, klassen sa ingenting, og K8 trodde på klassen.
+#
+# TOM SOM STANDARD. Hvilken kode som betyr føringsvei står i NS 3451, som er en
+# betalt standard, og innholdet skal ikke ligge i verktøyet (§8). Skriv inn
+# prosjektets egne — typisk én kode:
+#
+#     foring_systemkoder = ["4360"]
+#
+# De to listene virker ved siden av hverandre: et objekt er unntatt hvis
+# klassen ELLER systemkoden sier at det er en føringsvei.
+foring_systemkoder = []
+
 [master]
 # Hvor systemene og komponenttypene står i prosjektets TFM-master (K7).
 # Det er kolonneoverskriftene som gjenkjennes, ikke arknavnene: alle ark i
