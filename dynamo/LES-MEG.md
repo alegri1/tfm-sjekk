@@ -43,6 +43,20 @@ tfm-sjekk sjekk ... --ut rapport
 Da har du en arbeidsliste som tømmer seg selv etter hvert som du retter — kjør
 grafen på nytt, og radene forsvinner.
 
+## Grafen holder en kopi, ikke en peker
+
+Python-noden lagrer skriptet inne i `.dyn`-fila. Den leser ikke fra repoet, og
+den vet ikke at fila har endret seg. Oppdaterer du skriptet, må du åpne noden og
+lime inn på nytt — ellers kjører grafen videre på den versjonen du limte inn
+første gang.
+
+Det er ikke teoretisk. En graf bygget 21. august manglet feltet `nokkel_fra`, som
+kom inn dagen etter. Alt annet i sammendraget så riktig ut, og tallene stemte, så
+ingenting tydet på at noe var gammelt.
+
+**Slik ser du det:** `OUT[1]` skal ha åtte felter for `tfm_til_revit.py`. Er det
+sju, mangler `nokkel_fra`, og kopien er eldre enn 22. august.
+
 ## Grafen
 
 1. **Python Script**-node, lim inn hele `tfm_til_revit.py`. Sett antall inputs
