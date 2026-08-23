@@ -222,6 +222,15 @@ def statistikk(familienavn, kursnumre, tfm_er):
     }
 
 
+def antall(n, entall, flertall):
+    """«1 familie», ikke «1 familier».
+
+    Sammendraget leses av en BIM-koordinator, ikke av en utvikler. Samme grep
+    som _antall i tfm_sjekk/oppsett/toml_ut.py.
+    """
+    return "{0} {1}".format(n, entall if n == 1 else flertall)
+
+
 def sammendrag(tall):
     """Én lesbar linje per tall, til en Watch-node."""
     n = tall["elementer"]
@@ -232,16 +241,23 @@ def sammendrag(tall):
             "nøyaktig ut som en modell der alt allerede er merket.",
         ]
 
-    linjer = ["{0} elementer merket.".format(n)]
+    linjer = [antall(n, "element", "elementer") + " merket."]
     if tall["unike_tfm"] != n:
         linjer.append(
             "ADVARSEL: bare {0} av {1} TFM-ID-er er unike. Det skal ikke "
             "kunne skje, og gir K6-funn.".format(tall["unike_tfm"], n)
         )
-    linjer.append("{0} systemforekomster.".format(tall["systemforekomster"]))
-    linjer.append("{0} uten kursnummer — de får undernummer «00».".format(tall["uten_kurs"]))
+    linjer.append(antall(tall["systemforekomster"], "systemforekomst", "systemforekomster") + ".")
+    uk = tall["uten_kurs"]
+    linjer.append(
+        "{0} uten kursnummer — {1} får undernummer «00».".format(uk, "den" if uk == 1 else "de")
+    )
     if tall["ukjent_familie"] == n:
-        linjer.append("ADVARSEL: ingen av de {0} familienavnene står i tabellen.".format(n))
+        linjer.append(
+            "ADVARSEL: familienavnet står ikke i tabellen."
+            if n == 1
+            else "ADVARSEL: ingen av de {0} familienavnene står i tabellen.".format(n)
+        )
         første = tall["forste_familie"]
         linjer.append('  Første verdi inn: "{0}"'.format(første))
         if not første:
@@ -259,8 +275,12 @@ def sammendrag(tall):
             linjer.append("  Legg navnet inn i FAMILIER om det er et ekte familienavn.")
     elif tall["ukjent_familie"]:
         linjer.append(
-            "{0} familier står ikke i tabellen og fikk {1}. Legg dem inn i "
-            "FAMILIER om kodene betyr noe for deg.".format(tall["ukjent_familie"], STANDARD[0])
+            "{0} står ikke i tabellen og fikk {1}. Legg {2} inn i FAMILIER "
+            "om kodene betyr noe for deg.".format(
+                antall(tall["ukjent_familie"], "familie", "familier"),
+                STANDARD[0],
+                "den" if tall["ukjent_familie"] == 1 else "dem",
+            )
         )
     return linjer
 

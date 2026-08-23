@@ -280,3 +280,38 @@ def test_et_ekte_men_ukjent_navn_peker_paa_tabellen():
     linjer = sammendrag(statistikk(familier, ["1"] * 3, merk(familier, ["1"] * 3, PLASSERING)))
     assert any("FAMILIER" in ln for ln in linjer)
     assert not any("Revit-objekt" in ln for ln in linjer)
+
+
+# --- Sammendraget leses av et menneske ---
+
+
+def test_entall_boyes():
+    """«1 familier» er ikke norsk, og linja leses av en BIM-koordinator."""
+    linjer = sammendrag(statistikk(["Ukjent"], ["1"], merk(["Ukjent"], ["1"], PLASSERING)))
+    tekst = " ".join(linjer)
+    assert "1 element merket" in tekst
+    assert "1 systemforekomst." in tekst
+    assert "1 elementer" not in tekst
+    assert "1 systemforekomster" not in tekst
+
+
+def test_en_ukjent_familie_boyes():
+    familier = ["Downlight", "Ukjent"]
+    tekst = " ".join(
+        sammendrag(statistikk(familier, ["1", "2"], merk(familier, ["1", "2"], PLASSERING)))
+    )
+    assert "1 familie står ikke" in tekst
+    assert "Legg den inn" in tekst
+
+
+def test_flertall_boyes():
+    familier = ["Ukjent A", "Ukjent B", "Downlight"]
+    kurser = ["1", "2", "3"]
+    tekst = " ".join(sammendrag(statistikk(familier, kurser, merk(familier, kurser, PLASSERING))))
+    assert "2 familier står ikke" in tekst
+    assert "Legg dem inn" in tekst
+
+
+def test_ett_objekt_uten_kurs_boyes():
+    linjer = sammendrag(statistikk(["Downlight"], [""], merk(["Downlight"], [""], PLASSERING)))
+    assert any("den får undernummer" in ln for ln in linjer)
