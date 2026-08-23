@@ -353,3 +353,42 @@ def test_oppsett_kommandoen_finner_ogsaa_fila(tmp_path):
     modell = prosjekt(tmp_path)
     resultat = kjor(["oppsett", str(modell)])
     assert "tfm-sjekk.toml" in uten_ansi(resultat.stderr)
+
+
+# --- En ukjent nøkkel i oppsettet stopper kjøringen ---
+
+
+def test_ukjent_nokkel_gir_exit_2(tmp_path):
+    """Samme kode som en sti i oppsettet som peker feil. Samme slags feil."""
+    (tmp_path / "tfm-sjekk.toml").write_text(
+        '[elektro]\nforing_systemkode = ["4360"]\n', encoding="utf-8"
+    )
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "rie.ifc")
+    r = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")], mappe=tmp_path)
+    assert r.returncode == 2, r.stdout + r.stderr
+
+
+def test_ukjent_nokkel_gir_ingen_rapport(tmp_path):
+    """Poenget er ikke exit-koden, men at det ikke kommer en rapport.
+
+    En rapport laget med andre regler enn brukeren ba om, ser like ren ut som
+    en riktig — og den blir delt i Teams.
+    """
+    (tmp_path / "tfm-sjekk.toml").write_text(
+        '[elektro]\nforing_systemkode = ["4360"]\n', encoding="utf-8"
+    )
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "rie.ifc")
+    ut = tmp_path / "ut"
+    kjor(["sjekk", str(modell), "--ut", str(ut)], mappe=tmp_path)
+    assert not (ut / "rapport.html").exists()
+
+
+def test_meldingen_sier_hva_som_er_galt(tmp_path):
+    (tmp_path / "tfm-sjekk.toml").write_text(
+        '[elektro]\nforing_systemkode = ["4360"]\n', encoding="utf-8"
+    )
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "rie.ifc")
+    r = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")], mappe=tmp_path)
+    tekst = uten_ansi(r.stdout + r.stderr).replace("\n", " ")
+    assert "foring_systemkode" in tekst
+    assert "elektro" in tekst

@@ -18,7 +18,7 @@ from typing import Annotated
 
 import typer
 
-from tfm_sjekk.config import Konfigurasjon, finn_oppsett
+from tfm_sjekk.config import Konfigurasjon, OppsettFeil, finn_oppsett
 from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import alle_kontroller, kjor_alle
@@ -85,7 +85,13 @@ def _les_oppsett(
         return Konfigurasjon()
 
     typer.echo(f"Oppsett: {valgt}", err=til_stderr)
-    return Konfigurasjon.les(valgt)
+    try:
+        return Konfigurasjon.les(valgt)
+    except OppsettFeil as feil:
+        # Samme utgang som en sti i oppsettet som peker feil: exit 2, og ingen
+        # rapport. En nøkkel verktøyet ikke forsto ville ellers gitt en rapport
+        # laget med andre regler enn brukeren ba om — og den ser like ren ut.
+        raise typer.BadParameter(str(feil), param_hint="--config") from feil
 
 
 def _fra_oppsett(flagg: Path | None, oppsett: Konfigurasjon, felt: str, hva: str) -> Path | None:

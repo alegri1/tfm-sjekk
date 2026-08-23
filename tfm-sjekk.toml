@@ -13,6 +13,22 @@
 # systemtabell = "tabeller/min-ns3451.csv"
 # komponenttabell = "tabeller/min-ns3457-8.csv"
 
+# Klassene K1 krever TFM på. Matches mot hele arvekjeden, så
+# «IfcFlowTerminal» dekker også IfcAirTerminal, IfcLamp, IfcOutlet osv.
+#
+# MÅ STÅ FØR FØRSTE [seksjon]. I TOML hører en nøkkel til seksjonen over den,
+# så «ifc_klasser» skrevet lenger nede blir «pset.ifc_klasser» — en nøkkel som
+# ikke finnes. Den sto der i denne fila fram til nå, og ble forkastet i
+# stillhet hver eneste kjøring.
+ifc_klasser = [
+    "IfcDistributionElement",
+    "IfcFlowTerminal",
+    "IfcFlowController",
+    "IfcFlowMovingDevice",
+    "IfcEnergyConversionDevice",
+    "IfcDistributionFlowElement",
+]
+
 [grammatikk]
 plassering_siffer = 6
 systemkode_siffer = 4
@@ -44,17 +60,6 @@ mmi = ["MMI", "Prosesstatus"]
 # TFM-ID-en som komponenttype, siden det er forekomstens eget kandidatnavn.
 egenskapsnavn_forekomst = ["TFM", "TFMForekomst", "Forekomst"]
 egenskapsnavn_type = ["TFMType", "TFM11_Type"]
-
-# Klassene K1 krever TFM på. Matches mot hele arvekjeden, så
-# «IfcFlowTerminal» dekker også IfcAirTerminal, IfcLamp, IfcOutlet osv.
-ifc_klasser = [
-    "IfcDistributionElement",
-    "IfcFlowTerminal",
-    "IfcFlowController",
-    "IfcFlowMovingDevice",
-    "IfcEnergyConversionDevice",
-    "IfcDistributionFlowElement",
-]
 
 [mmi]
 # Prosesstatus/MMI (K9). Skalaen varierer mellom byggherrer; verdiene under

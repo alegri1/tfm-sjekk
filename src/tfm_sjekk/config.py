@@ -8,10 +8,11 @@ så grammatikk, pset-navn, IFC-klasser og alvorlighetsgrader hører hjemme her
 
 from __future__ import annotations
 
+import difflib
 import tomllib
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from tfm_sjekk.modell import Alvorlighet
 
@@ -44,6 +45,8 @@ def finn_oppsett(modeller: list[Path], arbeidskatalog: Path | None = None) -> Pa
 class Grammatikk(BaseModel):
     """Sifferantall i TFM-ID-en. Se §1 for standardoppsettet."""
 
+    model_config = ConfigDict(extra="forbid")
+
     plassering_siffer: int = 6
     systemkode_siffer: int = 4
     system_lopenummer_siffer: int = 3
@@ -74,6 +77,8 @@ class PsetOppsett(BaseModel):
     """Hvor TFM-verdiene ligger. Navnene under er de vanlige i norske
     Revit-maler, men de varierer — derfor konfigurerbart (§3)."""
 
+    model_config = ConfigDict(extra="forbid")
+
     forekomst: list[str] = ["TFM11_Forekomst"]
     type: list[str] = ["TFM11_Type"]
     mmi: list[str] = ["MMI", "Prosesstatus"]
@@ -95,6 +100,8 @@ class MmiOppsett(BaseModel):
     annen, settes den her. Tom liste slår av verdisjekken helt.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     gyldige_verdier: list[str] = ["100", "200", "300", "350", "400", "500"]
 
     krev_pa_alle: bool = Field(
@@ -115,6 +122,8 @@ class ElektroOppsett(BaseModel):
     så begge står i lista. Navn som ikke finnes i skjemaet til fila som leses
     hoppes over.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     fordeling_klasser: list[str] = [
         "IfcElectricDistributionBoard",  # IFC4
@@ -173,6 +182,8 @@ class MasterOppsett(BaseModel):
     legger systemer og komponenttyper side om side i samme ark fungerer også.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     kolonne_system: list[str] = ["systemforekomst", "system", "systemid", "tfm-system"]
     kolonne_komponenttype: list[str] = ["komponenttype", "type", "typeid", "tfm-type"]
     kolonne_komponentforekomst: list[str] = ["komponentforekomst", "forekomst", "komponent"]
@@ -187,13 +198,73 @@ class MasterOppsett(BaseModel):
 
 
 class KontrollOppsett(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     aktiv: bool = True
     alvorlighet: Alvorlighet | None = Field(
         default=None, description="Overstyrer kontrollens standardgrad"
     )
 
 
+class OppsettFeil(Exception):
+    """Konfigurasjonen ble ikke forstått, og kjøringen skal stoppe.
+
+    Samme linje som en sti i oppsettet som peker feil: en nøkkel verktøyet
+    forkaster i stillhet gir en rapport laget med andre regler enn den som
+    skrev fila ba om — og den ser like ren ut. Det har skjedd: «ifc_klasser»
+    skrevet etter «[pset]» leses av TOML som «pset.ifc_klasser».
+    """
+
+
+def _gyldige_nokler(sti: tuple) -> list[str]:
+    """Feltnavnene som hører hjemme der den ukjente nøkkelen sto.
+
+    Hentes fra modellen, ikke skrevet av. En håndskrevet liste driver fra
+    modellen første gang noen legger til en nøkkel.
+    """
+    modell: type[BaseModel] = Konfigurasjon
+    for ledd in sti[:-1]:
+        felt = modell.model_fields.get(str(ledd))
+        if felt is None or not isinstance(felt.annotation, type):
+            return []
+        if not issubclass(felt.annotation, BaseModel):
+            return []
+        modell = felt.annotation
+    return list(modell.model_fields)
+
+
+def _ukjente_nokler(sti: Path, feil: ValidationError) -> str:
+    """Pydantics feil oversatt til noe en BIM-koordinator kan handle på.
+
+    «Extra inputs are not permitted» med en feltsti sier hverken hva som er galt
+    eller hva det skulle stått, og det er engelsk i et verktøy der alt annet er
+    norsk.
+    """
+    linjer = [f"Feil i {sti}:"]
+    for e in feil.errors():
+        if e["type"] != "extra_forbidden":
+            linjer.append(f"  {'.'.join(str(x) for x in e['loc'])}: {e['msg']}")
+            continue
+        nokkel = str(e["loc"][-1])
+        if len(e["loc"]) == 1 and isinstance(e.get("input"), dict):
+            linjer.append(f"  Ukjent seksjon [{nokkel}].")
+        elif len(e["loc"]) == 1:
+            linjer.append(f"  Ukjent nøkkel «{nokkel}» på toppnivå.")
+        else:
+            seksjon = ".".join(str(x) for x in e["loc"][:-1])
+            linjer.append(f"  Ukjent nøkkel «{nokkel}» i [{seksjon}].")
+        # 0.85, ikke difflibs standard 0.6. Målt på ekte skrivefeil:
+        # «foring_systemkode» → «foring_systemkoder» gir 0.97 og «systemtabel»
+        # → «systemtabell» gir 0.96, mens «krev_plasering» — som hører hjemme i
+        # [grammatikk] — traff «krets_klasser» med 0.67. Et forslag som peker
+        # galt sender brukeren av gårde i feil retning, og er verre enn ingen.
+        nære = difflib.get_close_matches(nokkel, _gyldige_nokler(e["loc"]), n=1, cutoff=0.85)
+        if nære:
+            linjer.append(f"  Mente du «{nære[0]}»?")
+    return "\n".join(linjer)
+
+
 class Konfigurasjon(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     grammatikk: Grammatikk = Grammatikk()
     pset: PsetOppsett = PsetOppsett()
     master: MasterOppsett = MasterOppsett()
@@ -250,11 +321,18 @@ class Konfigurasjon(BaseModel):
 
     @classmethod
     def les(cls, sti: Path | None) -> Konfigurasjon:
-        """Leser TOML. Uten fil brukes standardverdiene over."""
+        """Leser TOML. Uten fil brukes standardverdiene over.
+
+        En nøkkel verktøyet ikke kjenner stopper kjøringen framfor å bli
+        forkastet. Se `OppsettFeil` for hvorfor.
+        """
         if sti is None:
             return cls()
         with sti.open("rb") as f:
             data = tomllib.load(f)
-        oppsett = cls.model_validate(data)
+        try:
+            oppsett = cls.model_validate(data)
+        except ValidationError as feil:
+            raise OppsettFeil(_ukjente_nokler(sti, feil)) from feil
         oppsett.kilde = sti.resolve()
         return oppsett

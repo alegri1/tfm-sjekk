@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from tfm_sjekk.config import Konfigurasjon, finn_oppsett
+from tfm_sjekk.config import Konfigurasjon, OppsettFeil, finn_oppsett
 
 
 def oppsett(mappe: Path, innhold: str = "") -> Path:
@@ -119,3 +119,94 @@ def test_kilde_folger_ikke_med_i_serialisering(tmp_path):
 @pytest.mark.parametrize("felt", ["tfm_master", "systemtabell", "komponenttabell"])
 def test_ikke_oppgitt_gir_ingen_sti(tmp_path, felt):
     assert Konfigurasjon.les(oppsett(tmp_path)).sti(felt) is None
+
+
+# --- En ukjent nøkkel skal stoppe kjøringen ---
+#
+# En forkastet nøkkel betyr at kjøringen brukte andre regler enn den som skrev
+# fila ba om, og rapporten ser like ren ut. Det har skjedd: «ifc_klasser»
+# skrevet etter «[pset]» leses av TOML som «pset.ifc_klasser», og halve
+# konfigurasjonen var borte uten et ord.
+
+
+def les(mappe: Path, innhold: str) -> Konfigurasjon:
+    return Konfigurasjon.les(oppsett(mappe, innhold))
+
+
+def test_feilstavet_nokkel_stopper(tmp_path):
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, '[elektro]\nforing_systemkode = ["4360"]\n')
+    assert "foring_systemkode" in str(e.value)
+    assert "elektro" in str(e.value)
+
+
+def test_feilstavet_seksjon_stopper(tmp_path):
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, '[elektrp]\nforing_systemkoder = ["4360"]\n')
+    assert "elektrp" in str(e.value)
+
+
+def test_gyldig_nokkel_i_feil_seksjon_stopper(tmp_path):
+    """Nøyaktig feilen «oppsett» en gang skrev: ifc_klasser hører på toppnivå."""
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, '[pset]\nifc_klasser = ["IfcWall"]\n')
+    assert "ifc_klasser" in str(e.value)
+    assert "pset" in str(e.value)
+
+
+def test_riktig_skrevet_fil_leses_som_for(tmp_path):
+    c = les(tmp_path, '[elektro]\nforing_systemkoder = ["4360"]\n')
+    assert c.elektro.foring_systemkoder == ["4360"]
+
+
+def test_kontroll_id_er_er_ikke_en_fast_liste(tmp_path):
+    """«kontroller» er en ordbok med kontroll-ID som nøkkel."""
+    c = les(tmp_path, '[kontroller.K4]\nalvorlighet = "advarsel"\n')
+    assert c.kontroller["K4"].alvorlighet.value == "advarsel"
+
+
+def test_forslaget_kommer_naar_noe_ligner(tmp_path):
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, '[elektro]\nforing_systemkode = ["4360"]\n')
+    assert "Mente du «foring_systemkoder»?" in str(e.value)
+
+
+def test_meldingen_star_stott_uten_forslag(tmp_path):
+    """Ligner den ingenting, skal meldingen fortsatt navngi nøkkelen."""
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, "[elektro]\nbanan = 1\n")
+    assert "banan" in str(e.value)
+    assert "Mente du" not in str(e.value)
+
+
+def test_meldingen_navngir_seksjonen(tmp_path):
+    """«Ukjent nøkkel «type»» er ubrukelig når «type» finnes i to seksjoner."""
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, "[mmi]\ntype = 1\n")
+    assert "[mmi]" in str(e.value)
+
+
+def test_repoets_egen_oppsettfil_leses():
+    """Den er både dokumentasjon og oppsett, og brukes i CI og i demomappa.
+
+    Den hadde «ifc_klasser» inne i [pset] fram til dette kravet kom. Verdiene
+    var like standardverdiene, så ingenting oppførte seg galt — men fila
+    dokumenterte en nøkkel på feil sted, og den som kopierte den og endret lista
+    ville fått endringen forkastet i stillhet.
+    """
+    sti = Path(__file__).parent.parent / "tfm-sjekk.toml"
+    oppsett = Konfigurasjon.les(sti)
+    assert oppsett.ifc_klasser, "ifc_klasser havnet ikke på toppnivå"
+
+
+def test_et_forslag_som_peker_galt_kommer_ikke(tmp_path):
+    """«krev_plasering» hører hjemme i [grammatikk], ikke i [elektro].
+
+    Med difflibs standardterskel traff den «krets_klasser» — et forslag som
+    sender brukeren i feil retning. Ekte skrivefeil ligger på 0.96 og oppover;
+    dette treffet lå på 0.67.
+    """
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, "[elektro]\nkrev_plasering = false\n")
+    assert "krev_plasering" in str(e.value)
+    assert "krets_klasser" not in str(e.value)

@@ -132,8 +132,21 @@ komponenttabell = "tabeller/min-ns3457-8.csv"
 ```
 
 Stiene er relative til oppsettsfila, ikke til der du står, så mappa kan flyttes
-og sendes videre. Har du ikke laget et oppsett ennå, oppgir du det samme som
-flagg:
+og sendes videre.
+
+En nøkkel verktøyet ikke kjenner **stopper kjøringen** med exit 2, og meldingen
+sier hvilken nøkkel, hvilken seksjon, og hva den nærmeste gyldige heter:
+
+```
+Feil i tfm-sjekk.toml:
+  Ukjent nøkkel «foring_systemkode» i [elektro].
+  Mente du «foring_systemkoder»?
+```
+
+Det er samme regel som for en sti som peker feil. En forkastet nøkkel ville gitt
+en rapport laget med andre regler enn du ba om — og den ser like ren ut.
+
+Har du ikke laget et oppsett ennå, oppgir du det samme som flagg:
 
 ```bash
 tfm-sjekk sjekk rie.ifc riv.ifc \
