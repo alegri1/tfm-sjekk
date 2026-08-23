@@ -315,3 +315,52 @@ def test_flertall_boyes():
 def test_ett_objekt_uten_kurs_boyes():
     linjer = sammendrag(statistikk(["Downlight"], [""], merk(["Downlight"], [""], PLASSERING)))
     assert any("den får undernummer" in ln for ln in linjer)
+
+
+# --- Systemfamilier har ikke familienavn ---
+
+
+def test_typenavnet_brukes_naar_familienavnet_mangler():
+    """Revit har to slags familier, og ingen node dekker begge.
+
+    Kabelrør er en systemfamilie: FamilyType.Family gir null med «Asked to
+    convert non-convertible types». Uten reserven falt alle rørene til 4390.
+    """
+    familier = ["Downlight", ""]
+    reserve = ["", "Conduit with Fittings"]
+    ut = merk(familier, ["1", ""], PLASSERING, reserve)
+    assert ut[0].startswith("++115080=4320")
+    assert ut[1].startswith("++115080=4360"), "kabelrøret fikk ikke føringsveikoden"
+
+
+def test_familienavnet_vinner_naar_begge_finnes():
+    """Reserven er en reserve, ikke et alternativ."""
+    ut = merk(["Downlight"], ["1"], PLASSERING, ["Conduit"])
+    assert ut[0].startswith("++115080=4320")
+
+
+def test_uten_reserve_virker_som_for():
+    """En graf med tre innganger skal fortsatt kjøre."""
+    ut = merk(["Downlight"], ["1"], PLASSERING)
+    assert ut == ["++115080=4320.001.01-QLF001"]
+
+
+def test_reserve_av_feil_lengde_stopper():
+    with pytest.raises(ValueError, match="samme rekkefølge"):
+        merk(["a", "b"], ["1", "2"], PLASSERING, ["x"])
+
+
+def test_statistikken_teller_reservebruken():
+    familier = ["Downlight", "", ""]
+    reserve = ["", "Conduit with Fittings", "Conduit Elbow - Steel"]
+    tall = statistikk(
+        familier, ["1", "", ""], merk(familier, ["1", "", ""], PLASSERING, reserve), reserve
+    )
+    assert tall["fra_reserve"] == 2
+    assert tall["ukjent_familie"] == 0
+    assert any("hentet navnet fra typen" in ln for ln in sammendrag(tall))
+
+
+def test_reservebruk_nevnes_ikke_naar_den_ikke_skjer():
+    tall = statistikk(["Downlight"], ["1"], merk(["Downlight"], ["1"], PLASSERING))
+    assert not any("hentet navnet fra typen" in ln for ln in sammendrag(tall))

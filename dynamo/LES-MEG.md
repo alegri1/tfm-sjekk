@@ -134,13 +134,17 @@ Halve TFM-ID-en ligger allerede i modellen. Familien sier hva objektet er, og
 `Circuit Number` sier hvilken kurs det henger på. Det som mangler er formatet.
 
 ```
-Element.GetParameterValueByName("Family") ─────────> IN[0]
-Element.GetParameterValueByName("Circuit Number") ─> IN[1]
-Code Block  "115080";  ───────────────────────────> IN[2]
+Element.ElementType → FamilyType.Family → Element.Name ─> IN[0]  familienavn
+Element.GetParameterValueByName("Circuit Number") ──────> IN[1]  kursnumre
+Code Block  "115080";  ────────────────────────────────> IN[2]  plassering
+Element.ElementType → Element.Name ────────────────────> IN[3]  typenavn
 
 OUT[0] ──> Element.SetParameterByName("TFM")   ← samme elementer inn i «element»
 OUT[1] ──> Watch
 ```
+
+`IN[3]` er valgfri, men bør være der: kabelrør og kabelbroer er systemfamilier
+uten familienavn, og uten den faller de til standardkoden.
 
 Parameteren må være **Tekst** og **Instance**, og den må hete det
 `revit/TFM-egenskapssett.txt` peker på — ellers kommer verdiene aldri ut i
@@ -242,6 +246,21 @@ elementer ble ukjente.
 Har du allerede en `Family and Type`-node, trenger du ikke rive den: send
 utgangen gjennom `FamilyType.Family` og `Element.Name`, så er du i mål.
 
+**Typenavnet også, som reserve.** Legg til en gren til:
+
+    All Elements of Category
+        -> Element.ElementType
+        -> Element.Name               -> IN[3]
+
+Kabelrør, kabelbroer og kanaler er **systemfamilier**: de er bygget inn i Revit
+og har ikke noe familienavn. `FamilyType.Family` gir null for dem, med
+advarselen `Asked to convert non-convertible types` — og den advarselen er
+riktig, ikke en feil du har gjort. Skriptet bruker typenavnet der familienavnet
+mangler, og sier i sammendraget hvor mange det gjaldt.
+
+Uten `IN[3]` faller alle rørene til `4390` i stedet for `4360`, og en modell med
+850 rør ser ut til å ha 850 ukjente familier.
+
 **7. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
 trykk `Run`. Du skal se familienavn i den ene (`Duplex Receptacle: 20A` eller
 liknende) og kursnumre i den andre (`1`, `6,8`, eller tomt).
@@ -254,12 +273,13 @@ Skriptet deler på kolon og bruker bare det som står før, så et navn på form
 ...` er noe annet: der står familienavnet bakerst, og det leses ikke.
 
 **8. Python-noden.** Søk `Python Script`. Den kommer med to inputs; klikk `+` på
-noden én gang, så du har tre. Dobbeltklikk, lim inn hele `tfm_fra_revit.py`,
+noden to ganger, så du har fire. Dobbeltklikk, lim inn hele `tfm_fra_revit.py`,
 trykk `Save`. Koble:
 
     familienavn        -> IN[0]
     kursnumre          -> IN[1]
     Code Block  "115080";   -> IN[2]
+    typenavn           -> IN[3]
 
 **9. Pakk opp de to utgangene.** Python-noden har bare én utgangsport, og
 skriptet gir deg to ting gjennom den:
@@ -329,6 +349,7 @@ fortsatt, er det koblingen inn i `element` som er problemet.
 | `SetParameterByName` feiler på noen få elementer | Den fikk `x[1]` — sammendraget — i stedet for `x[0]`. Utgangene står i feil rekkefølge. |
 | Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
 | `Ingen elementer inn` | Kategorivalget traff ingenting. En tom liste ser ut som en ferdig merket modell. |
+| `Asked to convert non-convertible types` på `FamilyType.Family` | Systemfamilier — kabelrør, kabelbroer, kanaler — har ikke familienavn. Riktig advarsel, ikke en feil. Koble typenavnet til `IN[3]`. |
 | Verdiene kommer ikke ut i IFC-en | Kartleggingsfila mangler i eksportoppsettet, eller peker på et annet parameternavn. |
 
 ### Kursnummeret leses fra Revit, ikke fra IFC-en

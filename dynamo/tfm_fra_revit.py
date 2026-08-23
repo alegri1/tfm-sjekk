@@ -11,9 +11,14 @@ kurs det henger på. Det som mangler er formatet.
 
 BRUK I DYNAMO
 
-    Element.GetParameterValueByName("Family") ─────────> IN[0]  familienavn
-    Element.GetParameterValueByName("Circuit Number") ─> IN[1]  kursnumre
-    Code Block  "115080";  ───────────────────────────> IN[2]  plassering
+    Element.ElementType → FamilyType.Family → Element.Name ─> IN[0]  familienavn
+    Element.GetParameterValueByName("Circuit Number") ──────> IN[1]  kursnumre
+    Code Block  "115080";  ────────────────────────────────> IN[2]  plassering
+    Element.ElementType → Element.Name ────────────────────> IN[3]  typenavn
+
+    IN[3] er valgfri, men bør være der. Kabelrør og kabelbroer er
+    systemfamilier og har ikke noe familienavn — IN[0] gir null for dem, og
+    uten IN[3] faller de til standardkoden.
 
     Elementene selv skal ikke inn hit. Send dem rett til
     Element.SetParameterByName sammen med OUT[0].
@@ -176,12 +181,35 @@ def tekst(verdi):
     return verdi if isinstance(verdi, type("")) else "{0}".format(verdi)
 
 
-def merk(familienavn, kursnumre, plassering):
+def navnet(familienavn, reservenavn, i):
+    """Familienavnet, eller typenavnet der Revit ikke har noe familienavn.
+
+    Revit har to slags familier. En lastet familie (en armatur, et uttak) har et
+    familienavn, og FamilyType.Family gir det. En systemfamilie — kabelrør,
+    kabelbroer, kanaler — har ikke det: den er bygget inn i Revit, og
+    FamilyType.Family gir null med advarselen «Asked to convert non-convertible
+    types». Da er typenavnet det som identifiserer den.
+
+    Det er derfor IN[3] finnes. Uten den falt alle kabelrørene til
+    standardkoden, og en modell med 850 rør så ut til å være 850 ukjente
+    familier.
+    """
+    navn = familienavn[i]
+    if navn:
+        return navn, False
+    if reservenavn and i < len(reservenavn) and reservenavn[i]:
+        return reservenavn[i], True
+    return "", False
+
+
+def merk(familienavn, kursnumre, plassering, reservenavn=None):
     """TFM-ID per element, i samme rekkefølge som inndataene.
 
     Løpenummeret telles per systemforekomst — altså per kombinasjon av
     systemkode og kurs. Det er det som gjør komponentforekomsten unik, og
     dermed det som holder K6 i sjakk.
+
+    `reservenavn` brukes der `familienavn` er tomt — se navnet().
     """
     if len(familienavn) != len(kursnumre):
         raise ValueError(
@@ -189,10 +217,16 @@ def merk(familienavn, kursnumre, plassering):
             "De to listene må komme fra de samme elementene, i samme "
             "rekkefølge.".format(len(familienavn), len(kursnumre))
         )
+    if reservenavn and len(reservenavn) != len(familienavn):
+        raise ValueError(
+            "IN[3] har {0} navn og IN[0] har {1}. De må komme fra de samme "
+            "elementene, i samme rekkefølge.".format(len(reservenavn), len(familienavn))
+        )
 
     tellere = {}
     ut = []
-    for navn, rå in zip(familienavn, kursnumre):
+    for i, rå in enumerate(kursnumre):
+        navn, _ = navnet(familienavn, reservenavn, i)
         systemkode, komponentkode = familiekode(navn)
         kurs = kursnummer(rå)
         forekomst = (systemkode, kurs)
@@ -201,14 +235,21 @@ def merk(familienavn, kursnumre, plassering):
     return ut
 
 
-def statistikk(familienavn, kursnumre, tfm_er):
+def statistikk(familienavn, kursnumre, tfm_er, reservenavn=None):
     """Tallene som avgjør om resultatet er til å stole på.
 
     Særlig «ukjent_familie» og «uten_kurs»: er de høye, er ikke merkingen gal,
     men den er fattig. Da er det FAMILIER-tabellen eller kursoppsettet i
     modellen som skal ses på — ikke denne grafen.
     """
-    ukjent = sum(1 for n in familienavn if familiekode(n) == STANDARD)
+    brukte = []
+    fra_reserve = 0
+    for i in range(len(familienavn)):
+        navn, reserve = navnet(familienavn, reservenavn, i)
+        brukte.append(navn)
+        if reserve:
+            fra_reserve += 1
+    ukjent = sum(1 for n in brukte if familiekode(n) == STANDARD)
     uten_kurs = sum(1 for k in kursnumre if kursnummer(k) == UTEN_KURS)
     return {
         "elementer": len(tfm_er),
@@ -218,7 +259,10 @@ def statistikk(familienavn, kursnumre, tfm_er):
         "systemforekomster": len({t.split("-")[0] for t in tfm_er}),
         # Den første verdien, ordrett. Er noe feilkoblet, er dette det eneste
         # som sier HVA som kom inn — et tall kan si at noe er galt, men ikke hva.
-        "forste_familie": familienavn[0] if familienavn else "",
+        "forste_familie": brukte[0] if brukte else "",
+        # Hvor mange som måtte bruke typenavnet. Er tallet høyt, er det
+        # systemfamilier — kabelrør og kanaler — og det er som det skal.
+        "fra_reserve": fra_reserve,
     }
 
 
@@ -252,6 +296,12 @@ def sammendrag(tall):
     linjer.append(
         "{0} uten kursnummer — {1} får undernummer «00».".format(uk, "den" if uk == 1 else "de")
     )
+    if tall.get("fra_reserve"):
+        linjer.append(
+            "{0} hentet navnet fra typen — systemfamilier har ikke familienavn.".format(
+                tall["fra_reserve"]
+            )
+        )
     if tall["ukjent_familie"] == n:
         linjer.append(
             "ADVARSEL: familienavnet står ikke i tabellen."
@@ -294,10 +344,14 @@ if "IN" in globals():  # pragma: no cover - krever Dynamo
     _kurser = [tekst(k) for k in (IN[1] or [])]  # noqa: F821
     _plassering = tekst(IN[2])  # noqa: F821
 
-    _tfm = merk(_familier, _kurser, _plassering)
+    # IN[3] er valgfri: en graf med tre innganger virker som før, men får da
+    # ingenting å falle tilbake på for systemfamiliene.
+    _reserve = [tekst(n) for n in (IN[3] or [])] if len(IN) > 3 else None  # noqa: F821
+
+    _tfm = merk(_familier, _kurser, _plassering, _reserve)
 
     # Liste, ikke tuppel: Dynamo har bare én utgangsport, så de to
     # tingene pakkes sammen og skilles av en Code Block med «x[0];» og
     # «x[1];» på hver sin linje.
     # Indeks 0 er TFM-ID-ene, indeks 1 er tallene — les tallene.
-    OUT = [_tfm, sammendrag(statistikk(_familier, _kurser, _tfm))]
+    OUT = [_tfm, sammendrag(statistikk(_familier, _kurser, _tfm, _reserve))]
