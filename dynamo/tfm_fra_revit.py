@@ -11,14 +11,19 @@ kurs det henger på. Det som mangler er formatet.
 
 BRUK I DYNAMO
 
-    Element.ElementType → FamilyType.Family → Element.Name ─> IN[0]  familienavn
-    Element.GetParameterValueByName("Circuit Number") ──────> IN[1]  kursnumre
-    Code Block  "115080";  ────────────────────────────────> IN[2]  plassering
-    Element.ElementType → Element.Name ────────────────────> IN[3]  typenavn
+    Element.ElementType
+        → GetParameterValueByName("Family Name") ──────> IN[0]  familienavn
+    Element.GetParameterValueByName("Circuit Number") ─> IN[1]  kursnumre
+    Code Block  "115080";  ───────────────────────────> IN[2]  plassering
+    Element.ElementType → Element.Name ───────────────> IN[3]  typenavn, valgfri
 
-    IN[3] er valgfri, men bør være der. Kabelrør og kabelbroer er
-    systemfamilier og har ikke noe familienavn — IN[0] gir null for dem, og
-    uten IN[3] faller de til standardkoden.
+    «Family Name» er en innebygd parameter på typen, og den virker på begge
+    slags familier Revit har. FamilyType.Family gir null på systemfamilier —
+    kabelrør, kabelbroer, kanaler — og Element.Name gir typenavnet, som er
+    materialet framfor funksjonen: «Electrical Metallic Tubing (EMT)».
+
+    IN[3] brukes bare der IN[0] er tom. Med «Family Name» fyrte den aldri på
+    Snowdon Towers, men den koster ingenting og sier fra i sammendraget.
 
     Elementene selv skal ikke inn hit. Send dem rett til
     Element.SetParameterByName sammen med OUT[0].

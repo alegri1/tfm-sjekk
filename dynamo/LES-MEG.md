@@ -134,17 +134,14 @@ Halve TFM-ID-en ligger allerede i modellen. Familien sier hva objektet er, og
 `Circuit Number` sier hvilken kurs det henger på. Det som mangler er formatet.
 
 ```
-Element.ElementType → FamilyType.Family → Element.Name ─> IN[0]  familienavn
-Element.GetParameterValueByName("Circuit Number") ──────> IN[1]  kursnumre
-Code Block  "115080";  ────────────────────────────────> IN[2]  plassering
-Element.ElementType → Element.Name ────────────────────> IN[3]  typenavn
+Element.ElementType → GetParameterValueByName("Family Name") ─> IN[0]
+Element.GetParameterValueByName("Circuit Number") ───────────> IN[1]
+Code Block  "115080";  ─────────────────────────────────────> IN[2]
+Element.ElementType → Element.Name ─────────────────────────> IN[3]  (valgfri)
 
 OUT[0] ──> Element.SetParameterByName("TFM")   ← samme elementer inn i «element»
 OUT[1] ──> Watch
 ```
-
-`IN[3]` er valgfri, men bør være der: kabelrør og kabelbroer er systemfamilier
-uten familienavn, og uten den faller de til standardkoden.
 
 Parameteren må være **Tekst** og **Instance**, og den må hete det
 `revit/TFM-egenskapssett.txt` peker på — ellers kommer verdiene aldri ut i
@@ -235,40 +232,51 @@ inn i `parameterName`. Anførselstegnene og semikolonet må begge være der.
 leser det som et navn på noe, lager en inngangsport av det, og sender null
 videre. Kjennetegnet er at Code Block-en får en ny port på venstre side.
 
-**Familienavnet krever tre noder**, og det er verdt å vite hvorfor:
+**Familienavnet er to noder**, og det er verdt å vite hvilke:
 
     elementlista
-        -> Element.ElementType        gir typen, ikke familien
-        -> FamilyType.Family          gir familien, som objekt
-        -> Element.Name               gir navnet, som tekst
+        -> Element.ElementType
+        -> Element.GetParameterValueByName("Family Name")   -> IN[0]
 
-`Element.GetParameterValueByName("Family and Type")` ser ut som en snarvei, men
-returnerer et Revit-objekt framfor en streng. En `Watch` viser det som
+`Family Name` er en innebygd parameter på **typen**, og den virker på begge
+slags familier Revit har. Det er hele poenget, for de to oppfører seg ulikt:
+
+| | Lastet familie | Systemfamilie |
+|---|---|---|
+| Eksempel | `Duplex Receptacle` | `Conduit with Fittings` |
+| `FamilyType.Family` | virker | **null** |
+| `Family Name` | virker | virker |
+
+Prøvd i Revit 2027 på Snowdon Towers: 2426 av 2426 elementer fikk et navn.
+
+**Tre veier som ser riktige ut, og ikke er det:**
+
+`Element.GetParameterValueByName("Family and Type")` returnerer et Revit-objekt,
+ikke en streng. En `Watch` viser det som
 
     Family Type: 18" D x 15" H, Family: Pendant-Dome
 
 Familienavnet står der, men det er Dynamos visningsform — ikke data. Skriptet
 deler på første kolon og sitter igjen med «Family Type», som ingen familie
-heter, og alt faller til standardkoden. Det er prøvd i Revit 2027: 588 av 588
-elementer ble ukjente.
+heter. Alle 588 elementene ble ukjente.
 
-Har du allerede en `Family and Type`-node, trenger du ikke rive den: send
-utgangen gjennom `FamilyType.Family` og `Element.Name`, så er du i mål.
+`Element.ElementType -> FamilyType.Family -> Element.Name` virker på lastede
+familier, men gir null på systemfamilier, med advarselen
+`Asked to convert non-convertible types`. Advarselen er riktig — et kabelrør
+*er* ikke en familietype. 530 kabelrør falt til standardkoden.
 
-**Typenavnet også, som reserve.** Legg til en gren til:
+`Element.ElementType -> Element.Name` gir **typenavnet**, som sier noe annet enn
+familien: kabelrørene heter `Electrical Metallic Tubing (EMT)` etter materialet,
+ikke etter hva de er. Også ukjent for tabellen.
 
-    elementlista
-        -> Element.ElementType
-        -> Element.Name               -> IN[3]
+**Reserven, om du vil ha den.** Skriptet tar en valgfri fjerde inngang:
 
-Kabelrør, kabelbroer og kanaler er **systemfamilier**: de er bygget inn i Revit
-og har ikke noe familienavn. `FamilyType.Family` gir null for dem, med
-advarselen `Asked to convert non-convertible types` — og den advarselen er
-riktig, ikke en feil du har gjort. Skriptet bruker typenavnet der familienavnet
-mangler, og sier i sammendraget hvor mange det gjaldt.
+    elementlista -> Element.ElementType -> Element.Name   -> IN[3]
 
-Uten `IN[3]` faller alle rørene til `4390` i stedet for `4360`, og en modell med
-850 rør ser ut til å ha 850 ukjente familier.
+Den brukes bare der `IN[0]` er tom, og sammendraget sier hvor mange det gjaldt.
+Med `Family Name` på `IN[0]` fyrte den aldri på Snowdon — men den koster
+ingenting, og en modell der noe mangler `Family Name` vil da si fra framfor å
+falle stille til standardkoden.
 
 **7. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
 trykk `Run`. Du skal se familienavn i den ene (`Duplex Receptacle: 20A` eller
@@ -282,13 +290,13 @@ Skriptet deler på kolon og bruker bare det som står før, så et navn på form
 ...` er noe annet: der står familienavnet bakerst, og det leses ikke.
 
 **8. Python-noden.** Søk `Python Script`. Den kommer med to inputs; klikk `+` på
-noden to ganger, så du har fire. Dobbeltklikk, lim inn hele `tfm_fra_revit.py`,
-trykk `Save`. Koble:
+noden én gang, så du har tre — eller to ganger om du vil ha reserven på `IN[3]`.
+Dobbeltklikk, lim inn hele `tfm_fra_revit.py`, trykk `Save`. Koble:
 
     familienavn        -> IN[0]
     kursnumre          -> IN[1]
     Code Block  "115080";   -> IN[2]
-    typenavn           -> IN[3]
+    typenavn           -> IN[3]   (valgfri)
 
 **9. Pakk opp de to utgangene.** Python-noden har bare én utgangsport, og
 skriptet gir deg to ting gjennom den:
@@ -359,7 +367,7 @@ fortsatt, er det koblingen inn i `element` som er problemet.
 | Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
 | `Internal error ... Dereferencing a non-pointer` | En node fikk null. Nesten alltid en `All Elements of Category` uten kategori — forgren fra den du har i stedet for å lage en ny. |
 | `Ingen elementer inn` | Kategorivalget traff ingenting. En tom liste ser ut som en ferdig merket modell. |
-| `Asked to convert non-convertible types` på `FamilyType.Family` | Systemfamilier — kabelrør, kabelbroer, kanaler — har ikke familienavn. Riktig advarsel, ikke en feil. Koble typenavnet til `IN[3]`. |
+| `Asked to convert non-convertible types` på `FamilyType.Family` | Systemfamilier — kabelrør, kabelbroer, kanaler — er ikke familietyper. Riktig advarsel, ikke en feil du har gjort. Bruk `Family Name` i stedet, se steg 6. |
 | Verdiene kommer ikke ut i IFC-en | Kartleggingsfila mangler i eksportoppsettet, eller peker på et annet parameternavn. |
 
 ### Kursnummeret leses fra Revit, ikke fra IFC-en
