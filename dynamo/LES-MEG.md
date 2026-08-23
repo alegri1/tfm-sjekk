@@ -217,7 +217,10 @@ med `All Elements of Category` inn i `element`. Navnet gis av en `Code Block`
     "Family and Type";     -> parameterName på den første
     "Circuit Number";      -> parameterName på den andre
 
-Semikolonet må være der. Uten det er Code Block-en tom.
+Anførselstegnene og semikolonet må begge være der. `Family and Type;` uten
+anførselstegn er ikke teksten «Family and Type» — Dynamo leser det som et navn
+på noe, lager en inngangsport av det, og sender null videre. Kjennetegnet er at
+Code Block-en får en ny port på venstre side.
 
 **7. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
 trykk `Run`. Du skal se familienavn i den ene (`Duplex Receptacle: 20A` eller
@@ -272,7 +275,7 @@ steg 7.
 **10. Først nå kobler du skrivingen.** `Element.SetParameterByName`:
 
     element         <- SAMME All Elements of Category som i steg 6
-    parameterName   <- Code Block  "TFM";
+    parameterName   <- Code Block  "TFM";      <- med anførselstegn
     value           <- Code Block-ens øverste utgang  (x[0])
 
 Elementene må komme fra den samme noden som parameterne ble lest fra. Henter du
