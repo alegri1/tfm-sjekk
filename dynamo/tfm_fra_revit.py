@@ -39,9 +39,9 @@ DENNE LEGGER IKKE INN FEIL MED VILJE
 
 verktoy/legg_til_tfm.py gjør det, fordi den bygger en testfikstur av en fil.
 Denne skriver inn i en ekte Revit-modell, og en modell er ikke en fikstur. Det
-trengs heller ikke: en ekte modell har sine egne hull. Merket med denne ga
-Snowdon Towers 169 funn, alle K8 om objekter uten kursnummer — og ingen av dem
-var lagt inn av noen.
+trengs heller ikke: en ekte modell har sine egne hull. Kjørt i Revit 2027 og
+eksportert til IFC ga Snowdon Towers 177 funn, alle K8 om objekter uten
+kursnummer — og ingen av dem var lagt inn av noen.
 
 HVORFOR KURSNUMMERET KOMMER FRA REVIT OG IKKE FRA IFC
 

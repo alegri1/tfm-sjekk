@@ -151,24 +151,37 @@ IFC-eksporten.
 den bygger en fikstur av en fil. Denne skriver inn i en ekte modell, og det
 skiller seg. Det trengs heller ikke: en ekte modell har sine egne hull.
 
-### Prøvd mot Snowdon Towers
+### Kjørt mot Snowdon Towers
 
-Logikken er kjørt tørt mot Autodesks `Snowdon Towers Sample Electrical Solar`,
-2426 elementer:
+Hele veien er gått i Revit 2027 på Autodesks `Snowdon Towers Sample Electrical
+Solar`: grafen merket modellen, modellen ble eksportert til IFC med
+kartleggingsfila, og `tfm-sjekk` leste eksporten.
 
-    2426 elementer merket, alle TFM-ID-er unike
-    69 systemforekomster
-    1021 uten kursnummer — de får undernummer «00»
-    140 familier står ikke i tabellen og fikk 4390
+Sju kategorier — Electrical Fixtures, Electrical Equipment, Lighting Devices,
+Lighting Fixtures, Data Devices, Conduits, Conduit Fittings — ga:
 
-Kjørt gjennom `tfm-sjekk` gir det **169 funn, alle K8**: objekter som ikke ligger
-på noen kurs. Null K1, null K2, null K6 — merkingen er ren, og hvert funn er et
-ekte hull i Autodesks modell.
+    2426 elementer merket
+    64 systemforekomster
+    1029 uten kursnummer — de får undernummer «00»
+    1 familie står ikke i tabellen og fikk 4390
 
-De 140 ukjente familiene er ikke en feil, men en fattigdom: `FAMILIER`-tabellen
-i skriptet kjenner fjorten familienavn. Betyr kodene noe for deg, legg dine egne
-inn der. Tabellen er den samme som i `verktoy/legg_til_tfm.py`, og
+Gjennom `tfm-sjekk` ble det **177 funn, alle K8**: objekter som ikke ligger på
+noen kurs. Null K1, null K2, null K6 — merkingen er ren, og hvert funn er et
+ekte hull i Autodesks modell. Ingen av dem er lagt inn av noen.
+
+Den ene ukjente familien er `Lobby Chandelier`. Den står ikke i `FAMILIER` med
+vilje: oppslaget matcher fra begynnelsen av navnet, så ingen generisk nøkkel
+treffer den, og å legge den inn ville vært å skrive ett prosjekts
+navnekonvensjon inn i en delt tabell. Betyr kodene noe for deg, legg dine egne
+familier inn der. Tabellen er den samme som i `verktoy/legg_til_tfm.py`, og
 `tests/test_merking.py` passer på at de ikke driver fra hverandre.
+
+**En kontroll som er verdt å gjøre selv.** Den samme logikken kjørt tørt mot
+IFC-en — uten å gå veien om Revit — ga 1021 uten kursnummer og 169 funn.
+Forskjellen på åtte er den samme begge steder, og kommer av at tørrkjøringen
+filtrerte på IFC-klasser der Revit-runden filtrerte på sju kategorier. Åtte flere
+objekter uten kurs ga åtte flere funn. Et tall som lar seg forklare er noe annet
+enn et tall som ser rimelig ut.
 
 ### Bygg grafen, steg for steg
 
