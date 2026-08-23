@@ -184,6 +184,39 @@ def lag_tidligfasemodell(sti: Path, schema: str = "IFC4") -> Path:
     return lag_modell([("IfcFlowTerminal", tfm) for tfm in TIDLIGFASE], sti, schema=schema)
 
 
+# Systemkoden 4340 er FIKTIV, og står som sådan i eksempler/FIKTIV-systemkoder.csv.
+# Hvilken kode som faktisk betyr føringsvei i NS 3451 skal ikke ligge i dette
+# repoet (§8) — og det trengs ikke: K8 bryr seg om at koden er konfigurert, ikke
+# om hvilken den er.
+FORINGSVEI = [
+    # Koblingsboksen: føringsvei-kode, men ingen føringsvei-KLASSE. Eksporten ga
+    # den en anonym proxy. Uten oppsettet meldes den; med det er den unntatt.
+    # Dette er det eneste objektet oppsettet endrer noe for.
+    ("IfcBuildingElementProxy", "++115080=4340.001.00-QLK001"),
+    # Kabelrøret: samme kode, men klassen sier det selv. Unntatt begge veier —
+    # å konfigurere systemkoder skal ikke slå av standardlista over klasser.
+    ("IfcFlowSegment", "++115080=4340.001.00-QLK002"),
+    # Uttaket: mangler kursnummer og er ingen føringsvei. Meldes begge veier.
+    # Uten dette objektet ville en tom rapport sett ut som en virkende regel.
+    ("IfcOutlet", "++115080=4310.001.00-QLF001"),
+]
+
+
+def lag_foringsveimodell(sti: Path, schema: str = "IFC4") -> Path:
+    """Skriver en modell der ett objekt bare kan kjennes igjen på systemkoden.
+
+    K8 kjenner en føringsvei på to måter: IFC-klassen og systemkoden. Klassen
+    sier hva eksporten fikk til; systemkoden sier hva prosjektet har bestemt.
+    En ekte Revit-eksport ga seksten koblingsbokser som IfcBuildingElementProxy
+    — TFM-en sa føringsvei, klassen sa ingenting.
+
+    Med standardoppsettet gir modellen to funn. Med eksempler/foringsvei.toml
+    gir den ett, og det som blir igjen er det som skal bli igjen. Forskjellen
+    skal kunne ses, ikke bare leses om.
+    """
+    return lag_modell(list(FORINGSVEI), sti, schema=schema)
+
+
 def _punkt(f, x: float = 0.0, y: float = 0.0, z: float = 0.0):
     return f.create_entity("IfcCartesianPoint", Coordinates=(x, y, z))
 

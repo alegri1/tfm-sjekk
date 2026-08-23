@@ -258,6 +258,36 @@ Grensen er bevisst. Alternativet er å skanne hvert felt i hvert egenskapssett o
 stole på at verdien *ser ut som* en TFM-ID — en langt løsere slutning enn de
 øvrige, og en beslutning som fortjener sin egen vurdering.
 
+### Føringsveier eksporten ikke merket som føringsveier
+
+K8 krever kursnummer av elektroobjekter, og unntar føringsveier: et kabelrør
+bærer kurser og ligger ikke på en. Unntaket kjenner dem normalt på IFC-klassen.
+
+Det holder ikke alltid. En ekte Revit-eksport av Snowdon Towers ga seksten
+koblingsbokser som `IfcBuildingElementProxy` — en anonym boks. TFM-en sa
+føringsvei, klassen sa ingenting, og K8 trodde på klassen.
+
+```bash
+uv run tfm-sjekk sjekk eksempler/foringsvei.ifc
+# 2 feil — uttaket mangler kursnummer, og koblingsboksen «mangler» det også
+
+uv run tfm-sjekk sjekk eksempler/foringsvei.ifc --config eksempler/foringsvei.toml
+# 1 feil — bare uttaket. Koblingsboksen er kjent igjen på systemkoden
+```
+
+Kabelrøret i modellen meldes ingen av gangene: det er `IfcFlowSegment`, som
+standardlista dekker. De to kjennetegnene virker ved siden av hverandre, og å
+konfigurere systemkoder slår ikke av klasselista.
+
+```toml
+[elektro]
+foring_systemkoder = ["4340"]
+```
+
+Koden i eksempelet er fiktiv. Hvilken kode som betyr føringsvei står i NS 3451,
+og innholdet ligger ikke i verktøyet (§8) — derfor er standardlista tom, og
+prosjektet skriver inn sin egen.
+
 ### Modeller i tidligfase
 
 En tidlig modell har ikke alltid fått byggnummer. Systemet og komponenten er

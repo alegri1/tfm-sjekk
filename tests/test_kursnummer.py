@@ -10,7 +10,12 @@ kabelrør og 11 om ekte feil.
 
 from __future__ import annotations
 
+import sys
+import tempfile
+from pathlib import Path
+
 from tfm_sjekk.config import ElektroOppsett, Konfigurasjon
+from tfm_sjekk.ifc.loader import les_modell
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller.k8_elektro import K8Elektro
 from tfm_sjekk.modell import IfcObjekt
@@ -253,3 +258,55 @@ def test_unntaket_sprer_seg_ikke_til_koblingsgrafen():
     assert any("tilkoblet fordelingen" in f.melding for f in funn), (
         "lampen mistet fordelingen sin gjennom koblingsboksen"
     )
+
+
+# --- Demomodellen skal faktisk demonstrere regelen ---
+
+
+def demofunn(config_sti):
+    """Kjører eksempler/foringsvei.ifc slik README-en sier, og teller K8-funn."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    from fixtures.syntetisk import lag_foringsveimodell
+
+    modell = lag_foringsveimodell(Path(tempfile.mkdtemp()) / "foringsvei.ifc")
+    objekter = les_modell(modell)
+    config = Konfigurasjon.les(config_sti)
+    return [f for f in K8Elektro().kjor(Kontekst.bygg(objekter, config)) if "kurs-" in f.melding]
+
+
+def test_demomodellen_viser_forskjellen():
+    """Uten oppsettet to funn, med det ett — og det ene er koblingsboksen.
+
+    Tallet alene beviser ingenting: en modell der begge funnene forsvant ville
+    gitt samme retning. Testen krever at det som blir igjen er uttaket, og at
+    det som forsvant er proxyen.
+    """
+    eksempler = Path(__file__).parent.parent / "eksempler"
+    uten = demofunn(None)
+    med = demofunn(eksempler / "foringsvei.toml")
+
+    assert {f.ifc_klasse for f in uten} == {"IfcOutlet", "IfcBuildingElementProxy"}
+    assert {f.ifc_klasse for f in med} == {"IfcOutlet"}
+
+
+def test_kabelroret_meldes_aldri():
+    """IfcFlowSegment dekkes av standardlista over klasser, begge veier.
+
+    Å konfigurere systemkoder skal ikke slå av klasselista — og modellen har
+    et kabelrør nettopp for å vise det.
+    """
+    eksempler = Path(__file__).parent.parent / "eksempler"
+    for config in (None, eksempler / "foringsvei.toml"):
+        assert not [f for f in demofunn(config) if "QLK002" in (f.tfm or "")]
+
+
+def test_oppsettet_og_modellen_bruker_samme_kode():
+    """Endres koden i fiksturen uten at TOML-en følger med, slutter demoen å
+    demonstrere noe — og den ville sett like riktig ut."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    from fixtures.syntetisk import FORINGSVEI
+
+    eksempler = Path(__file__).parent.parent / "eksempler"
+    koder = Konfigurasjon.les(eksempler / "foringsvei.toml").elektro.foring_systemkoder
+    proxy_tfm = next(t for k, t in FORINGSVEI if k == "IfcBuildingElementProxy")
+    assert proxy_tfm.split("=")[1][:4] in koder

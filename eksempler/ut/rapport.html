@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="no">
+<meta charset="utf-8">
+<title>TFM-rapport — demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc</title>
+<style>
+  /* Hele paletten defineres her, for lys bakgrunn. Mørk modus under bytter
+     bare ut verdiene — ingen farge har sin eneste definisjon der, ellers
+     ville den manglet for alle andre. */
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --tekst: #1a1a1a;
+    --dempet: #5f5f5f;
+    --ramme: #dddddd;
+    --ramme-sterk: #cccccc;
+    --th-bg: #f4f4f4;
+    --ok: #2e7d32;
+    --feil: #c0392b;
+    --advarsel: #e67e22;
+    --info: #7f8c8d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --tekst: #e8e8e8;
+      --dempet: #a3a3a3;
+      --ramme: #3a3a3a;
+      --ramme-sterk: #4a4a4a;
+      --th-bg: #262626;
+      /* Lysere varianter: de mettede fargene over forsvinner mot mørk bakgrunn. */
+      --ok: #66bb6a;
+      --feil: #e57373;
+      --advarsel: #ffb74d;
+      --info: #b0bec5;
+    }
+  }
+  /* Bakgrunn og tekstfarge må stå eksplisitt. Uten dem arver sida browserens
+     standardfarger, og da ble overskriftsraden hvit på hvitt i mørk modus. */
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem auto;
+         max-width: 1200px; padding: 0 1rem;
+         background: var(--bg); color: var(--tekst); }
+  h1 { margin-bottom: .25rem; }
+  .meta { color: var(--dempet); margin-bottom: 1.5rem; }
+  .tall { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tall div { border: 1px solid var(--ramme-sterk); border-radius: 6px;
+              padding: .6rem 1rem; }
+  .tall b { display: block; font-size: 1.6rem; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--ramme);
+           vertical-align: top; }
+  th { cursor: pointer; user-select: none; background: var(--th-bg); color: var(--tekst);
+       position: sticky; top: 0; }
+  tr.feil td:first-child { border-left: 4px solid var(--feil); }
+  tr.advarsel td:first-child { border-left: 4px solid var(--advarsel); }
+  tr.info td:first-child { border-left: 4px solid var(--info); }
+  code { font-size: .9em; }
+  table.dekning { width: auto; margin-bottom: 1.5rem; }
+  table.dekning th { cursor: default; position: static; }
+  table.dekning td { font-variant-numeric: tabular-nums; }
+  .tom { padding: 2rem; text-align: center; color: var(--ok); font-size: 1.2rem; }
+</style>
+<h1>TFM-rapport</h1>
+<p class="meta">demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc</p>
+
+<div class="tall">
+  <div><b>13</b>feil</div>
+  <div><b>1</b>advarsler</div>
+  <div><b>3</b>info</div>
+  <div><b>18</b>objekter kontrollert</div>
+  <div><b>18</b>objekter lest</div>
+</div>
+
+
+
+
+<table class="dekning">
+<thead><tr><th>Fagmodell</th><th>I omfanget</th><th>Lest</th></tr></thead>
+<tbody>
+
+<tr>
+  <td>demo-elektro.ifc</td><td>9</td><td>9</td>
+</tr>
+
+<tr>
+  <td>demo-rie.ifc</td><td>6</td><td>6</td>
+</tr>
+
+<tr>
+  <td>demo-riv.ifc</td><td>3</td><td>3</td>
+</tr>
+
+</tbody>
+</table>
+
+
+
+<table id="t">
+<thead><tr>
+  <th onclick="sorter(0)">Kontroll</th>
+  <th onclick="sorter(1)">Grad</th>
+  <th onclick="sorter(2)">Fil</th>
+  <th onclick="sorter(3)">Klasse</th>
+  <th onclick="sorter(4)">TFM</th>
+  <th onclick="sorter(5)">Melding</th>
+</tr></thead>
+<tbody>
+
+<tr class="feil">
+  <td>K1</td>
+  <td>feil</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code></code></td>
+  <td>Objektet mangler TFM-verdi. Forventet i egenskapssettet TFM11_Forekomst.</td>
+</tr>
+
+<tr class="feil">
+  <td>K2</td>
+  <td>feil</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++11508=4310.001.12-QLF005</code></td>
+  <td>Plasseringen «11508» har 5 siffer, forventet 6.</td>
+</tr>
+
+<tr class="feil">
+  <td>K3</td>
+  <td>feil</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=9999.001.12-QLF003</code></td>
+  <td>Systemkoden «9999» finnes ikke i kodetabellen «NS 3451 tabell 8».</td>
+</tr>
+
+<tr class="advarsel">
+  <td>K4</td>
+  <td>advarsel</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=2300.001.12-QLF004</code></td>
+  <td>Systemkoden «2300» er overordnet. Mer spesifikke koder finnes: 2310, 2320. PA 0805 krever mest mulig spesifikk kode.</td>
+</tr>
+
+<tr class="feil">
+  <td>K5</td>
+  <td>feil</td>
+  <td>demo-riv.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=3600.001.04-XXX009</code></td>
+  <td>Komponentkoden «XXX» finnes ikke i kodetabellen «NS 3457-8».</td>
+</tr>
+
+<tr class="feil">
+  <td>K6</td>
+  <td>feil</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=4310.001.12-QLF001</code></td>
+  <td>Komponentforekomsten «++115080=4310.001.12-QLF001» er brukt på 2 objekter på tvers av 2 filer (demo-rie.ifc, demo-riv.ifc). Den skal være unik.</td>
+</tr>
+
+<tr class="feil">
+  <td>K6</td>
+  <td>feil</td>
+  <td>demo-riv.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=4310.001.12-QLF001</code></td>
+  <td>Komponentforekomsten «++115080=4310.001.12-QLF001» er brukt på 2 objekter på tvers av 2 filer (demo-rie.ifc, demo-riv.ifc). Den skal være unik.</td>
+</tr>
+
+<tr class="info">
+  <td>K7</td>
+  <td>info</td>
+  <td></td>
+  <td></td>
+  <td><code></code></td>
+  <td>1 system i TFM-mastera (FIKTIV-tfm-master.csv) er ikke brukt i modellen: 3600.002.04.</td>
+</tr>
+
+<tr class="info">
+  <td>K7</td>
+  <td>info</td>
+  <td></td>
+  <td></td>
+  <td><code></code></td>
+  <td>1 komponenttype i TFM-mastera (FIKTIV-tfm-master.csv) er ikke brukt i modellen: QLF.001.001.</td>
+</tr>
+
+<tr class="feil">
+  <td>K7</td>
+  <td>feil</td>
+  <td>demo-elektro.ifc</td>
+  <td>IfcLamp</td>
+  <td><code>++115080=4310.001.13-QLF107</code></td>
+  <td>Komponenttypen «QLF.001.003» står ikke i TFM-mastera (FIKTIV-tfm-master.csv).</td>
+</tr>
+
+<tr class="feil">
+  <td>K7</td>
+  <td>feil</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=9999.001.12-QLF003</code></td>
+  <td>Systemforekomsten «9999.001.12» står ikke i TFM-mastera (FIKTIV-tfm-master.csv).</td>
+</tr>
+
+<tr class="feil">
+  <td>K8</td>
+  <td>feil</td>
+  <td>demo-elektro.ifc</td>
+  <td>IfcLamp</td>
+  <td><code>++115080=4320.001.12-QLF103</code></td>
+  <td>Objektet er tilkoblet fordelingen «Fordeling 1» med systemet 4310.001, men er merket med systemet 4320.001. Alt som mates fra samme fordeling skal tilhøre samme system; det er kursnummeret som skal variere.</td>
+</tr>
+
+<tr class="feil">
+  <td>K8</td>
+  <td>feil</td>
+  <td>demo-elektro.ifc</td>
+  <td>IfcOutlet</td>
+  <td><code>++115080=4310.001.14-QLF104</code></td>
+  <td>Kursnummer «14» er brukt av 2 ulike kurser på fordelingen «Fordeling 1» (Kurs 14, Kurs 14B). Kursnumre skal være unike innenfor én fordeling.</td>
+</tr>
+
+<tr class="feil">
+  <td>K8</td>
+  <td>feil</td>
+  <td>demo-elektro.ifc</td>
+  <td>IfcOutlet</td>
+  <td><code>++115080=4310.001.14-QLF105</code></td>
+  <td>Kursnummer «14» er brukt av 2 ulike kurser på fordelingen «Fordeling 1» (Kurs 14, Kurs 14B). Kursnumre skal være unike innenfor én fordeling.</td>
+</tr>
+
+<tr class="feil">
+  <td>K8</td>
+  <td>feil</td>
+  <td>demo-rie.ifc</td>
+  <td>IfcFlowTerminal</td>
+  <td><code>++115080=4310.001.00-QLF002</code></td>
+  <td>Elektroobjekt i system 4310 mangler kurs-/sløyfenummer (undernummeret er «00»). For NS 3451 kapittel 4 og 5 skal undernummeret være utfylt.</td>
+</tr>
+
+<tr class="info">
+  <td>K9</td>
+  <td>info</td>
+  <td>demo-elektro.ifc</td>
+  <td>IfcOutlet</td>
+  <td><code>++115080=4310.001.14-QLF105</code></td>
+  <td>MMI «200» avviker fra resten av systemet 4310.001, der de fleste står på «300» (fordeling: 200 (1), 300 (7)).</td>
+</tr>
+
+<tr class="feil">
+  <td>T1</td>
+  <td>feil</td>
+  <td>demo-elektro.ifc</td>
+  <td>IfcLamp</td>
+  <td><code>++115080=4310.001.13-QLF106%QLF.001.004</code></td>
+  <td>Komponenttypen i typefeltet «QLF.001.005» er ikke den samme som i TFM-ID-en «QLF.001.004». De to skal beskrive samme type, og hvilken som gjelder lar seg ikke avgjøre herfra.</td>
+</tr>
+
+</tbody>
+</table>
+<script>
+let stigende = [];
+function sorter(n) {
+  const tbody = document.querySelector('#t tbody');
+  const rader = [...tbody.rows];
+  stigende[n] = !stigende[n];
+  const retning = stigende[n] ? 1 : -1;
+  rader.sort((a, b) =>
+    retning * a.cells[n].innerText.localeCompare(b.cells[n].innerText, 'no'));
+  rader.forEach(r => tbody.appendChild(r));
+}
+</script>
+
+</html>

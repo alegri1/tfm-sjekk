@@ -1,0 +1,19 @@
+# Oppsett for en modell der føringsveier ikke fikk en føringsvei-klasse.
+
+# K8 krever kursnummer av elektroobjekter. Føringsveier er unntatt — et kabelrør
+# bærer kurser og ligger ikke på en — og de kjennes normalt igjen på IFC-klassen.
+#
+# Det holder ikke alltid. En ekte Revit-eksport ga seksten koblingsbokser som
+# IfcBuildingElementProxy: TFM-en sa føringsvei, klassen sa ingenting, og K8
+# trodde på klassen.
+#
+# Koden under er FIKTIV. Hvilken kode som betyr føringsvei i NS 3451 skal ikke
+# ligge i dette repoet (§8) — skriv inn prosjektets egen.
+#
+# Prøv modellen begge veier, så ser du hva nøkkelen gjør:
+#
+#     tfm-sjekk sjekk eksempler/foringsvei.ifc
+#     tfm-sjekk sjekk eksempler/foringsvei.ifc --config eksempler/foringsvei.toml
+
+[elektro]
+foring_systemkoder = ["4340"]

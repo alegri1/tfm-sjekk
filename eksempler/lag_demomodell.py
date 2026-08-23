@@ -8,13 +8,15 @@
     avveie.ifc                                     «tfm-sjekk oppsett»
     blindsone.ifc                                  grensen for hva oppsett ser
     tidligfase.ifc                                 merking uten plassering
+    foringsvei.ifc                                 føringsvei uten føringsvei-klasse
     visning.ifc                                    BCF-en prøvd i en viewer
     visning-2x3.ifc                                samme, men til import i Revit
 
 Bare de tre første er merket «demo-», og det er med vilje: globben under skal
 treffe akkurat dem. De fem andre har verdier som ville forstyrret en
 kontrollkjøring — avveie.ifc og blindsone.ifc ligger utenfor oppsettet,
-tidligfase.ifc krever sitt eget oppsett for å gi mening, og de to visning-filene
+tidligfase.ifc og foringsvei.ifc krever hver sitt oppsett for å gi mening,
+og de to visning-filene
 er kopier av elektromodellen som ville gitt K6-duplikater av hver komponent.
 
     uv run tfm-sjekk eksempler/demo-*.ifc \
@@ -34,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tests"))
 
 from fixtures.syntetisk import (
     lag_elektromodell,
+    lag_foringsveimodell,
     lag_modell,
     lag_modell_i_blindsonen,
     lag_modell_pa_avveie,
@@ -182,6 +185,13 @@ if __name__ == "__main__":
     # Merket uten plassering. Kjørt med standardoppsettet gir den fem
     # syntaksfunn om «++»-delen; med eksempler/tidligfase.toml forsvinner de.
     print(f"skrev {lag_tidligfasemodell(HER / 'tidligfase.ifc')}")
+
+    # Ett objekt som bare kan kjennes igjen på systemkoden: en koblingsboks som
+    # kom ut av eksporten som en anonym proxy. Kjørt med standardoppsettet gir
+    # den to funn; med eksempler/foringsvei.toml gir den ett. Uten denne
+    # modellen har «foring_systemkoder» ingen demo — og en regel ingen ser,
+    # slutter stille å virke.
+    print(f"skrev {lag_foringsveimodell(HER / 'foringsvei.ifc')}")
 
     # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
     # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:
