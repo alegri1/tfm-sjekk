@@ -35,13 +35,41 @@ tfm-sjekk sjekk ... --ut rapport
 
 ## Oppsett i Revit, én gang
 
-1. Lag en **prosjektparameter** eller delt parameter `TFM_Avvik`, type **Tekst**,
-   på de kategoriene du sjekker (Electrical Fixtures, Air Terminals, …).
-2. Lag en schedule med kolonnene du vil gå gjennom, pluss `TFM_Avvik`.
-3. Filtrer schedulen på `TFM_Avvik` **is not empty**.
+**Parameteren.** `Manage → Project Parameters → Add…`, navn `TFM_Avvik`, type
+**Text**, **Instance**, på de kategoriene du sjekker — Electrical Fixtures,
+Electrical Equipment, Lighting Fixtures, Lighting Devices, Data Devices,
+Conduits, Conduit Fittings.
 
-Da har du en arbeidsliste som tømmer seg selv etter hvert som du retter — kjør
-grafen på nytt, og radene forsvinner.
+`Instance`, ikke `Type`: avviket gjelder ett objekt, ikke alle av samme slag.
+
+**Schedulen.** `View → Schedules → Multi-Category`.
+
+Ikke `Schedule/Quantities`. Den låser deg til én kategori, og funnene ligger
+spredt over alle sju. En multikategori-schedule tar dem i én liste.
+
+| Fane | Hva |
+|---|---|
+| `Fields` | `Family and Type`, `TFM`, `TFM_Avvik`, `Level` |
+| `Filter` | `TFM_Avvik` → **`is not empty`** |
+| `Sorting/Grouping` | `Level`, så `TFM`. La `Itemize every instance` stå på. |
+
+Filteret er det som gjør lista til en arbeidsliste framfor en oversikt. Uten det
+får du hele modellen.
+
+Finner du ikke `TFM_Avvik` blant feltene, er den ikke bundet til kategoriene.
+
+**Slik brukes den.** Klikk en rad og trykk `Highlight in Model` på båndet. Revit
+zoomer til objektet i en åpen 3D- eller planvisning. Det er den knappen som gjør
+schedulen til et verktøy og ikke en tabell.
+
+**Raden forsvinner ikke når du retter objektet.** `TFM_Avvik` er en tekst Dynamo
+skrev inn, og den vet ikke at du har gjort noe. Lista tømmer seg først når hele
+runden er kjørt på nytt:
+
+    eksporter IFC -> tfm-sjekk -> grafen -> radene forsvinner
+
+Det er derfor dette er en runde og ikke en direkte kobling. Rett gjerne et titalls
+objekter før du kjører om igjen.
 
 ## Grafen holder en kopi, ikke en peker
 
