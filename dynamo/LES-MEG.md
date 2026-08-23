@@ -58,7 +58,7 @@ grafen på nytt, og radene forsvinner.
    - nederste utgang → tallene → en `Watch`-node
 
    `List.GetItemAtIndex` gjør det samme, men er fire noder i stedet for én, og
-   de to indeksene havner hver sin plass på lerretet. Se steg 8 lenger nede.
+   de to indeksene havner hver sin plass på lerretet. Se steg 9 lenger nede.
 
 ## Les tallene før du stoler på resultatet
 
@@ -171,29 +171,46 @@ inn der. Tabellen er den samme som i `verktoy/legg_til_tfm.py`, og
 
 ### Bygg grafen, steg for steg
 
-Skrevet for deg som ikke bruker Dynamo daglig. Ni steg, og du bygger lesesiden
+Skrevet for deg som ikke bruker Dynamo daglig. Ti steg, og du bygger lesesiden
 ferdig før du kobler til noe som skriver.
 
-**1. Åpne Dynamo.** I Revit: fanen `Manage` → `Dynamo`. Velg `New`.
+**1. Lag parameteren i Revit — før du åpner Dynamo.** Grafen skriver til en
+parameter som må finnes fra før. Gjør den ikke det, feiler siste steg med
+`No parameter found by that name`, og meldingen sier ingenting om hvorfor.
 
-**2. Sett motoren.** Nederst til høyre i Dynamo-vinduet står Python-motoren.
+    Manage -> Project Parameters -> Add...
+        Name:                TFM
+        Type of Parameter:   Text
+        (*) Instance                     <- ikke Type
+        Categories:          kryss av de samme du henter fra i steg 5
+
+`Instance` er ikke en detalj. Er den `Type`, deler alle armaturer av samme type
+én TFM-verdi, og løpenummeret blir meningsløst.
+
+Navnet må være det samme som `revit/TFM-egenskapssett.txt` peker på i siste
+kolonne. Ellers blir verdiene liggende i modellen og kommer aldri ut i
+IFC-eksporten.
+
+**2. Åpne Dynamo.** I Revit: fanen `Manage` → `Dynamo`. Velg `New`.
+
+**3. Sett motoren.** Nederst til høyre i Dynamo-vinduet står Python-motoren.
 `PythonNet3` er riktig. Er den låst, er den allerede riktig.
 
-**3. Sett kjøremodus til Manual.** Nederst til venstre står `Automatic`. Bytt
+**4. Sett kjøremodus til Manual.** Nederst til venstre står `Automatic`. Bytt
 til `Manual`. Dette er det viktigste steget: i Automatic kjører grafen i det
 øyeblikket du kobler siste ledning, og en skrivenode skriver da til alle
 elementene før du har sett på noe.
 
-**4. Hent elementene.** To noder:
+**5. Hent elementene.** To noder:
 
 - Søk `Categories` — en nedtrekksliste. Velg `Lighting Fixtures` til å begynne
-  med. Én kategori er nok til å få grafen til å virke; flere kommer i steg 9.
+  med. Én kategori er nok til å få grafen til å virke; flere kommer til slutt.
 - Søk `All Elements of Category`. Den ligger under `Revit → Selection`, ikke
   under `Categories` — nedtrekkslista er bare en verdi, ikke et bibliotek.
 
 Koble `Categories` → `category`.
 
-**5. Les de to parameterne.** To `Element.GetParameterValueByName`-noder, begge
+**6. Les de to parameterne.** To `Element.GetParameterValueByName`-noder, begge
 med `All Elements of Category` inn i `element`. Navnet gis av en `Code Block`
 (dobbeltklikk på lerretet):
 
@@ -202,7 +219,7 @@ med `All Elements of Category` inn i `element`. Navnet gis av en `Code Block`
 
 Semikolonet må være der. Uten det er Code Block-en tom.
 
-**6. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
+**7. Se på det du fikk, før du går videre.** Heng en `Watch` på hver av de to og
 trykk `Run`. Du skal se familienavn i den ene (`Duplex Receptacle: 20A` eller
 liknende) og kursnumre i den andre (`1`, `6,8`, eller tomt).
 
@@ -215,7 +232,7 @@ Er familienavnene tomme eller ser ut som `Revit.Elements.Family`, virker ikke
 Skriptet deler på kolon og bruker bare det som står før, så `Familie: Type`
 er like bra som `Familie` alene.
 
-**7. Python-noden.** Søk `Python Script`. Den kommer med to inputs; klikk `+` på
+**8. Python-noden.** Søk `Python Script`. Den kommer med to inputs; klikk `+` på
 noden én gang, så du har tre. Dobbeltklikk, lim inn hele `tfm_fra_revit.py`,
 trykk `Save`. Koble:
 
@@ -223,7 +240,7 @@ trykk `Save`. Koble:
     kursnumre          -> IN[1]
     Code Block  "115080";   -> IN[2]
 
-**8. Pakk opp de to utgangene.** Python-noden har bare én utgangsport, og
+**9. Pakk opp de to utgangene.** Python-noden har bare én utgangsport, og
 skriptet gir deg to ting gjennom den:
 
     OUT[0]   TFM-ID-ene, én per element
@@ -250,11 +267,11 @@ på noe helt annet.
 **Trykk `Run` nå, og les Watch-en.** Står det `2426 elementer merket` og et
 lavt tall for ukjente familier, er lesesiden ferdig. Står det `ADVARSEL: ingen
 av familienavnene står i tabellen`, er `IN[0]` feilkoblet — gå tilbake til
-steg 6.
+steg 7.
 
-**9. Først nå kobler du skrivingen.** `Element.SetParameterByName`:
+**10. Først nå kobler du skrivingen.** `Element.SetParameterByName`:
 
-    element         <- SAMME All Elements of Category som i steg 5
+    element         <- SAMME All Elements of Category som i steg 6
     parameterName   <- Code Block  "TFM";
     value           <- Code Block-ens øverste utgang  (x[0])
 
@@ -276,11 +293,17 @@ Aktuelle kategorier: `Electrical Fixtures`, `Electrical Equipment`,
 
 ### Fellene, samlet
 
+Én prøve skiller de fleste av dem fra hverandre: bytt `parameterName` til
+`"Comments";` og kjør. `Comments` finnes på praktisk talt alt i Revit. Går det
+gjennom, er det parameteren som mangler eller er feil bundet. Feiler det
+fortsatt, er det koblingen inn i `element` som er problemet.
+
+
 | Symptom | Årsak |
 |---|---|
-| `No parameter found by that name` | Parameteren finnes ikke i dette prosjektet, eller er ikke bundet til kategorien. Den må være **Instance** og **Text**. |
+| `No parameter found by that name` | Parameteren finnes ikke (steg 1), er ikke bundet til kategorien, eller `parameterName` mangler anførselstegn — `TFM;` lager en inngangsport og sender null, `"TFM";` sender navnet. |
 | Grafen skriver før du er klar | Kjøremodus står på `Automatic`. |
-| `ADVARSEL: ingen av familienavnene ...` | `IN[0]` gir noe annet enn navn. Se steg 6. |
+| `ADVARSEL: ingen av familienavnene ...` | `IN[0]` gir noe annet enn navn. Se steg 7. |
 | Skriptet kaster om ulik lengde | `IN[0]` og `IN[1]` kommer fra ulike elementlister. |
 | `SetParameterByName` feiler på noen få elementer | Den fikk `x[1]` — sammendraget — i stedet for `x[0]`. Utgangene står i feil rekkefølge. |
 | Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
