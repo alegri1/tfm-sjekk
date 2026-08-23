@@ -110,7 +110,7 @@ MAL = Template(
   <th onclick="sorter(1)">Grad</th>
   <th onclick="sorter(2)">Fil</th>
   <th onclick="sorter(3)">Klasse</th>
-  <th onclick="sorter(4)">TFM-verdi</th>
+  <th onclick="sorter(4)">TFM</th>
   <th onclick="sorter(5)">Melding</th>
 </tr></thead>
 <tbody>
@@ -120,7 +120,7 @@ MAL = Template(
   <td>{{ f.alvorlighet.value }}</td>
   <td>{{ f.kildefil or '' }}</td>
   <td>{{ f.ifc_klasse or '' }}</td>
-  <td><code>{{ f.verdi or '' }}</code></td>
+  <td><code>{{ f.tfm or '' }}</code></td>
   <td>{{ f.melding }}</td>
 </tr>
 {% endfor %}

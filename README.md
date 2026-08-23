@@ -33,7 +33,7 @@ fagmodeller, og ingen oppdager det før i FDV-fasen.
 ## Rapporten
 ![HTML-rapporten](docs/rapport.png)
 *Demomodellene, som har én tilsiktet feil per kontroll. Dekningstabellen sier
-hvor mye som faktisk ble kontrollert — her 17 av 17. Står det 0, er «ingen funn»
+hvor mye som faktisk ble kontrollert — her 18 av 18. Står det 0, er «ingen funn»
 ikke det samme som «ingen feil».*
 
 Hver kjøring gir en selvstendig HTML-rapport med sorterbar tabell, en BCF-fil

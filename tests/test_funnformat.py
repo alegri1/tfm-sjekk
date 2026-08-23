@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import csv
 import inspect
+import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 import openpyxl
 
 from tfm_sjekk.modell import Alvorlighet, Funn, IfcObjekt
-from tfm_sjekk.rapport import skriv_csv, skriv_xlsx
+from tfm_sjekk.rapport import skriv_bcf, skriv_csv, skriv_html, skriv_xlsx
 from tfm_sjekk.rapport.csv_rapport import KOLONNER
 
 TFM = "++115080=4310.001.14-QLF105"
@@ -131,3 +133,88 @@ def test_kolonnelistene_kan_ikke_drive_fra_hverandre():
     from tfm_sjekk.rapport.xlsx import OVERSKRIFTER
 
     assert set(KOLONNER) <= set(OVERSKRIFTER)
+
+
+# --- Rapporten til lesing og emnene til vieweren ---
+#
+# Prøven hviler på ett tilfelle: et funn der «tfm» og «verdi» er ulike. For alle
+# andre funn er de like, og en test mot dem ville passert både før og etter at
+# feilen ble rettet. Derfor er det alltid et K9-funn som brukes her.
+
+
+def html(funn: list[Funn], tmp_path: Path) -> str:
+    sti = tmp_path / "rapport.html"
+    skriv_html(funn, sti, "test")
+    return sti.read_text(encoding="utf-8")
+
+
+def bcf_kommentarer(funn: list[Funn], tmp_path: Path) -> list[str]:
+    """Kommentarteksten i hvert emne, som den står i zip-en."""
+    sti = tmp_path / "funn.bcfzip"
+    skriv_bcf(funn, sti, opprettet="2026-01-01T12:00:00Z")
+    ut = []
+    with zipfile.ZipFile(sti) as z:
+        for navn in z.namelist():
+            if navn.endswith("markup.bcf"):
+                rot = ET.fromstring(z.read(navn).decode("utf-8"))
+                # «Comment/Comment»: BCF pakker teksten i et element med samme
+                # navn som beholderen. Leter man med iter(), treffer man
+                # beholderen først, og dens tekst er bare innrykk — da blir
+                # enhver «står ikke der»-test grønn uten å ha sett på noe.
+                ut += [k.text or "" for k in rot.findall(".//Comment/Comment")]
+    return ut
+
+
+def test_html_viser_objektets_tfm_ikke_meldt_verdi(tmp_path):
+    """K9 melder om MMI. Raden skal likevel identifisere objektet."""
+    funn = [Funn.for_objekt("K9", Alvorlighet.INFO, "MMI avviker", objekt(), verdi="200")]
+    ut = html(funn, tmp_path)
+    tabell = ut[ut.index("<table id=") :]
+    assert TFM in tabell, "raden identifiserer ikke objektet sitt"
+    assert "<code>200</code>" not in tabell, "MMI-verdien står i TFM-feltet"
+
+
+def test_html_merker_kolonnen_tfm(tmp_path):
+    """Overskriften skal ikke love «TFM-verdi» over noe som ikke er det."""
+    ut = html([Funn.for_objekt("K2", Alvorlighet.FEIL, "syntaks", objekt())], tmp_path)
+    assert ">TFM<" in ut
+    assert ">TFM-verdi<" not in ut
+
+
+def test_bcf_oppgir_objektets_tfm_ikke_meldt_verdi(tmp_path):
+    funn = [Funn.for_objekt("K9", Alvorlighet.INFO, "MMI avviker", objekt(), verdi="200")]
+    kommentar = bcf_kommentarer(funn, tmp_path)[0]
+    assert f"TFM: {TFM}" in kommentar
+    assert "TFM-verdi: 200" not in kommentar
+
+
+def test_bcf_beholder_meldinga_i_description(tmp_path):
+    """Verdien funnet handler om går ikke tapt — den står i meldinga."""
+    funn = [Funn.for_objekt("K9", Alvorlighet.INFO, "MMI «200» avviker", objekt(), verdi="200")]
+    sti = tmp_path / "funn.bcfzip"
+    skriv_bcf(funn, sti, opprettet="2026-01-01T12:00:00Z")
+    with zipfile.ZipFile(sti) as z:
+        navn = next(n for n in z.namelist() if n.endswith("markup.bcf"))
+        rot = ET.fromstring(z.read(navn).decode("utf-8"))
+    assert "200" in rot.find(".//Description").text
+
+
+def test_html_uten_tfm_gir_tom_celle(tmp_path):
+    """K1 melder at verdien mangler. Raden skal ikke motsi meldinga med «None»."""
+    funn = [Funn.for_objekt("K1", Alvorlighet.FEIL, "mangler TFM", objekt(tfm=None))]
+    ut = html(funn, tmp_path)
+    assert "None" not in ut
+
+
+def test_bcf_uten_tfm_utelater_leddet(tmp_path):
+    funn = [Funn.for_objekt("K1", Alvorlighet.FEIL, "mangler TFM", objekt(tfm=None))]
+    kommentar = bcf_kommentarer(funn, tmp_path)[0]
+    assert "TFM" not in kommentar
+    assert "None" not in kommentar
+
+
+def test_funn_uten_objekt_gir_tomt_felt_i_begge(tmp_path):
+    """K7 melder om mastera, ikke om et objekt."""
+    funn = [Funn(kontroll="K7", alvorlighet=Alvorlighet.INFO, melding="ikke modellert")]
+    assert "None" not in html(funn, tmp_path)
+    assert "TFM" not in bcf_kommentarer(funn, tmp_path)[0]

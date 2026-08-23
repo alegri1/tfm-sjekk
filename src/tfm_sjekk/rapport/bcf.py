@@ -332,6 +332,10 @@ def _detaljer(f: Funn) -> str:
         deler.append(f"Fil: {f.kildefil}")
     if f.ifc_klasse:
         deler.append(f"IFC-klasse: {f.ifc_klasse}")
-    if f.verdi:
-        deler.append(f"TFM-verdi: {f.verdi}")
+    if f.tfm:
+        # Objektets egen TFM, ikke verdien funnet handler om. K9 melder om MMI
+        # og legger MMI-verdien i «verdi»; sto den her, ville emnet hatt en
+        # linje som het TFM og inneholdt «200». Verdien funnet handler om står
+        # uansett i Description, som viewerne viser i sin helhet.
+        deler.append(f"TFM: {f.tfm}")
     return " · ".join(deler)
