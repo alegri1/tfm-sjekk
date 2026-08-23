@@ -262,6 +262,8 @@ if "IN" in globals():  # pragma: no cover - krever Dynamo
 
     _tfm = merk(_familier, _kurser, _plassering)
 
-    # Liste, ikke tuppel: List.GetItemAtIndex regner med en liste.
+    # Liste, ikke tuppel: Dynamo har bare én utgangsport, så de to
+    # tingene pakkes sammen og skilles av en Code Block med «x[0];» og
+    # «x[1];» på hver sin linje.
     # Indeks 0 er TFM-ID-ene, indeks 1 er tallene — les tallene.
     OUT = [_tfm, sammendrag(statistikk(_familier, _kurser, _tfm))]

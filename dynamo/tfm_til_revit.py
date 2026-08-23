@@ -236,6 +236,8 @@ if "IN" in globals():  # pragma: no cover - krever Dynamo
 
     _funn = les_fil(_sti)
 
-    # Liste, ikke tuppel: List.GetItemAtIndex regner med en liste.
+    # Liste, ikke tuppel: Dynamo har bare én utgangsport, så de to
+    # tingene pakkes sammen og skilles av en Code Block med «x[0];» og
+    # «x[1];» på hver sin linje.
     # Indeks 0 er tekstene, indeks 1 er tallene — les tallene.
     OUT = [avvikstekster(_funn, _verdier), statistikk(_funn, _verdier)]

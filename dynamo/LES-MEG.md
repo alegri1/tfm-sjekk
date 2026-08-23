@@ -52,9 +52,13 @@ grafen på nytt, og radene forsvinner.
    TFM-parameteren → `IN[1]`
 4. Elementene selv går rett til `Element.SetParameterByName` — de skal ikke
    innom Python-noden.
-5. `OUT` er en liste med to ting. Bruk `List.GetItemAtIndex`:
-   - indeks 0 → avvikstekstene → `Element.SetParameterByName("TFM_Avvik")`
-   - indeks 1 → tallene → en `Watch`-node
+5. `OUT` er en liste med to ting. Pakk den opp med én `Code Block` på to
+   linjer — `x[0];` og `x[1];` — og koble Python-noden inn i `x`:
+   - øverste utgang → avvikstekstene → `Element.SetParameterByName("TFM_Avvik")`
+   - nederste utgang → tallene → en `Watch`-node
+
+   `List.GetItemAtIndex` gjør det samme, men er fire noder i stedet for én, og
+   de to indeksene havner hver sin plass på lerretet. Se steg 8 lenger nede.
 
 ## Les tallene før du stoler på resultatet
 
@@ -219,13 +223,29 @@ trykk `Save`. Koble:
     kursnumre          -> IN[1]
     Code Block  "115080";   -> IN[2]
 
-**8. Skill ut de to utgangene.** Python-noden gir én liste med to ting i.
+**8. Pakk opp de to utgangene.** Python-noden har bare én utgangsport, og
+skriptet gir deg to ting gjennom den:
 
-    List.GetItemAtIndex(index = Code Block  0;)   -> TFM-ID-ene
-    List.GetItemAtIndex(index = Code Block  1;)   -> tallene  -> Watch
+    OUT[0]   TFM-ID-ene, én per element
+    OUT[1]   sammendraget, én linje per tall
 
-`index` må komme fra en Code Block. Skriver du tallet i noden selv, tolkes det
-ikke som et tall.
+Lag én `Code Block` med nøyaktig disse to linjene:
+
+    x[0];
+    x[1];
+
+Den får da én inngang (`x`, fordi navnet er udefinert) og to utganger, én per
+linje. Koble Python-noden inn i `x`. Øverste utgang er TFM-ID-ene, nederste er
+sammendraget — heng en `Watch` på den.
+
+Semikolonene må være der, ett per linje.
+
+*Alternativt* to `List.GetItemAtIndex`-noder, med `index` fra hver sin Code
+Block (`0;` og `1;`) og Python-noden inn i begge `list`-inngangene. Det virker
+like godt, men er fire noder i stedet for én — og de to indeksene havner hver
+sin plass på lerretet, der det er lett å sette begge til samme tall. Da får
+skrivenoden sammendraget i stedet for TFM-ID-ene, og advarselen du får peker
+på noe helt annet.
 
 **Trykk `Run` nå, og les Watch-en.** Står det `2426 elementer merket` og et
 lavt tall for ukjente familier, er lesesiden ferdig. Står det `ADVARSEL: ingen
@@ -236,7 +256,7 @@ steg 6.
 
     element         <- SAMME All Elements of Category som i steg 5
     parameterName   <- Code Block  "TFM";
-    value           <- List.GetItemAtIndex(0)
+    value           <- Code Block-ens øverste utgang  (x[0])
 
 Elementene må komme fra den samme noden som parameterne ble lest fra. Henter du
 dem fra en annen node, kan rekkefølgen være en annen, og hvert element får
@@ -262,6 +282,7 @@ Aktuelle kategorier: `Electrical Fixtures`, `Electrical Equipment`,
 | Grafen skriver før du er klar | Kjøremodus står på `Automatic`. |
 | `ADVARSEL: ingen av familienavnene ...` | `IN[0]` gir noe annet enn navn. Se steg 6. |
 | Skriptet kaster om ulik lengde | `IN[0]` og `IN[1]` kommer fra ulike elementlister. |
+| `SetParameterByName` feiler på noen få elementer | Den fikk `x[1]` — sammendraget — i stedet for `x[0]`. Utgangene står i feil rekkefølge. |
 | Watch viser lister i lister | Flere kategorier uten `List.Flatten`. |
 | `Ingen elementer inn` | Kategorivalget traff ingenting. En tom liste ser ut som en ferdig merket modell. |
 | Verdiene kommer ikke ut i IFC-en | Kartleggingsfila mangler i eksportoppsettet, eller peker på et annet parameternavn. |
