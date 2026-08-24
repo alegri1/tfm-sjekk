@@ -474,6 +474,16 @@ Trinn 3 er den som kan ta feil, og derfor godtas en verdi der bare når den er
 av `++`, `=` og `-` mangler. Uten den regelen leste verktøyet fabrikatnavnet fra
 et egenskapssett som het riktig, og meldte det som syntaksfeil i TFM-ID-en.
 
+De tre trinnene gjelder to steder: på objektet selv, og på **typeobjektet** det
+hører til. En Revit-familietype kan bære merkingen som typeparameter, og for
+komponenttypen er det det naturlige stedet — alle forekomstene av en familietype
+*er* samme komponenttype. Objektets egen verdi vinner når begge har den, som et
+typeobjekt er ment å virke.
+
+Merkes derimot TFM-*forekomsten* på en delt type, får hvert objekt samme
+komponentforekomst, og K6 melder dem. Det er riktig svar: verdien er duplisert.
+En forekomst-ID hører hjemme på forekomsten.
+
 Et funn som hviler på trinn 2 eller 3 sier hvor verdien faktisk kom fra. Ble
 verdien forkastet, sier meldingen hva som sto der i stedet — det er den
 opplysningen som lar deg finne ut hvilket felt malen egentlig skriver til.

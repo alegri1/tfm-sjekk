@@ -7,6 +7,8 @@ kravet handler om.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import ifcopenshell
 import ifcopenshell.guid as guid
 import pytest
@@ -255,3 +257,81 @@ def test_bcf_tittelen_forblir_lesbar_og_beskrivelsen_baerer_opphavet(tmp_path):
     assert len(tittel) <= 100
     assert tittel.startswith("K2:")
     assert "Pset_Revit_Data" in topic.findtext("Description")
+
+
+# --- Egenskapssett på typeobjektet ---
+#
+# En Revit-familietype kan bære merkingen som typeparameter. Uten dette så
+# verktøyet ingenting, og K1 meldte at hvert eneste objekt manglet TFM —
+# rapporten så ut som en modell uten merking, ikke som et verktøy som ikke
+# leste etter.
+
+TYPE_TFM = "++115080=4310.001.12-QLF001"
+FOREKOMST_TFM = "++115080=4310.001.13-QLF002"
+
+
+def typemodell(tmp_path, **kwargs):
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).parent))
+    from fixtures.syntetisk import lag_modell_med_typemerking
+
+    return lag_modell_med_typemerking(tmp_path / "t.ifc", **kwargs)
+
+
+def test_forekomsten_vinner_over_typen(tmp_path):
+    """Et typeobjekt er et utgangspunkt en forekomst kan fravike.
+
+    Den som har skrevet en verdi på selve objektet, har gjort det for å si noe
+    om nettopp det objektet.
+    """
+    sti = typemodell(
+        tmp_path, typeverdier={"TFM": TYPE_TFM}, forekomstverdier={"TFM": FOREKOMST_TFM}
+    )
+    assert les_modell(sti)[0].tfm_forekomst == FOREKOMST_TFM
+
+
+def test_typens_verdi_brukes_naar_forekomsten_ikke_har_noe(tmp_path):
+    sti = typemodell(tmp_path, typeverdier={"TFM": TYPE_TFM})
+    assert les_modell(sti)[0].tfm_forekomst == TYPE_TFM
+
+
+def test_objekt_uten_type_virker_som_for(tmp_path):
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).parent))
+    from fixtures.syntetisk import lag_modell
+
+    sti = lag_modell([("IfcFlowTerminal", FOREKOMST_TFM)], tmp_path / "u.ifc")
+    assert les_modell(sti)[0].tfm_forekomst == FOREKOMST_TFM
+
+
+def test_type_uten_egenskapssett_virker_som_for(tmp_path):
+    sti = typemodell(tmp_path, forekomstverdier={"TFM": FOREKOMST_TFM})
+    assert les_modell(sti)[0].tfm_forekomst == FOREKOMST_TFM
+
+
+def test_kilden_oppgis_ogsaa_for_en_typeverdi(tmp_path):
+    sti = typemodell(tmp_path, typeverdier={"TFM": TYPE_TFM})
+    kilde = les_modell(sti)[0].kilder["forekomst"]
+    assert kilde.pset == "TFM11_Forekomst"
+    assert kilde.felt == "TFM"
+
+
+def test_settene_smelter_sammen_felt_for_felt(tmp_path):
+    """Har typen ett felt og forekomsten et annet i samme sett, leses begge."""
+    sti = typemodell(
+        tmp_path,
+        typeverdier={"TFMType": "QLF.001.008"},
+        forekomstverdier={"TFM": FOREKOMST_TFM},
+    )
+    objekt = les_modell(sti)[0]
+    assert objekt.tfm_forekomst == FOREKOMST_TFM
+    assert objekt.tfm_type == "QLF.001.008"
+
+
+def test_begge_skjemaene(tmp_path):
+    """IsTypedBy finnes bare i IFC4. I 2x3 ligger koblingen i IsDefinedBy."""
+    for schema in ("IFC4", "IFC2X3"):
+        sti = typemodell(tmp_path / schema, typeverdier={"TFM": TYPE_TFM}, schema=schema)
+        assert les_modell(sti)[0].tfm_forekomst == TYPE_TFM, schema

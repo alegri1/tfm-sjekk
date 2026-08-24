@@ -102,6 +102,90 @@ def lag_modell(
     return sti
 
 
+# Hvilke typeklasser som passer til hvilken forekomstklasse. IFC krever at de
+# henger sammen: en IfcFlowTerminal kan ikke ha en IfcFlowSegmentType.
+TYPEKLASSE = {
+    "IfcFlowTerminal": "IfcFlowTerminalType",
+    "IfcFlowSegment": "IfcFlowSegmentType",
+    "IfcFlowFitting": "IfcFlowFittingType",
+    "IfcLamp": "IfcLampType",
+    "IfcOutlet": "IfcOutletType",
+}
+
+
+def lag_modell_med_typemerking(
+    sti: Path,
+    typeverdier: dict[str, str] | None = None,
+    forekomstverdier: dict[str, str] | None = None,
+    klasse: str = "IfcFlowTerminal",
+    pset_navn: str = "TFM11_Forekomst",
+    schema: str = "IFC4",
+    delt_av: int = 1,
+) -> Path:
+    """Ett typeobjekt med egenskapssett, og `delt_av` forekomster under det.
+
+    `typeverdier` og `forekomstverdier` er feltnavn -> verdi. Begge kan være
+    satt: da skal forekomstens vinne, som i IFC ellers.
+
+    Finnes for at mangelen kan prøves. En Revit-familietype kan bære merkingen
+    som typeparameter, og uten en modell som gjør det, kunne verktøyet ikke
+    prøves mot tilfellet — det var derfor mangelen sto udokumentert så lenge.
+
+    `delt_av` gir flere forekomster under samme type. En TFM-forekomst merket
+    der deles av alle, og K6 melder dem. Det er teknisk riktig: verdien ER
+    duplisert.
+    """
+    f = ifcopenshell.file(schema=schema)
+    ny_guid = guidgiver(sti.name)
+
+    def sett(verdier: dict[str, str]):
+        egenskaper = [
+            f.create_entity(
+                "IfcPropertySingleValue",
+                Name=navn,
+                NominalValue=f.create_entity("IfcLabel", verdi),
+            )
+            for navn, verdi in verdier.items()
+        ]
+        return f.create_entity(
+            "IfcPropertySet", GlobalId=ny_guid(), Name=pset_navn, HasProperties=egenskaper
+        )
+
+    type_objekt = f.create_entity(
+        TYPEKLASSE.get(klasse, "IfcFlowTerminalType"),
+        GlobalId=ny_guid(),
+        Name="FIKTIV familietype",
+        HasPropertySets=[sett(typeverdier)] if typeverdier else None,
+    )
+
+    forekomster = []
+    for nummer in range(delt_av):
+        element = f.create_entity(klasse, GlobalId=ny_guid(), Name=f"Forekomst {nummer + 1}")
+        forekomster.append(element)
+        if forekomstverdier:
+            f.create_entity(
+                "IfcRelDefinesByProperties",
+                GlobalId=ny_guid(),
+                RelatedObjects=[element],
+                RelatingPropertyDefinition=sett(forekomstverdier),
+            )
+
+    # Samme relasjon i begge skjemaer, men den finnes igjen på ulikt sted:
+    # `IsTypedBy` i IFC4, inne i `IsDefinedBy` i 2x3. Skriveren bryr seg ikke —
+    # det er leseren som må kjenne begge.
+    f.create_entity(
+        "IfcRelDefinesByType",
+        GlobalId=ny_guid(),
+        RelatedObjects=forekomster,
+        RelatingType=type_objekt,
+    )
+
+    _fest_header(f)
+    sti.parent.mkdir(parents=True, exist_ok=True)
+    f.write(str(sti))
+    return sti
+
+
 def lag_modell_pa_avveie(sti: Path, schema: str = "IFC4") -> Path:
     """Skriver en modell der TFM-verdiene ligger utenfor standardoppsettet.
 

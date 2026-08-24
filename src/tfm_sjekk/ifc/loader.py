@@ -256,28 +256,25 @@ def _supertyper(produkt: Any) -> list[str]:
         return []
 
 
-def _psets(produkt: Any) -> dict[str, dict[str, str]]:
-    """Egenskapssett på forekomsten, som ren dict.
+def _typeobjekt(produkt: Any) -> Any | None:
+    """Typeobjektet forekomsten hører til, om det finnes.
 
-    IfcOpenShell har `ifcopenshell.util.element.get_psets`, men den er tregere
-    og drar inn mer enn vi trenger; her henter vi bare navn/verdi.
-
-    MANGEL: typeegenskaper leses ikke. Ligger TFM-verdien på typeobjektet —
-    en Revit-familietype med TFM som typeparameter — ser verktøyet ingenting,
-    og K1 melder at hvert eneste objekt mangler TFM.
-
-    Koblingen ligger i `IsTypedBy` i IFC4 og som en `IfcRelDefinesByType` i
-    `IsDefinedBy` i 2x3; ingen av delene fanges her. Prøvd i begge skjemaer,
-    se `test_ifc.py::test_typeegenskaper_leses_ikke`.
-
-    Om det er verdt å lukke avhenger av om norske eksporter faktisk merker på
-    typen. Det er et spørsmål til en RIE, ikke en antakelse å kode på.
+    Koblingen heter ikke det samme i de to skjemaene. IFC4 har den omvendte
+    attributten `IsTypedBy`; 2x3 har ingen, og der ligger relasjonen inne i
+    `IsDefinedBy` sammen med egenskapsrelasjonene. Begge må følges — en modell
+    fra Revit kan være hvilken som helst av dem.
     """
+    for navn in ("IsTypedBy", "IsDefinedBy"):
+        for rel in getattr(produkt, navn, None) or []:
+            if rel.is_a("IfcRelDefinesByType"):
+                return rel.RelatingType
+    return None
+
+
+def _sett_fra(definisjoner: Any) -> dict[str, dict[str, str]]:
+    """Navn/verdi ut av en samling `IfcPropertySet`."""
     ut: dict[str, dict[str, str]] = {}
-    for rel in getattr(produkt, "IsDefinedBy", None) or []:
-        if not rel.is_a("IfcRelDefinesByProperties"):
-            continue
-        definisjon = rel.RelatingPropertyDefinition
+    for definisjon in definisjoner or []:
         if not definisjon.is_a("IfcPropertySet"):
             continue
         verdier: dict[str, str] = {}
@@ -288,7 +285,40 @@ def _psets(produkt: Any) -> dict[str, dict[str, str]]:
                 continue
             verdier[prop.Name] = str(prop.NominalValue.wrappedValue)
         if verdier:
-            ut[definisjon.Name] = verdier
+            ut.setdefault(definisjon.Name, {}).update(verdier)
+    return ut
+
+
+def _psets(produkt: Any) -> dict[str, dict[str, str]]:
+    """Egenskapssett på forekomsten OG på typen den hører til, som ren dict.
+
+    IfcOpenShell har `ifcopenshell.util.element.get_psets`, men den er tregere
+    og drar inn mer enn vi trenger; her henter vi bare navn/verdi.
+
+    Typens sett legges inn først og forekomstens over. Da overstyrer
+    forekomsten av seg selv, som er hva et typeobjekt er i IFC: et utgangspunkt
+    en forekomst kan fravike. Den som har skrevet en verdi på selve objektet,
+    har gjort det for å si noe om nettopp det objektet.
+
+    Sammenslåingen går felt for felt, ikke sett for sett. Har typen
+    `TFM11_Type.TFMType` og forekomsten `TFM11_Type.MMI`, leses begge.
+
+    Uten typeleddet så verktøyet ingenting av en modell merket som
+    typeparameter i Revit, og K1 meldte at hvert eneste objekt manglet TFM.
+    Rapporten så da ut som en modell uten merking, ikke som et verktøy som
+    ikke leste etter.
+    """
+    ut: dict[str, dict[str, str]] = {}
+
+    type_objekt = _typeobjekt(produkt)
+    if type_objekt is not None:
+        ut = _sett_fra(getattr(type_objekt, "HasPropertySets", None))
+
+    for rel in getattr(produkt, "IsDefinedBy", None) or []:
+        if not rel.is_a("IfcRelDefinesByProperties"):
+            continue
+        for navn, verdier in _sett_fra([rel.RelatingPropertyDefinition]).items():
+            ut.setdefault(navn, {}).update(verdier)
     return ut
 
 

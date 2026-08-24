@@ -203,19 +203,20 @@ def test_federering_parallelt_gir_samme_resultat(tmp_path):
     assert [o.global_id for o in sekvensielt] == [o.global_id for o in parallelt]
 
 
-def test_typeegenskaper_leses_ikke(tmp_path):
-    """Dokumenterer en kjent mangel: TFM på typeobjektet blir ikke sett.
+def test_typeegenskaper_leses(tmp_path):
+    """TFM på typeobjektet skal leses, i begge skjemaer.
 
-    Docstringen i `_psets` påsto en gang at typeegenskaper var håndtert. Det
-    var usant i begge skjemaer: i IFC4 ligger koblingen i `IsTypedBy`, som
-    aldri leses, og i 2x3 ligger den i `IsDefinedBy` som en
-    `IfcRelDefinesByType`, som forkastes.
+    En Revit-familietype kan bære merkingen som typeparameter, og for
+    komponenttypen er det det naturlige stedet: alle forekomstene av en
+    familietype ER samme komponenttype.
 
-    Konsekvensen er alvorlig hvis den treffer: merker prosjektet TFM som
-    typeparameter i Revit, melder K1 at hvert eneste objekt mangler TFM.
+    Koblingen heter ikke det samme i de to skjemaene — `IsTypedBy` i IFC4, og en
+    `IfcRelDefinesByType` inne i `IsDefinedBy` i 2x3 — så testen dekker begge.
+    En test på bare det ene ville sagt god dag.
 
-    Testen låser dagens oppførsel slik at den som lukker hullet får beskjed
-    om at det var her det satt.
+    Uten dette så verktøyet ingenting, og K1 meldte at hvert eneste objekt
+    manglet TFM. Rapporten så da ut som en modell uten merking, ikke som et
+    verktøy som ikke leste etter.
     """
     import ifcopenshell
     import ifcopenshell.guid as guid
@@ -242,8 +243,8 @@ def test_typeegenskaper_leses_ikke(tmp_path):
         f.write(str(sti))
 
         objekt = next(o for o in les_modell(sti) if o.ifc_klasse == "IfcFlowTerminal")
-        assert objekt.tfm_forekomst is None, f"{schema}: typeegenskaper leses nå — oppdater testen"
-        assert objekt.kilder == {}
+        assert objekt.tfm_forekomst == GYLDIG, f"{schema}: typeegenskapen ble ikke lest"
+        assert objekt.kilder["forekomst"].pset == "TFM11_Forekomst"
 
 
 def test_modell_med_geometri_har_eierhistorikk_overalt(tmp_path):
