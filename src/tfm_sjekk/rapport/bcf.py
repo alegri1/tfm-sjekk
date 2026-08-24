@@ -83,8 +83,13 @@ MODELLNIVA = "modellnivå"
 # halv, og i millimeter til åtte millimeter — kameraet endte inni objektet.
 # Posisjonen som kommer inn er regnet om av `tfm_sjekk.ifc`, så det finnes ingen
 # enhet å ta forbehold om lenger.
-KAMERAAVSTAND = 8.0
-KAMERAHOYDE = 6.0
+#
+# Tallene er justert etter å ha sett på en ekte modell i en viewer. Med 8 og 6
+# sto kameraet 12,8 meter unna, og et uttak fylte to prosent av bildet — teknisk
+# riktig og praktisk ubrukelig. Med 2,5 og 2,0 blir avstanden 4,1 meter: uttaket
+# fyller sju prosent, en fordeling en tredjedel, og rommet rundt er fortsatt med.
+KAMERAAVSTAND = 2.5
+KAMERAHOYDE = 2.0
 
 # Samme farger som i HTML-rapporten, så alvorligheten ser lik ut begge steder.
 FARGER = {

@@ -101,7 +101,11 @@ def test_kameraet_star_noen_titalls_meter_fra_objektet():
     ):
         o = les_modell(modell(enhet, punkt))[0]
         d = avstand(kamera(o), fysisk)
+        # Grensen er romslig med vilje: den skal fange en enhetsfeil, ikke
+        # låse en synsvinkel. Avstanden er 4,1 m i dag, justert etter å ha
+        # sett på en ekte modell i en viewer.
         assert 1.0 < d < 50.0, f"{enhet[0]}: kameraet står {d:,.0f} m fra objektet"
+        assert abs(d - 4.1) < 0.1, f"{enhet[0]}: avstanden er {d:.1f} m, ventet 4,1"
 
 
 # --- Et emne uten kjent posisjon skal fortsatt kunne åpnes ---
