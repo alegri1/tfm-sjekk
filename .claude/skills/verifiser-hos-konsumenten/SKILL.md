@@ -18,7 +18,7 @@ konsumenten ser:
 | `→` i oppsummeringa krasjet ren modell | terminalen her er UTF-8 | en cp1252-konsoll |
 | Mørk modus hadde 1,11:1 kontrast | CSS-en var syntaktisk feilfri | et øye |
 | BCF-emner manglet kamera, så snapshot | begge er valgfrie i XSD-en | BIMcollab ZOOM |
-| `demo-*.ifc` sveipet med visning.ifc | K6 gjorde nøyaktig som den skulle | å lese rapporten |
+| `demo-*.ifc` sveipet med en kopi av elektromodellen | K6 gjorde nøyaktig som den skulle | å lese rapporten |
 | Ubeskyttet `$(...)` i et CI-steg | terminalen her kjører ikke med `set -e` | bygg på alle tre plattformer |
 
 Mønsteret er ett: **det ble erklært ferdig uten at noen så på det der det
@@ -48,7 +48,7 @@ Endret du noe i venstre kolonne, gjør du høyre kolonne før du sier ferdig.
 **BCF** (`rapport/bcf.py`)
 - Skjemavalidering er ikke nok. Kamera og snapshot er **valgfrie** i XSD-en, så
   en fil kan validere og likevel gi «This issue has no viewpoint to zoom to».
-- Importer `funn.bcfzip` i BIMcollab ZOOM mot `eksempler/visning.ifc`, og
+- Importer `funn.bcfzip` i BIMcollab ZOOM mot `eksempler/demo-*.ifc`, og
   dobbeltklikk et emne. Modellnivå-emner uten objekt skal være merket.
 - Legg testen i `tests/test_bcf.py`.
 

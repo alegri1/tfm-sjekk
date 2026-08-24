@@ -50,7 +50,6 @@ funn.xlsx
 
 # Genererte demomodeller (lages av eksempler/lag_demomodell.py)
 eksempler/demo-*.ifc
-eksempler/visning.ifc
 eksempler/visning-2x3.ifc
 eksempler/avveie.ifc
 eksempler/blindsone.ifc

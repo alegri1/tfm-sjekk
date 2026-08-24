@@ -372,19 +372,25 @@ oppsett, og for hvilke to slags funn som ikke kan kobles til et element.
 
 ### Prøve BCF-en i en viewer
 
-`eksempler/visning.ifc` har samme innhold som elektromodellen, men med
-prosjekt, enheter, romlig struktur og geometri — alt en viewer trenger for å
-åpne fila og faktisk vise noe. De øvrige demomodellene har bare objekter med
-egenskaper, som er nok for kontrollene, men gir en tom scene i en viewer.
+Demomodellene har prosjekt, enheter, romlig struktur og geometri — alt en viewer
+trenger for å åpne fila og faktisk vise noe. Kontrollene bryr seg ikke om noe av
+det, men BCF-en gjør: et viewpoint kan bare vises hvis modellen har noe å vise.
 
 ```bash
-uv run tfm-sjekk sjekk eksempler/visning.ifc --ut rapport
+uv run tfm-sjekk sjekk eksempler/demo-*.ifc --config eksempler/tfm-sjekk-full.toml --ut rapport
 ```
 
-Åpne så `visning.ifc` i Catenda, BIMcollab ZOOM eller Solibri Anywhere og
+Åpne så demomodellene i Catenda, BIMcollab ZOOM eller Solibri Anywhere og
 importer `rapport/funn.bcfzip`. Et emne skal velge nøyaktig det objektet det
-gjelder — det er den koblingen som gjør BCF verdt bryet, og den eneste delen
-av formatet et skjema ikke kan verifisere.
+gjelder, og kameraet skal stå fire meter unna — det er den koblingen som gjør
+BCF verdt bryet, og den eneste delen av formatet et skjema ikke kan verifisere.
+
+De to emnene uten viewpoint er K7-funn om oppføringer i mastera som ikke er
+modellert. De peker ikke på et objekt, så det er ingenting å zoome til.
+
+`eksempler/visning-2x3.ifc` er den samme modellen i IFC 2x3, til import i Revit.
+Den skal ikke kjøres sammen med `demo-*.ifc` — den har de samme TFM-verdiene, og
+K6 ville funnet hver eneste komponentforekomst i to filer.
 
 ## Avgrensning
 

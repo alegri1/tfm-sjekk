@@ -9,15 +9,14 @@
     blindsone.ifc                                  grensen for hva oppsett ser
     tidligfase.ifc                                 merking uten plassering
     foringsvei.ifc                                 føringsvei uten føringsvei-klasse
-    visning.ifc                                    BCF-en prøvd i en viewer
-    visning-2x3.ifc                                samme, men til import i Revit
+    visning-2x3.ifc                                demomodellen i 2x3, til import i Revit
 
 Bare de tre første er merket «demo-», og det er med vilje: globben under skal
-treffe akkurat dem. De fem andre har verdier som ville forstyrret en
+treffe akkurat dem. De fire andre har verdier som ville forstyrret en
 kontrollkjøring — avveie.ifc og blindsone.ifc ligger utenfor oppsettet,
-tidligfase.ifc og foringsvei.ifc krever hver sitt oppsett for å gi mening,
-og de to visning-filene
-er kopier av elektromodellen som ville gitt K6-duplikater av hver komponent.
+tidligfase.ifc og foringsvei.ifc krever hver sitt oppsett for å gi mening, og
+visning-2x3.ifc er den samme elektromodellen i et annet skjema, som ville gitt
+K6-duplikater av hver komponent.
 
     uv run tfm-sjekk eksempler/demo-*.ifc \
         --systemtabell eksempler/FIKTIV-systemkoder.csv \
@@ -165,10 +164,14 @@ ELEKTRO_2X3 = _til_2x3(ELEKTRO)
 
 
 if __name__ == "__main__":
+    # plassering=True og geometri=True: uten dem har objektene ingen posisjon,
+    # og hvert BCF-emne blir uten kamera. Vieweren sier da at det ikke er noe å
+    # zoome til, og «kjør demoen» gir en BCF ingen kan åpne. Kontrollene bryr
+    # seg ikke — funntallet er det samme — men det er demoen folk ser.
     for navn, objekter in (("demo-rie.ifc", RIE), ("demo-riv.ifc", RIV)):
-        sti = lag_modell(objekter, HER / navn)
+        sti = lag_modell(objekter, HER / navn, plassering=True)
         print(f"skrev {sti}")
-    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-elektro.ifc')}")
+    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'demo-elektro.ifc', geometri=True)}")
 
     # Egen modell for «tfm-sjekk oppsett»: verdiene ligger utenfor
     # standardoppsettet, slik at kommandoen har noe å foreslå. Den holdes
@@ -192,16 +195,6 @@ if __name__ == "__main__":
     # modellen har «foring_systemkoder» ingen demo — og en regel ingen ser,
     # slutter stille å virke.
     print(f"skrev {lag_foringsveimodell(HER / 'foringsvei.ifc')}")
-
-    # Samme innhold, men med prosjekt, romlig struktur og geometri, slik at
-    # fila kan åpnes i en viewer. Den er til manuell prøving av BCF-en:
-    # et viewpoint kan bare vises hvis modellen har noe å vise.
-    #
-    # Den heter bevisst ikke «demo-»: den har samme TFM-verdier som
-    # elektromodellen, så tas den med i en «demo-*.ifc»-kjøring finner K6
-    # hver eneste komponentforekomst i to filer. Riktig oppførsel, ubrukelig
-    # demo — 39 funn i stedet for 17.
-    print(f"skrev {lag_elektromodell(ELEKTRO, HER / 'visning.ifc', geometri=True)}")
 
     # Samme modell i IFC 2x3. Revits IFC-importør åpner 2x3 langt mer pålitelig
     # enn IFC4, så det er denne du bruker hvis du vil ha modellen inn i Revit og

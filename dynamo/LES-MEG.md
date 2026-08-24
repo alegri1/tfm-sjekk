@@ -455,7 +455,7 @@ som `IN[0]`.
 imot filnavnet og gjør så ingenting — uten feilmelding. IFC har sin egen
 oppføring i Open-undermenyen.
 
-**Bruk 2x3-fila, ikke `visning.ifc`.** De har samme innhold, men Revits
+**Bruk 2x3-fila, ikke `demo-elektro.ifc`.** De har samme innhold, men Revits
 IFC-importør åpner IFC 2x3 langt mer pålitelig enn IFC4, og 2x3-fila er skrevet
 med `CoordinationView_V2.0` — MVD-en importøren forventer. IFC4-fila bruker
 `ReferenceView`, som er ment for lesing, og Revit vegrer seg.

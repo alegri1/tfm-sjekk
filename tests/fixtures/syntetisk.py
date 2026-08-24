@@ -23,16 +23,25 @@ def lag_modell(
     schema: str = "IFC4",
     pset_navn: str = "TFM11_Forekomst",
     egenskapsnavn: str = "TFM",
+    plassering: bool = False,
 ) -> Path:
     """Skriver en minimal IFC-fil.
 
     `objekter` er (ifc_klasse, tfm_verdi). tfm_verdi=None gir et objekt helt
     uten egenskapssett — tilfellet K1 skal fange.
+
+    `plassering=True` gir hvert objekt et punkt, spredt langs x-aksen. Uten det
+    har objektene ingen posisjon, og BCF-emnene blir uten kamera: vieweren sier
+    da at det ikke er noe å zoome til. Standardverdien er False fordi
+    kontrollene ikke bryr seg, og fordi en test krever nettopp en modell uten
+    plassering. Demomodellene ber om True — det er dem noen faktisk åpner.
     """
     f = ifcopenshell.file(schema=schema)
 
-    for klasse, tfm in objekter:
+    for nummer, (klasse, tfm) in enumerate(objekter):
         element = f.create_entity(klasse, GlobalId=guid.new(), Name=f"{klasse}-{tfm or 'utenTFM'}")
+        if plassering:
+            element.ObjectPlacement = _plassering(f, x=nummer * 2.0)
         if tfm is None:
             continue
         egenskap = f.create_entity(
