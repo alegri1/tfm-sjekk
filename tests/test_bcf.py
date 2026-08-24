@@ -334,3 +334,47 @@ def test_cli_avviser_ugyldig_opprettet(tmp_path):
     )
     assert resultat.exit_code != 0
     assert "--opprettet" in uten_ansi(resultat.output)
+
+
+# --- Emnet skal bære versjonen av verktøyet som lagde det ---
+
+
+def test_emnet_baerer_versjonen(tmp_path):
+    """En BCF kan være eldre enn koden som lagde den, og det ser man ikke.
+
+    En fil laget før kamerafeilen ble rettet hadde GUID-er som stemte og emner
+    som åpnet seg — den flyttet bare kameraet 969 kilometer. Eneste måte å
+    skille den fra en fersk var å regne ut avstanden.
+    """
+    from importlib.metadata import version
+
+    sti = tmp_path / "funn.bcfzip"
+    skriv_bcf([funn_med_objekt()], sti, opprettet="2026-01-01T12:00:00Z")
+    with zipfile.ZipFile(sti) as z:
+        navn = next(n for n in z.namelist() if n.endswith("markup.bcf"))
+        rot = ET.fromstring(z.read(navn).decode("utf-8"))
+    assert version("tfm-sjekk") in rot.find(".//CreationAuthor").text
+
+
+def test_formatets_versjon_er_ikke_verktoyets(tmp_path):
+    """DetailedVersion beskriver BCF-formatet. Å skrive verktøyets versjon der
+    ville vært å svare på et annet spørsmål enn det som stilles."""
+    sti = tmp_path / "funn.bcfzip"
+    skriv_bcf([funn_med_objekt()], sti, opprettet="2026-01-01T12:00:00Z")
+    with zipfile.ZipFile(sti) as z:
+        rot = ET.fromstring(z.read("bcf.version").decode("utf-8"))
+    assert rot.get("VersionId") == "2.1"
+    assert rot.find("DetailedVersion").text == "2.1"
+
+
+def test_uten_installert_pakke_faller_den_tilbake_pa_navnet(monkeypatch):
+    """Kjørt fra en kildemappe uten installasjon skal kjøringen fortsette."""
+    from importlib.metadata import PackageNotFoundError
+
+    import tfm_sjekk.rapport.bcf as modul
+
+    def feiler(_):
+        raise PackageNotFoundError("tfm-sjekk")
+
+    monkeypatch.setattr(modul, "version", feiler)
+    assert modul._forfatter() == "tfm-sjekk"

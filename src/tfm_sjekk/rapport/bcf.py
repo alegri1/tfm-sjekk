@@ -55,12 +55,36 @@ import xml.etree.ElementTree as ET
 import zipfile
 import zlib
 from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from tfm_sjekk.modell import Alvorlighet, Funn
 
 BCF_VERSJON = "2.1"
-FORFATTER = "tfm-sjekk"
+
+
+def _forfatter() -> str:
+    """«tfm-sjekk 0.6.1» — navnet med utgaven som skrev fila.
+
+    En BCF kan være eldre enn koden som lagde den, og det ser man ikke på den.
+    En fil laget før en rettelse har GUID-er som stemmer og emner som åpner seg;
+    den gjør bare noe galt, og vieweren har ingen grunn til å si fra. Det skjedde
+    med en fil laget før kamerafeilen: eneste måte å skille den fra en fersk var
+    å regne ut avstanden fra kameraet til objektet.
+
+    Versjonen leses av pakken, ikke skrevet her. En streng i denne fila ville
+    drevet fra pyproject.toml ved første bump — nøyaktig den slags drift dette
+    finnes for å fange.
+    """
+    try:
+        return f"tfm-sjekk {version('tfm-sjekk')}"
+    except PackageNotFoundError:
+        # Kjørt fra en kildemappe uten installasjon. Et emne uten versjon er
+        # dårligere enn ett med, men bedre enn en kjøring som stopper.
+        return "tfm-sjekk"
+
+
+FORFATTER = _forfatter()
 ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Fast navnerom for uuid5. Verdien betyr ingenting i seg selv; den må bare
