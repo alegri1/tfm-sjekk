@@ -75,8 +75,14 @@ MAKS_TITTEL = 100
 # Etikett på emner som peker på modellen som helhet framfor på et objekt.
 MODELLNIVA = "modellnivå"
 
-# Kameraets plassering i forhold til objektet, i modellens enhet (normalt
-# meter). Skrått ovenfra, langt nok unna til at naboobjektene er med.
+# Kameraets plassering i forhold til objektet, i meter. Skrått ovenfra, langt
+# nok unna til at naboobjektene er med.
+#
+# Meter uten forbehold. Her sto det en gang «i modellens enhet (normalt meter)»,
+# og forbeholdet var selve feilen: i en fot-modell ble åtte meter til to og en
+# halv, og i millimeter til åtte millimeter — kameraet endte inni objektet.
+# Posisjonen som kommer inn er regnet om av `tfm_sjekk.ifc`, så det finnes ingen
+# enhet å ta forbehold om lenger.
 KAMERAAVSTAND = 8.0
 KAMERAHOYDE = 6.0
 

@@ -27,6 +27,9 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
 
     naboer = _koblingsgraf(fil)
     kretser = _kretser(fil, config)
+    # Én gang per fil, ikke per objekt: enheten er en egenskap ved fila, og
+    # Snowdon har 2439 objekter som alle ville fått det samme svaret.
+    faktor = meterfaktor(fil)
 
     objekter: list[IfcObjekt] = []
     for produkt in fil.by_type("IfcProduct"):
@@ -70,7 +73,7 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
                 tfm_type=type_verdi,
                 mmi=mmi_verdi,
                 kilder=kilder,
-                posisjon=_posisjon(produkt),
+                posisjon=_posisjon(produkt, faktor),
                 tilkoblet=sorted(naboer.get(produkt.GlobalId, set())),
                 kretser=kretser.get(produkt.GlobalId, []),
             )
@@ -78,8 +81,54 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
     return objekter
 
 
-def _posisjon(produkt: Any) -> tuple[float, float, float] | None:
-    """Objektets origo i modellens koordinater.
+# Meter per SI-lengdeenhet med prefiks. Norske modeller er ofte i millimeter,
+# og der sto kameraet 8 millimeter fra objektet — praktisk talt inni det.
+SI_PREFIKS: dict[str | None, float] = {
+    None: 1.0,
+    "KILO": 1000.0,
+    "DECI": 0.1,
+    "CENTI": 0.01,
+    "MILLI": 0.001,
+}
+
+
+def meterfaktor(fil: Any) -> float:
+    """Meter per lengdeenhet i fila.
+
+    En modell kan være i millimeter, fot eller meter, og koordinatene står i
+    modellens egen enhet — ifcopenshell regner ikke om noe. BCF krever meter,
+    og uten denne faktoren havnet kameraet 969 kilometer fra objektet i en
+    amerikansk eksport.
+
+    Slås opp én gang per fil. Enheten er en egenskap ved fila, og Snowdon har
+    2439 objekter som alle ville fått det samme svaret.
+
+    Klarer vi ikke å tolke enheten, gis 1.0. Et kamera på feil sted er en
+    dårligere rapport, ikke en mislykket kjøring — samme avveining som
+    `_posisjon` gjør når plasseringen ikke lar seg lese.
+    """
+    try:
+        tildeling = fil.by_type("IfcUnitAssignment")
+        if not tildeling:
+            # IFC krever enheter på IfcProject, så en fil uten er ufullstendig.
+            # Meter er den eneste antakelsen som ikke gjør noe verre: faktor 1.0
+            # er nøyaktig oppførselen fra før.
+            return 1.0
+        for enhet in tildeling[0].Units:
+            if getattr(enhet, "UnitType", None) != "LENGTHUNIT":
+                continue
+            if enhet.is_a("IfcSIUnit"):
+                return SI_PREFIKS.get(enhet.Prefix, 1.0)
+            if enhet.is_a("IfcConversionBasedUnit"):
+                faktor = enhet.ConversionFactor
+                return float(faktor.ValueComponent.wrappedValue)
+    except Exception:
+        return 1.0
+    return 1.0
+
+
+def _posisjon(produkt: Any, faktor: float = 1.0) -> tuple[float, float, float] | None:
+    """Objektets origo, i METER.
 
     Går ut fra plasseringskjeden, ikke fra geometrien: en modell kan ha
     titusenvis av objekter, og å tessellere hvert av dem for å finne et punkt
@@ -87,6 +136,12 @@ def _posisjon(produkt: Any) -> tuple[float, float, float] | None:
 
     Punktet ender i BCF-viewpointet. Uten det har viewer-en ingen synsvinkel å
     gjenopprette, og svarer «this issue has no viewpoint to zoom to».
+
+    `faktor` er meter per lengdeenhet i fila — se `meterfaktor`. Omregningen
+    skjer her og ikke i rapportmodulen: enheter er en IFC-sak, og `tfm_sjekk.ifc`
+    er eneste modul som skal kjenne dem. Da betyr feltet meter for alle som
+    leser det, og det neste formatet som trenger posisjonen arver garantien
+    uten å gjøre noe.
     """
     plassering = getattr(produkt, "ObjectPlacement", None)
     if plassering is None:
@@ -95,7 +150,11 @@ def _posisjon(produkt: Any) -> tuple[float, float, float] | None:
         import ifcopenshell.util.placement
 
         matrise = ifcopenshell.util.placement.get_local_placement(plassering)
-        return (float(matrise[0][3]), float(matrise[1][3]), float(matrise[2][3]))
+        return (
+            float(matrise[0][3]) * faktor,
+            float(matrise[1][3]) * faktor,
+            float(matrise[2][3]) * faktor,
+        )
     except Exception:
         # Plasseringen kan være sirkulær eller bruke noe vi ikke forstår.
         # Et manglende kamera er en dårligere rapport, ikke en mislykket

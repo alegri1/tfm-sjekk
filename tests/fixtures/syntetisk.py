@@ -217,6 +217,96 @@ def lag_foringsveimodell(sti: Path, schema: str = "IFC4") -> Path:
     return lag_modell(list(FORINGSVEI), sti, schema=schema)
 
 
+# Lengdeenheter en modell kan komme i. Faktoren er meter per enhet.
+#
+# Ingen fikstur hadde en annen enhet enn meter før nå, og det er nettopp derfor
+# kamerafeilen overlevde: antakelsen «modellens enhet er normalt meter» var sann
+# i hver eneste fil vi prøvde mot. Den var usann i den første ekte eksporten.
+METER = ("METRE", None, 1.0)
+MILLIMETER = ("METRE", "MILLI", 0.001)
+FOT = ("FOOT", None, 0.3048)
+
+
+def _sett_lengdeenhet(f, enhet: tuple) -> None:
+    """Bytter modellens LENGTHUNIT til den oppgitte.
+
+    ifcopenshell.template.create gir alltid meter og tar ingen parameter for
+    det. Revit gjør nettopp dette byttet når prosjektet er imperialt: en
+    IfcConversionBasedUnit med FOOT og faktoren 0.3048.
+    """
+    navn, prefiks, faktor = enhet
+    ua = f.by_type("IfcUnitAssignment")[0]
+    andre = [u for u in ua.Units if getattr(u, "UnitType", None) != "LENGTHUNIT"]
+
+    if navn == "METRE":
+        ny_enhet = f.create_entity("IfcSIUnit", UnitType="LENGTHUNIT", Name="METRE", Prefix=prefiks)
+    else:
+        meter = f.create_entity("IfcSIUnit", UnitType="LENGTHUNIT", Name="METRE")
+        ny_enhet = f.create_entity(
+            "IfcConversionBasedUnit",
+            Dimensions=f.create_entity("IfcDimensionalExponents", *[1, 0, 0, 0, 0, 0, 0]),
+            UnitType="LENGTHUNIT",
+            Name=navn,
+            ConversionFactor=f.create_entity(
+                "IfcMeasureWithUnit",
+                ValueComponent=f.create_entity("IfcLengthMeasure", faktor),
+                UnitComponent=meter,
+            ),
+        )
+    ua.Units = [*andre, ny_enhet]
+
+
+def lag_modell_med_enhet(
+    sti: Path,
+    enhet: tuple = METER,
+    punkt: tuple[float, float, float] = (100.0, 200.0, 3.0),
+    tfm: str = "++115080=4310.001.12-QLF001",
+    schema: str = "IFC4",
+) -> Path:
+    """Ett objekt på et kjent punkt, i den lengdeenheten som oppgis.
+
+    `punkt` er i modellens egen enhet. Skal to modeller vise det SAMME fysiske
+    objektet, må tallene skille seg: 100 meter er 328.084 fot.
+
+    Finnes for kamerafeilen. Et BCF-viewpoint skal stå i meter, og med en
+    fot-modell havnet det 969 kilometer fra objektet — vieweren flyttet seg dit
+    den ble bedt om, og modellen forsvant ut av bildet.
+    """
+    f = ifcopenshell.template.create(
+        schema_identifier=schema,
+        project_name="FIKTIVT enhetsprosjekt",
+        mvd="CoordinationView_V2.0",
+        timestring="2026-01-01T12:00:00",
+    )
+    _sett_lengdeenhet(f, enhet)
+
+    element = f.create_entity(
+        "IfcFlowTerminal",
+        GlobalId=guid.new(),
+        Name="FIKTIVT objekt",
+        ObjectPlacement=_plassering(f, *punkt),
+    )
+    egenskap = f.create_entity(
+        "IfcPropertySingleValue", Name="TFM", NominalValue=f.create_entity("IfcLabel", tfm)
+    )
+    pset = f.create_entity(
+        "IfcPropertySet",
+        GlobalId=guid.new(),
+        Name="TFM11_Forekomst",
+        HasProperties=[egenskap],
+    )
+    f.create_entity(
+        "IfcRelDefinesByProperties",
+        GlobalId=guid.new(),
+        RelatedObjects=[element],
+        RelatingPropertyDefinition=pset,
+    )
+    _sett_eierhistorikk(f)
+    sti.parent.mkdir(parents=True, exist_ok=True)
+    f.write(str(sti))
+    return sti
+
+
 def _punkt(f, x: float = 0.0, y: float = 0.0, z: float = 0.0):
     return f.create_entity("IfcCartesianPoint", Coordinates=(x, y, z))
 

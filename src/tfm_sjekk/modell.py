@@ -217,7 +217,8 @@ class IfcObjekt(BaseModel):
     posisjon: tuple[float, float, float] | None = Field(
         default=None,
         description=(
-            "Objektets plassering i modellens koordinater. Brukes til å sikte "
+            "Objektets plassering i METER, uansett hvilken lengdeenhet modellen "
+            "er tegnet i — `tfm_sjekk.ifc` regner om. Brukes til å sikte "
             "kameraet i BCF-viewpointet; uten den har viewer-en ingen "
             "synsvinkel å gjenopprette."
         ),
@@ -271,7 +272,11 @@ class Funn(BaseModel):
         ),
     )
     posisjon: tuple[float, float, float] | None = Field(
-        default=None, description="Objektets plassering, til kameraet i BCF-viewpointet"
+        default=None,
+        description=(
+            "Objektets plassering i METER, uansett modellens lengdeenhet. "
+            "Til kameraet i BCF-viewpointet, som formatet krever i meter."
+        ),
     )
     kilde: Verdikilde | None = Field(
         default=None, description="Hvor verdien funnet hviler på ble lest fra"

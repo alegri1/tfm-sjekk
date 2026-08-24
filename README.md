@@ -533,6 +533,13 @@ velger objektet det gjelder. Kontroll-ID-en ligger både i tittelen og som
 peker på modellen som helhet (K7 og K8c) får emne uten viewpoint — det er
 ingenting å zoome til.
 
+**Kameraet står i meter**, uansett hvilken lengdeenhet modellen er tegnet i.
+BCF krever meter; en modell kan være i millimeter eller fot. Uten omregningen
+flytter viewer-en seg dit den blir bedt om — en amerikansk eksport i fot ga
+kamera 969 kilometer fra objektet, og modellen forsvant ut av bildet uten at
+noe sa hvorfor. Omregningen skjer når modellen leses, så feltet betyr meter for
+alle som bruker det.
+
 Fila skrives direkte som zip + XML, uten BCF-bibliotek. Formatet er lite nok
 til at avhengigheten ikke lønner seg, og det holder PyInstaller-binæren mindre.
 
