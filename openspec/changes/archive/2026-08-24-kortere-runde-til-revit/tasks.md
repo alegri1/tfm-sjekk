@@ -72,5 +72,5 @@ toppen da uansett.
       en drift som allerede står der:** avsnittet ber deg finne stien
       `C:\dev\tfm-validator\rapport-2x3\funn.csv` i grafen, og den stien finnes
       ikke i fila. Nevner også `tidligfase.toml`, som ikke ligger i mappa
-- [ ] 5.6 **Til brukeren:** åpne begge `.dyn` i Dynamo i Revit og se at ledningene
-      sitter. En gyldig JSON-fil beviser det ikke
+- [x] 5.6 Begge `.dyn` åpnet i Dynamo i Revit. Ledningene sitter — bekreftet av
+      brukeren 2026-08-24. En gyldig JSON-fil beviste det ikke
