@@ -58,17 +58,17 @@
 - [x] 5.7 BOM i oppsettet krasjet med en tilbakesporing — funnet under 5.3, gjelder
       v0.6.2 like mye. Rettet, og ugyldig TOML gir nå en melding med filnavn
 
-**5.2, 5.4, 5.5 og 5.6 venter på taggen.** `tfm-sjekk.exe` i demomappa er v0.6.2,
+**Gjort etter v0.7.0.** Sto først igjen fordi `tfm-sjekk.exe` i demomappa er v0.6.2,
 og den avviser `modeller` og `ut` med exit 2 — et oppsett med ruten ville brukket
 *alle* demokommandoene, ikke bare den nye. Mappa holdes selvkonsistent på 0.6.2 og
 oppdateres i én omgang når binæren byttes; `LES-MEG.txt` skal ha ny versjon i
 toppen da uansett.
 
-- [ ] 5.2 Demomappa: `tfm-sjekk.toml` får `modeller` og `ut`, og en `kjor.cmd` som
+- [x] 5.2 Demomappa: `tfm-sjekk.toml` får `modeller` og `ut`, og en `kjor.cmd` som
       bare kaller `tfm-sjekk.exe sjekk` og ender med `pause`
-- [ ] 5.4 Kopier de to `.dyn`-filene til demomappa fra `dynamo/`, så demoen og repoet
+- [x] 5.4 Kopier de to `.dyn`-filene til demomappa fra `dynamo/`, så demoen og repoet
       er samme generasjon
-- [ ] 5.5 `LES-MEG.txt` i demomappa nevner `kjor.cmd` og grafene. **Retter samtidig
+- [x] 5.5 `LES-MEG.txt` i demomappa nevner `kjor.cmd` og grafene. **Retter samtidig
       en drift som allerede står der:** avsnittet ber deg finne stien
       `C:\dev\tfm-validator\rapport-2x3\funn.csv` i grafen, og den stien finnes
       ikke i fila. Nevner også `tidligfase.toml`, som ikke ligger i mappa
