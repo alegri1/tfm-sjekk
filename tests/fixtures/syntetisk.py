@@ -8,6 +8,8 @@ Disse er små nok til å ligge i repoet, og de inneholder ingen prosjektdata.
 
 from __future__ import annotations
 
+import itertools
+import uuid
 from pathlib import Path
 
 import ifcopenshell
@@ -15,6 +17,40 @@ import ifcopenshell.guid as guid
 import ifcopenshell.template
 
 GYLDIG = "++115080=3600.001.04-JVZ001%JVZ.001.008"
+
+
+# Fast navnerom for uuid5. Verdien betyr ingenting i seg selv; den må bare
+# ALDRI endres, ellers bytter hver eneste entitet i hver fikstur identitet på én
+# gang. Samme forbehold som i rapport/bcf.py, og av samme grunn.
+NAVNEROM = uuid.uuid5(uuid.NAMESPACE_URL, "urn:tfm-sjekk:fikstur")
+
+
+def guidgiver(fro: str):
+    """En rekke faste GlobalId-er, utledet av «frø:løpenummer».
+
+    Demomodellene fikk før ny identitet hver kjøring, og da pekte en BCF laget
+    i går på objekter som ikke fantes i dag. Vieweren svarte «None of the
+    viewpoint components are found in your project» — uten at noe annet så
+    galt ut. Funntallet var det samme, og filene så like ut.
+
+    Nøkkelen er posisjonen i fila, ikke innholdet. Innholdet er ikke unikt:
+    demomodellene har med vilje to objekter med samme TFM-verdi, og det er
+    K6-duplikatet. En innholdsnøkkel ville gitt dem samme identitet.
+
+    Prisen er at et objekt satt inn midt i lista forskyver alle etter det. Det
+    er greit — da har dataene endret seg, og BCF-en skal lages på nytt uansett.
+    Garantien vi trenger er at samme inndata gir samme utdata.
+
+    Lages lokalt per fil, ikke som en modulglobal teller. Fiksturen kalles fra
+    tester i vilkårlig rekkefølge, og delt muterbar tilstand ville virket helt
+    til to av dem kjørte samtidig.
+    """
+    teller = itertools.count(1)
+
+    def ny() -> str:
+        return guid.compress(uuid.uuid5(NAVNEROM, f"{fro}:{next(teller)}").hex)
+
+    return ny
 
 
 def lag_modell(
@@ -37,9 +73,10 @@ def lag_modell(
     plassering. Demomodellene ber om True — det er dem noen faktisk åpner.
     """
     f = ifcopenshell.file(schema=schema)
+    ny_guid = guidgiver(sti.name)
 
     for nummer, (klasse, tfm) in enumerate(objekter):
-        element = f.create_entity(klasse, GlobalId=guid.new(), Name=f"{klasse}-{tfm or 'utenTFM'}")
+        element = f.create_entity(klasse, GlobalId=ny_guid(), Name=f"{klasse}-{tfm or 'utenTFM'}")
         if plassering:
             element.ObjectPlacement = _plassering(f, x=nummer * 2.0)
         if tfm is None:
@@ -50,16 +87,17 @@ def lag_modell(
             NominalValue=f.create_entity("IfcLabel", tfm),
         )
         pset = f.create_entity(
-            "IfcPropertySet", GlobalId=guid.new(), Name=pset_navn, HasProperties=[egenskap]
+            "IfcPropertySet", GlobalId=ny_guid(), Name=pset_navn, HasProperties=[egenskap]
         )
         f.create_entity(
             "IfcRelDefinesByProperties",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatedObjects=[element],
             RelatingPropertyDefinition=pset,
         )
 
     sti.parent.mkdir(parents=True, exist_ok=True)
+    _fest_header(f)
     f.write(str(sti))
     return sti
 
@@ -81,20 +119,21 @@ def lag_modell_pa_avveie(sti: Path, schema: str = "IFC4") -> Path:
     feltet ville gjort en riktig avvisning til varig konfigurasjon.
     """
     f = ifcopenshell.file(schema=schema)
+    ny_guid = guidgiver(sti.name)
 
     def lag(klasse: str, navn: str, pset_navn: str, felt: str, verdi: str):
-        element = f.create_entity(klasse, GlobalId=guid.new(), Name=navn)
+        element = f.create_entity(klasse, GlobalId=ny_guid(), Name=navn)
         egenskap = f.create_entity(
             "IfcPropertySingleValue",
             Name=felt,
             NominalValue=f.create_entity("IfcLabel", verdi),
         )
         pset = f.create_entity(
-            "IfcPropertySet", GlobalId=guid.new(), Name=pset_navn, HasProperties=[egenskap]
+            "IfcPropertySet", GlobalId=ny_guid(), Name=pset_navn, HasProperties=[egenskap]
         )
         f.create_entity(
             "IfcRelDefinesByProperties",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatedObjects=[element],
             RelatingPropertyDefinition=pset,
         )
@@ -118,6 +157,7 @@ def lag_modell_pa_avveie(sti: Path, schema: str = "IFC4") -> Path:
     lag("IfcFlowTerminal", "Fabrikat i TFM-settet", "TFM11_Forekomst", "Fabrikat", "Systemair")
 
     sti.parent.mkdir(parents=True, exist_ok=True)
+    _fest_header(f)
     f.write(str(sti))
     return sti
 
@@ -139,9 +179,10 @@ def lag_modell_i_blindsonen(sti: Path, schema: str = "IFC4", antall: int = 40) -
     er det denne modellen som skal begynne å gi forslag.
     """
     f = ifcopenshell.file(schema=schema)
+    ny_guid = guidgiver(sti.name)
 
     for i in range(antall):
-        element = f.create_entity("IfcFlowTerminal", GlobalId=guid.new(), Name=f"Terminal {i + 1}")
+        element = f.create_entity("IfcFlowTerminal", GlobalId=ny_guid(), Name=f"Terminal {i + 1}")
         egenskap = f.create_entity(
             "IfcPropertySingleValue",
             Name="Anleggskode",
@@ -151,18 +192,19 @@ def lag_modell_i_blindsonen(sti: Path, schema: str = "IFC4", antall: int = 40) -
         )
         pset = f.create_entity(
             "IfcPropertySet",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             Name="AnleggsData",
             HasProperties=[egenskap],
         )
         f.create_entity(
             "IfcRelDefinesByProperties",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatedObjects=[element],
             RelatingPropertyDefinition=pset,
         )
 
     sti.parent.mkdir(parents=True, exist_ok=True)
+    _fest_header(f)
     f.write(str(sti))
     return sti
 
@@ -281,17 +323,20 @@ def lag_modell_med_enhet(
     fot-modell havnet det 969 kilometer fra objektet — vieweren flyttet seg dit
     den ble bedt om, og modellen forsvant ut av bildet.
     """
+    ny_guid = guidgiver(sti.name)
     f = ifcopenshell.template.create(
         schema_identifier=schema,
+        project_globalid=ny_guid(),
         project_name="FIKTIVT enhetsprosjekt",
         mvd="CoordinationView_V2.0",
-        timestring="2026-01-01T12:00:00",
+        timestring=FAST_TIDSSTEMPEL,
+        timestamp=FAST_EPOKE,
     )
     _sett_lengdeenhet(f, enhet)
 
     element = f.create_entity(
         "IfcFlowTerminal",
-        GlobalId=guid.new(),
+        GlobalId=ny_guid(),
         Name="FIKTIVT objekt",
         ObjectPlacement=_plassering(f, *punkt),
     )
@@ -300,18 +345,19 @@ def lag_modell_med_enhet(
     )
     pset = f.create_entity(
         "IfcPropertySet",
-        GlobalId=guid.new(),
+        GlobalId=ny_guid(),
         Name="TFM11_Forekomst",
         HasProperties=[egenskap],
     )
     f.create_entity(
         "IfcRelDefinesByProperties",
-        GlobalId=guid.new(),
+        GlobalId=ny_guid(),
         RelatedObjects=[element],
         RelatingPropertyDefinition=pset,
     )
     _sett_eierhistorikk(f)
     sti.parent.mkdir(parents=True, exist_ok=True)
+    _fest_header(f)
     f.write(str(sti))
     return sti
 
@@ -323,6 +369,27 @@ def _punkt(f, x: float = 0.0, y: float = 0.0, z: float = 0.0):
 def _plassering(f, x: float = 0.0, y: float = 0.0, z: float = 0.0, forelder=None):
     akse = f.create_entity("IfcAxis2Placement3D", Location=_punkt(f, x, y, z))
     return f.create_entity("IfcLocalPlacement", PlacementRelTo=forelder, RelativePlacement=akse)
+
+
+FAST_TIDSSTEMPEL = "2026-01-01T12:00:00"
+# Samme øyeblikk som tall. IfcOwnerHistory bærer sekunder siden epoken, og
+# template.create tar den fra klokka om vi ikke sier noe — da skiller to
+# kjøringer seg på ett tegn i én linje, og bare i modellene med geometri.
+FAST_EPOKE = 1767268800
+
+
+def _fest_header(f) -> None:
+    """Fryser tidsstempelet i FILE_NAME.
+
+    ifcopenshell skriver klokka nå, med sekundoppløsning. To kjøringer av
+    generatoren ga derfor ulike filer selv med faste GlobalId-er — og en test
+    som lager to filer rett etter hverandre passerte likevel, fordi begge havnet
+    innenfor samme sekund. Den kunne ikke feile pålitelig.
+
+    Determinisme er hele poenget: en BCF skal fortsatt peke på de samme
+    objektene etter at modellene er laget på nytt.
+    """
+    f.header.file_name.time_stamp = FAST_TIDSSTEMPEL
 
 
 def _sett_eierhistorikk(f) -> None:
@@ -345,7 +412,7 @@ def _sett_eierhistorikk(f) -> None:
             entitet.OwnerHistory = historikk
 
 
-def _romlig_struktur(f) -> dict:
+def _romlig_struktur(f, ny_guid) -> dict:
     """Prosjekt → tomt → bygg → etasje, slik en viewer forventer det.
 
     Uten denne kjeden nekter de fleste viewere å åpne fila i det hele tatt:
@@ -368,21 +435,21 @@ def _romlig_struktur(f) -> dict:
     rot = _plassering(f)
     tomt = f.create_entity(
         "IfcSite",
-        GlobalId=guid.new(),
+        GlobalId=ny_guid(),
         Name="FIKTIV tomt",
         ObjectPlacement=rot,
         CompositionType="ELEMENT",
     )
     bygg = f.create_entity(
         "IfcBuilding",
-        GlobalId=guid.new(),
+        GlobalId=ny_guid(),
         Name="FIKTIVT bygg 115080",
         ObjectPlacement=_plassering(f, forelder=rot),
         CompositionType="ELEMENT",
     )
     etasje = f.create_entity(
         "IfcBuildingStorey",
-        GlobalId=guid.new(),
+        GlobalId=ny_guid(),
         Name="Plan 1",
         ObjectPlacement=_plassering(f, forelder=bygg.ObjectPlacement),
         CompositionType="ELEMENT",
@@ -391,7 +458,7 @@ def _romlig_struktur(f) -> dict:
     for forelder, barn in ((prosjekt, tomt), (tomt, bygg), (bygg, etasje)):
         f.create_entity(
             "IfcRelAggregates",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatingObject=forelder,
             RelatedObjects=[barn],
         )
@@ -463,18 +530,21 @@ def lag_elektromodell(
     til å teste `Kontekst` med. Det er BCF-en som trenger den tunge varianten,
     fordi et viewpoint uten en modell å peke i ikke kan prøves.
     """
+    ny_guid = guidgiver(sti.name)
     if geometri:
         f = ifcopenshell.template.create(
             schema_identifier=schema,
+            project_globalid=ny_guid(),
             project_name="FIKTIVT demoprosjekt 115080",
             # CoordinationView er MVD-en Revits IFC-importor forventer.
             # Standardverdien i ifcopenshell er ReferenceView, som er en
             # lese-MVD; med den apner ikke Revit fila.
             mvd="CoordinationView_V2.0",
             # Fast tidsstempel: fila skal kunne sammenlignes mellom kjoringer.
-            timestring="2026-01-01T12:00:00",
+            timestring=FAST_TIDSSTEMPEL,
+            timestamp=FAST_EPOKE,
         )
-        rom = _romlig_struktur(f)
+        rom = _romlig_struktur(f, ny_guid)
     else:
         f = ifcopenshell.file(schema=schema)
         rom = None
@@ -489,11 +559,11 @@ def lag_elektromodell(
             NominalValue=f.create_entity("IfcLabel", verdi),
         )
         pset = f.create_entity(
-            "IfcPropertySet", GlobalId=guid.new(), Name=sett_navn, HasProperties=[egenskap]
+            "IfcPropertySet", GlobalId=ny_guid(), Name=sett_navn, HasProperties=[egenskap]
         )
         f.create_entity(
             "IfcRelDefinesByProperties",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatedObjects=[element],
             RelatingPropertyDefinition=pset,
         )
@@ -505,7 +575,7 @@ def lag_elektromodell(
         mmi: str | None = None,
         typefelt: str | None = None,
     ):
-        element = f.create_entity(klasse, GlobalId=guid.new(), Name=navn)
+        element = f.create_entity(klasse, GlobalId=ny_guid(), Name=navn)
         if tfm is not None:
             sett_pset(element, pset_navn, egenskapsnavn, tfm)
         if mmi is not None:
@@ -521,9 +591,9 @@ def lag_elektromodell(
         return element
 
     def port_for(element):
-        port = f.create_entity("IfcDistributionPort", GlobalId=guid.new())
+        port = f.create_entity("IfcDistributionPort", GlobalId=ny_guid())
         f.create_entity(
-            "IfcRelNests", GlobalId=guid.new(), RelatingObject=element, RelatedObjects=[port]
+            "IfcRelNests", GlobalId=ny_guid(), RelatingObject=element, RelatedObjects=[port]
         )
         return port
 
@@ -545,7 +615,7 @@ def lag_elektromodell(
             )
             f.create_entity(
                 "IfcRelConnectsPorts",
-                GlobalId=guid.new(),
+                GlobalId=ny_guid(),
                 RelatingPort=port_for(tavle),
                 RelatedPort=port_for(objekt),
             )
@@ -561,14 +631,14 @@ def lag_elektromodell(
                     if schema.startswith("IFC4")
                     else "IfcElectricalCircuit"
                 )
-                krets = f.create_entity(krets_klasse, GlobalId=guid.new(), Name=kurs)
+                krets = f.create_entity(krets_klasse, GlobalId=ny_guid(), Name=kurs)
                 kretser[kurs] = [krets, []]
             kretser[kurs][1].append(objekt)
 
     for krets, objekter in kretser.values():
         f.create_entity(
             "IfcRelAssignsToGroup",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatedObjects=objekter,
             RelatingGroup=krets,
         )
@@ -578,12 +648,13 @@ def lag_elektromodell(
         # utenfor: de er koblinger, ikke noe som står i en etasje.
         f.create_entity(
             "IfcRelContainedInSpatialStructure",
-            GlobalId=guid.new(),
+            GlobalId=ny_guid(),
             RelatedElements=rom["innhold"],
             RelatingStructure=rom["etasje"],
         )
         _sett_eierhistorikk(f)
 
     sti.parent.mkdir(parents=True, exist_ok=True)
+    _fest_header(f)
     f.write(str(sti))
     return sti
