@@ -432,8 +432,8 @@ kode;beskrivelse
 2310;<beskrivelse fra standarden>
 ```
 
-Filene under `eksempler/` er oppdiktede og ikke-normative — de finnes bare for at
-testene og demoen skal kunne kjøre.
+Filene under `eksempler/` er fiktive og ikke-normative — de bærer prefikset
+`FIKTIV-`, og finnes bare for at testene og demoen skal kunne kjøre.
 
 Dette gjør verktøyet lovlig å publisere, og det gjør det generelt: en byggherre med
 eget kodeverk kan bruke det med sin egen tabell.

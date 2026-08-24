@@ -23,7 +23,7 @@ K6-duplikater av hver komponent.
         --komponenttabell eksempler/FIKTIV-komponentkoder.csv \
         --master eksempler/FIKTIV-tfm-master.csv
 
-Modellene inneholder kun oppdiktede verdier. Se eksempler/LES-MEG.md.
+Modellene inneholder kun fiktive verdier. Se eksempler/LES-MEG.md.
 """
 
 from __future__ import annotations

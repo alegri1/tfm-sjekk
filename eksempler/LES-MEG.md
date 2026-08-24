@@ -1,6 +1,6 @@
 # Eksempeltabeller — IKKE NORMATIVE
 
-Filene i denne mappa er **oppdiktede**. De inneholder ikke innhold fra
+Filene i denne mappa er **fiktive**. De inneholder ikke innhold fra
 NS 3451 eller NS 3457-serien, og de kan ikke brukes til å validere et
 virkelig prosjekt.
 
@@ -23,7 +23,7 @@ Se §8 i spesifikasjonen.
 
 ## FIKTIV-tfm-master.csv
 
-Denne er også oppdiktet, men av en annen grunn: TFM-mastera er *prosjektets egen*,
+Denne er også fiktiv, men av en annen grunn: TFM-mastera er *prosjektets egen*,
 ikke Standard Norges. Den er ikke opphavsrettslig beskyttet materiale — den ligger
 her bare fordi demokjøringen trenger noe å sjekke K7 mot.
 
