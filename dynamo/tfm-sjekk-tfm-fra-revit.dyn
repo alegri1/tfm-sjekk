@@ -1,0 +1,1224 @@
+{
+  "Uuid": "8878668f-a997-48c7-890a-07d6f5a717e7",
+  "IsCustomNode": false,
+  "Description": "",
+  "Name": "tfm-sjekk-tfm-fra-revit",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 302,
+      "SelectedString": "OST_LightingFixtures",
+      "Id": "3811099d8e27455885bdac4969dd5b26",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "0159106031b446b7996fdbc273e6a6ed",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.ElementsOfCategory, DSRevitNodesUI",
+      "Id": "fc2e6d97b2e24ed9ad63fbd9906e792c",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "49cf47fd4cd644239d1cd6a10c1cae83",
+          "Name": "Category",
+          "Description": "The Category",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "867b9202daae4dbeae3138004cab394e",
+          "Name": "Elements",
+          "Description": "An element class.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Get all elements of the specified category from the model."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "f490c273f4454abd98928dbc04e4987e",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "48801468e0274eb1a27bf4149a1bbc88",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "5b6254d1fab54ecbb9a57284a8fd57e6",
+          "Name": "parameterName",
+          "Description": "The name of the parameter whose value you want to obtain.\n\nstring",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "0413ec9740d1414b9e4b18752f5f6766",
+          "Name": "var[]..[]",
+          "Description": "var[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "Revit.Elements.Element.GetParameterValueByName@string",
+      "Replication": "Auto",
+      "Description": "Get the value of one of the element's parameters.\n\nElement.GetParameterValueByName (parameterName: string): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "Id": "de7a72a0691542d7b0097d8aea8d1d17",
+      "NodeType": "CodeBlockNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "d1669c1b5b734325b5ee44291759caf8",
+          "Name": "string",
+          "Description": "\"Circuit Number\"",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly",
+      "Code": "\"Circuit Number\";"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 200.0,
+      "WatchHeight": 200.0,
+      "Id": "32f5c1d9ee6d469295bfa7939b5765ee",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "d0bbbfcd678047a6a7cfb7d7e37b5c32",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "d5af633b62bd42a1baed4387b977cce4",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "# -*- coding: utf-8 -*-\r\n\"\"\"Bygger TFM-ID-er av det Revit-modellen allerede vet, til bruk i Dynamo.\r\n\r\nMotstykket til tfm_til_revit.py. Den skriver funn tilbake til modellen; denne\r\nskriver merkingen inn i utgangspunktet, slik at det finnes noe å kontrollere.\r\n\r\nBakgrunnen er praktisk. En umerket modell gir K1 på hvert eneste objekt, og en\r\nrapport der alt er feil sier ingenting om noe. Samtidig ligger halve TFM-ID-en\r\nallerede i modellen: familien sier hva objektet er, og kursnummeret sier hvilken\r\nkurs det henger på. Det som mangler er formatet.\r\n\r\nBRUK I DYNAMO\r\n\r\n    Element.ElementType\r\n        → GetParameterValueByName(\"Family Name\") ──────> IN[0]  familienavn\r\n    Element.GetParameterValueByName(\"Circuit Number\") ─> IN[1]  kursnumre\r\n    Code Block  \"115080\";  ───────────────────────────> IN[2]  plassering\r\n                (prosjektets egen kode — grafen leveres med en plassholder)\r\n    Element.ElementType → Element.Name ───────────────> IN[3]  typenavn, valgfri\r\n\r\n    «Family Name» er en innebygd parameter på typen, og den virker på begge\r\n    slags familier Revit har. FamilyType.Family gir null på systemfamilier —\r\n    kabelrør, kabelbroer, kanaler — og Element.Name gir typenavnet, som er\r\n    materialet framfor funksjonen: «Electrical Metallic Tubing (EMT)».\r\n\r\n    IN[3] brukes bare der IN[0] er tom. Med «Family Name» fyrte den aldri på\r\n    Snowdon Towers, men den koster ingenting og sier fra i sammendraget.\r\n\r\n    Elementene selv skal ikke inn hit. Send dem rett til\r\n    Element.SetParameterByName sammen med OUT[0].\r\n\r\n    OUT[0] er en liste like lang som IN[0]: TFM-ID-en per element.\r\n    OUT[1] er tallene. Les dem før du stoler på resultatet.\r\n\r\n    Parameteren du skriver til må være Tekst og Instance, og den må hete det\r\n    kartleggingsfila revit/TFM-egenskapssett.txt peker på — ellers kommer\r\n    verdiene aldri ut i IFC-eksporten.\r\n\r\nDENNE LEGGER IKKE INN FEIL MED VILJE\r\n\r\nverktoy/legg_til_tfm.py gjør det, fordi den bygger en testfikstur av en fil.\r\nDenne skriver inn i en ekte Revit-modell, og en modell er ikke en fikstur. Det\r\ntrengs heller ikke: en ekte modell har sine egne hull. Kjørt i Revit 2027 og\r\neksportert til IFC ga Snowdon Towers 177 funn, alle K8 om objekter uten\r\nkursnummer — og ingen av dem var lagt inn av noen.\r\n\r\nHVORFOR KURSNUMMERET KOMMER FRA REVIT OG IKKE FRA IFC\r\n\r\nKursen er det eneste leddet i TFM-ID-en som ikke kan utledes av objektet selv.\r\nI IFC leses den av navnet på IfcSystem — men det navnet er nettopp Revits eget\r\n«Circuit Number», skrevet ut ved eksport. Her leses den fra kilden i stedet for\r\nfra avtrykket.\r\n\r\nDet er også den ene retningen som virker. Kurser overlever eksporten ut av\r\nRevit, men ikke importen inn igjen: et objekt som har vært innom en IFC-import\r\ner en Generic Model uten kurs. Derfor merkes modellen der kursene finnes.\r\n\r\nSkrevet for både IronPython 2.7 og CPython3, som er de to Dynamo kjører.\r\n\"\"\"\r\n\r\n# Uten denne er \"...\" bytes i Python 2, og alt under knekker på første «».\r\n# I Python 3 er den et null-tiltak.\r\nfrom __future__ import unicode_literals\r\n\r\n# --- Ren logikk. Ingen Revit-avhengighet, slik at den kan prøves utenfor Dynamo. ---\r\n\r\nPY2 = str is bytes\r\n\r\n# Familienavn -> (systemkode, komponentkode).\r\n#\r\n# KODENE ER FUNNET PÅ. De er valgt så de ser plausible ut i en rapport, og de er\r\n# konsistente med hverandre — ikke mer. NS 3451 og NS 3457-serien er betalte\r\n# standarder, og innholdet skal aldri inn i dette repoet (§8). Skal tabellen\r\n# brukes på et ekte prosjekt, er det prosjektets egne koder som hører hjemme her.\r\n#\r\n# Tabellen er den samme som i verktoy/legg_til_tfm.py, og de to skal ikke kunne\r\n# drive fra hverandre: tests/test_merking.py sammenlikner dem.\r\n#\r\n# Treff skjer på begynnelsen av familienavnet, slik at «Downlight 150mm» og\r\n# «Downlight 200mm» faller på samme kode, og «Meter» dekker både «Meter Bank» og\r\n# «Meter Main». En nøkkel som er begynnelsen på en annen ville skygget for den;\r\n# tests/test_merking.py passer på at ingen gjør det.\r\n#\r\n# Familienavnene er Autodesks, fra Snowdon Towers. En norsk modell har andre —\r\n# det er FAMILIER du endrer da, ikke koden under.\r\nFAMILIER = [\r\n    # Fordelinger, inntak og vern — det kursene går ut fra\r\n    (\"Lighting and Appliance Panelboard\", (\"4310\", \"QLF\")),\r\n    (\"PV Panelboard\", (\"4310\", \"QLF\")),\r\n    (\"Switchboard\", (\"4310\", \"QLF\")),\r\n    (\"Meter\", (\"4310\", \"QLM\")),\r\n    (\"Disconnect Switch\", (\"4310\", \"QLA\")),\r\n    (\"Dry Type Transformer\", (\"4310\", \"QLT\")),\r\n    (\"Electrical Equipment\", (\"4310\", \"QLT\")),\r\n    # Lys\r\n    (\"Pendant-Dome\", (\"4320\", \"QLF\")),\r\n    (\"Pendant Lamp\", (\"4320\", \"QLF\")),\r\n    (\"Pendant Light\", (\"4320\", \"QLF\")),\r\n    (\"Recessed Lamp\", (\"4320\", \"QLF\")),\r\n    (\"Wall Lamp\", (\"4320\", \"QLF\")),\r\n    (\"Downlight\", (\"4320\", \"QLF\")),\r\n    (\"Ceiling Light\", (\"4320\", \"QLF\")),\r\n    (\"Bollard Light\", (\"4320\", \"QLF\")),\r\n    (\"Sconce Light\", (\"4320\", \"QLF\")),\r\n    (\"Lighting-Exterior\", (\"4320\", \"QLF\")),\r\n    (\"Lighting Switches\", (\"4320\", \"QLB\")),\r\n    # Uttak og tilkoblet utstyr\r\n    (\"Duplex Receptacle\", (\"4330\", \"QLS\")),\r\n    (\"Quadruplex Receptacle\", (\"4330\", \"QLS\")),\r\n    (\"High Voltage Receptacle\", (\"4330\", \"QLS\")),\r\n    (\"Weather Proof Receptacle\", (\"4330\", \"QLS\")),\r\n    (\"Electrical Fixtures\", (\"4330\", \"QLS\")),\r\n    (\"Hand Dryer\", (\"4330\", \"QLU\")),\r\n    # Lokal produksjon\r\n    (\"PV Battery\", (\"4350\", \"QLP\")),\r\n    (\"PV Inverter\", (\"4350\", \"QLP\")),\r\n    # Føringsveier — bærer kurser og ligger ikke på en (se K8)\r\n    (\"Conduit\", (\"4360\", \"QLK\")),\r\n    (\"Wiring Pull Box\", (\"4360\", \"QLK\")),\r\n    # Tele og data\r\n    (\"Data Outlet\", (\"5300\", \"QTD\")),\r\n]\r\nSTANDARD = (\"4390\", \"QLX\")\r\n\r\n# Undernummeret er to siffer. «00» betyr «ligger ikke på noen kurs» — det er en\r\n# ekte opplysning, ikke en manglende: tavler og føringsveier har den med rette,\r\n# og et uttak har det ikke.\r\nUTEN_KURS = \"00\"\r\n\r\n\r\ndef familiekode(navn):\r\n    \"\"\"(systemkode, komponentkode) for et familienavn.\r\n\r\n    Ukjente familier får STANDARD framfor å bli hoppet over. Et objekt uten TFM\r\n    gir K1, og da ser modellen umerket ut der den egentlig bare er ukjent for\r\n    denne tabellen. En kode verktøyet kan avvise er mer opplysende enn ingenting.\r\n    \"\"\"\r\n    familie = (navn or \"\").split(\":\")[0].strip()\r\n    for nøkkel, koder in FAMILIER:\r\n        if familie.startswith(nøkkel):\r\n            return koder\r\n    return STANDARD\r\n\r\n\r\ndef kursnummer(rå):\r\n    \"\"\"Revits «Circuit Number» til to siffer.\r\n\r\n    Revit skriver kursnummeret som fritekst, og et objekt kan ligge på flere:\r\n    «6,8» betyr kurs 6 og kurs 8. TFM har plass til én, så den første brukes.\r\n    Det er en forenkling, og den er verdt å vite om — men tallet er ekte, og\r\n    det er mer enn et oppdiktet tall er.\r\n\r\n    Alt som ikke inneholder et siffer regnes som «ingen kurs».\r\n    \"\"\"\r\n    første = (rå or \"\").split(\",\")[0]\r\n    sifre = \"\".join(c for c in første if c.isdigit())\r\n    if not sifre:\r\n        return UTEN_KURS\r\n    return sifre.zfill(2)[:2]\r\n\r\n\r\n# Verdien Code Block-noden i den ferdige grafen står med. Grafen kan ikke levere\r\n# et brukbart resultat før noen har byttet den ut, og det skal den si fra om.\r\nPLASSHOLDER = \"SETT-PLASSERING\"\r\n\r\n\r\ndef tfm_id(plassering, systemkode, kurs, komponentkode, løpenummer):\r\n    \"\"\"Setter sammen ID-en slik grammatikken krever den.\"\"\"\r\n    return \"++{0}={1}.001.{2}-{3}{4:03d}\".format(\r\n        plassering, systemkode, kurs, komponentkode, løpenummer\r\n    )\r\n\r\n\r\ndef tekst(verdi):\r\n    \"\"\"Det Dynamo sender inn, som en streng verktøyet kan regne med.\r\n\r\n    Revit gir null for en parameter som ikke er satt, og Dynamo sender den\r\n    videre som None. Uten dette ville «Circuit Number» på et ukoblet objekt\r\n    blitt strengen «None» — som inneholder ingen siffer, og dermed hadde\r\n    oppført seg riktig ved en ren tilfeldighet.\r\n\r\n    Noen noder gir et Revit-objekt framfor en streng. str() på det gir noe\r\n    ubrukelig, men ikke et krasj — og da sier statistikken fra, framfor at\r\n    grafen stopper med en meldingen ingen forstår.\r\n    \"\"\"\r\n    if verdi is None:\r\n        return \"\"\r\n    if isinstance(verdi, bytes):\r\n        return verdi.decode(\"utf-8\")\r\n    if PY2 and isinstance(verdi, str):\r\n        return verdi.decode(\"utf-8\")\r\n    return verdi if isinstance(verdi, type(\"\")) else \"{0}\".format(verdi)\r\n\r\n\r\ndef navnet(familienavn, reservenavn, i):\r\n    \"\"\"Familienavnet, eller typenavnet der Revit ikke har noe familienavn.\r\n\r\n    Revit har to slags familier. En lastet familie (en armatur, et uttak) har et\r\n    familienavn, og FamilyType.Family gir det. En systemfamilie — kabelrør,\r\n    kabelbroer, kanaler — har ikke det: den er bygget inn i Revit, og\r\n    FamilyType.Family gir null med advarselen «Asked to convert non-convertible\r\n    types». Da er typenavnet det som identifiserer den.\r\n\r\n    Det er derfor IN[3] finnes. Uten den falt alle kabelrørene til\r\n    standardkoden, og en modell med 850 rør så ut til å være 850 ukjente\r\n    familier.\r\n    \"\"\"\r\n    navn = familienavn[i]\r\n    if navn:\r\n        return navn, False\r\n    if reservenavn and i < len(reservenavn) and reservenavn[i]:\r\n        return reservenavn[i], True\r\n    return \"\", False\r\n\r\n\r\ndef merk(familienavn, kursnumre, plassering, reservenavn=None):\r\n    \"\"\"TFM-ID per element, i samme rekkefølge som inndataene.\r\n\r\n    Løpenummeret telles per systemforekomst — altså per kombinasjon av\r\n    systemkode og kurs. Det er det som gjør komponentforekomsten unik, og\r\n    dermed det som holder K6 i sjakk.\r\n\r\n    `reservenavn` brukes der `familienavn` er tomt — se navnet().\r\n    \"\"\"\r\n    if not plassering or plassering == PLASSHOLDER:\r\n        # Uten dette merkes hele modellen med plassholderen, og resultatet ser\r\n        # ut som en ferdig merket modell helt til noen leser en ID. En ekte\r\n        # kode i grafen ville vært verre igjen: da ville en fremmed modell\r\n        # blitt merket med et annet bygg uten at noe protesterte.\r\n        raise ValueError(\r\n            \"IN[2] er «{0}». Bytt Code Block-noden til prosjektets \"\r\n            \"plasseringskode før du kjører.\".format(plassering)\r\n        )\r\n    if len(familienavn) != len(kursnumre):\r\n        raise ValueError(\r\n            \"IN[0] har {0} familienavn og IN[1] har {1} kursnumre. \"\r\n            \"De to listene må komme fra de samme elementene, i samme \"\r\n            \"rekkefølge.\".format(len(familienavn), len(kursnumre))\r\n        )\r\n    if reservenavn and len(reservenavn) != len(familienavn):\r\n        raise ValueError(\r\n            \"IN[3] har {0} navn og IN[0] har {1}. De må komme fra de samme \"\r\n            \"elementene, i samme rekkefølge.\".format(len(reservenavn), len(familienavn))\r\n        )\r\n\r\n    tellere = {}\r\n    ut = []\r\n    for i, rå in enumerate(kursnumre):\r\n        navn, _ = navnet(familienavn, reservenavn, i)\r\n        systemkode, komponentkode = familiekode(navn)\r\n        kurs = kursnummer(rå)\r\n        forekomst = (systemkode, kurs)\r\n        tellere[forekomst] = tellere.get(forekomst, 0) + 1\r\n        ut.append(tfm_id(plassering, systemkode, kurs, komponentkode, tellere[forekomst]))\r\n    return ut\r\n\r\n\r\ndef statistikk(familienavn, kursnumre, tfm_er, reservenavn=None):\r\n    \"\"\"Tallene som avgjør om resultatet er til å stole på.\r\n\r\n    Særlig «ukjent_familie» og «uten_kurs»: er de høye, er ikke merkingen gal,\r\n    men den er fattig. Da er det FAMILIER-tabellen eller kursoppsettet i\r\n    modellen som skal ses på — ikke denne grafen.\r\n    \"\"\"\r\n    brukte = []\r\n    fra_reserve = 0\r\n    for i in range(len(familienavn)):\r\n        navn, reserve = navnet(familienavn, reservenavn, i)\r\n        brukte.append(navn)\r\n        if reserve:\r\n            fra_reserve += 1\r\n    ukjent = sum(1 for n in brukte if familiekode(n) == STANDARD)\r\n    uten_kurs = sum(1 for k in kursnumre if kursnummer(k) == UTEN_KURS)\r\n    return {\r\n        \"elementer\": len(tfm_er),\r\n        \"ukjent_familie\": ukjent,\r\n        \"uten_kurs\": uten_kurs,\r\n        \"unike_tfm\": len(set(tfm_er)),\r\n        \"systemforekomster\": len({t.split(\"-\")[0] for t in tfm_er}),\r\n        # Den første verdien, ordrett. Er noe feilkoblet, er dette det eneste\r\n        # som sier HVA som kom inn — et tall kan si at noe er galt, men ikke hva.\r\n        \"forste_familie\": brukte[0] if brukte else \"\",\r\n        # Hvor mange som måtte bruke typenavnet. Er tallet høyt, er det\r\n        # systemfamilier — kabelrør og kanaler — og det er som det skal.\r\n        \"fra_reserve\": fra_reserve,\r\n    }\r\n\r\n\r\ndef antall(n, entall, flertall):\r\n    \"\"\"«1 familie», ikke «1 familier».\r\n\r\n    Sammendraget leses av en BIM-koordinator, ikke av en utvikler. Samme grep\r\n    som _antall i tfm_sjekk/oppsett/toml_ut.py.\r\n    \"\"\"\r\n    return \"{0} {1}\".format(n, entall if n == 1 else flertall)\r\n\r\n\r\ndef sammendrag(tall):\r\n    \"\"\"Én lesbar linje per tall, til en Watch-node.\"\"\"\r\n    n = tall[\"elementer\"]\r\n    if not n:\r\n        return [\r\n            \"Ingen elementer inn.\",\r\n            \"Sjekk at kategorivalget faktisk traff noe — en tom liste ser\",\r\n            \"nøyaktig ut som en modell der alt allerede er merket.\",\r\n        ]\r\n\r\n    linjer = [antall(n, \"element\", \"elementer\") + \" merket.\"]\r\n    if tall[\"unike_tfm\"] != n:\r\n        linjer.append(\r\n            \"ADVARSEL: bare {0} av {1} TFM-ID-er er unike. Det skal ikke \"\r\n            \"kunne skje, og gir K6-funn.\".format(tall[\"unike_tfm\"], n)\r\n        )\r\n    linjer.append(antall(tall[\"systemforekomster\"], \"systemforekomst\", \"systemforekomster\") + \".\")\r\n    uk = tall[\"uten_kurs\"]\r\n    linjer.append(\r\n        \"{0} uten kursnummer — {1} får undernummer «00».\".format(uk, \"den\" if uk == 1 else \"de\")\r\n    )\r\n    if tall.get(\"fra_reserve\"):\r\n        linjer.append(\r\n            \"{0} hentet navnet fra typen — systemfamilier har ikke familienavn.\".format(\r\n                tall[\"fra_reserve\"]\r\n            )\r\n        )\r\n    if tall[\"ukjent_familie\"] == n:\r\n        linjer.append(\r\n            \"ADVARSEL: familienavnet står ikke i tabellen.\"\r\n            if n == 1\r\n            else \"ADVARSEL: ingen av de {0} familienavnene står i tabellen.\".format(n)\r\n        )\r\n        første = tall[\"forste_familie\"]\r\n        linjer.append('  Første verdi inn: \"{0}\"'.format(første))\r\n        if not første:\r\n            linjer.append(\r\n                \"  Tom. Parameternavnet i Code Block-en finnes ikke på disse \"\r\n                \"elementene, eller anførselstegnene mangler.\"\r\n            )\r\n        elif \":\" in første or \",\" in første:\r\n            linjer.append(\r\n                \"  Det ser ut som et Revit-objekt, ikke et navn. Legg en \"\r\n                \"Element.Name inn før IN[0] — og en FamilyType.Family foran den \"\r\n                \"om du kom fra «Family and Type».\"\r\n            )\r\n        else:\r\n            linjer.append(\"  Legg navnet inn i FAMILIER om det er et ekte familienavn.\")\r\n    elif tall[\"ukjent_familie\"]:\r\n        linjer.append(\r\n            \"{0} står ikke i tabellen og fikk {1}. Legg {2} inn i FAMILIER \"\r\n            \"om kodene betyr noe for deg.\".format(\r\n                antall(tall[\"ukjent_familie\"], \"familie\", \"familier\"),\r\n                STANDARD[0],\r\n                \"den\" if tall[\"ukjent_familie\"] == 1 else \"dem\",\r\n            )\r\n        )\r\n    return linjer\r\n\r\n\r\n# --- Skallet. Kjøres bare i Dynamo. ---\r\n\r\n# Ingen sjekk på __name__ — se begrunnelsen i tfm_til_revit.py. At «IN» finnes\r\n# er det eneste sikre tegnet på at vi kjører i Dynamo.\r\nif \"IN\" in globals():  # pragma: no cover - krever Dynamo\r\n    _familier = [tekst(n) for n in (IN[0] or [])]  # noqa: F821\r\n    _kurser = [tekst(k) for k in (IN[1] or [])]  # noqa: F821\r\n    _plassering = tekst(IN[2])  # noqa: F821\r\n\r\n    # IN[3] er valgfri: en graf med tre innganger virker som før, men får da\r\n    # ingenting å falle tilbake på for systemfamiliene.\r\n    _reserve = [tekst(n) for n in (IN[3] or [])] if len(IN) > 3 else None  # noqa: F821\r\n\r\n    _tfm = merk(_familier, _kurser, _plassering, _reserve)\r\n\r\n    # Liste, ikke tuppel: Dynamo har bare én utgangsport, så de to\r\n    # tingene pakkes sammen og skilles av en Code Block med «x[0];» og\r\n    # «x[1];» på hver sin linje.\r\n    # Indeks 0 er TFM-ID-ene, indeks 1 er tallene — les tallene.\r\n    OUT = [_tfm, sammendrag(statistikk(_familier, _kurser, _tfm, _reserve))]\r\n",
+      "Engine": "PythonNet3",
+      "VariableInputPorts": true,
+      "Id": "6808e137a0b54b45a170966b23919661",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "b7c07e33c78f44b98f8146775c262287",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "6730c78c0c3f433e98abf7ea44815d2c",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "6a81630365f0451cbe006eb6a8481ed5",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "5f5e099d174941edb83f8cb9c62be6d1",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "f38befb8fcd54e0fa63b100bfdce2495",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Runs an embedded Python script."
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "Id": "85b1d8a6616c4f17a553a082ece3775e",
+      "NodeType": "CodeBlockNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "ae400ecf42c64b78898e7085e18584e1",
+          "Name": "string",
+          "Description": "\"SETT-PLASSERING\"",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly",
+      "Code": "\"SETT-PLASSERING\";"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "Id": "b69f99414ae143cdb0aeaf0e0a1008d0",
+      "NodeType": "CodeBlockNode",
+      "Inputs": [
+        {
+          "Id": "ee75805f5ed7449f969d3def57054ec8",
+          "Name": "x",
+          "Description": "x",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "10d01346d63f4d6c83c82981d3a8cad9",
+          "Name": "function",
+          "Description": "DesignScript.Builtin.Get.ValueAtIndex(x, 0)",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "5ec86c62d5194649b27589284aedefd2",
+          "Name": "function",
+          "Description": "DesignScript.Builtin.Get.ValueAtIndex(x, 1)",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly",
+      "Code": "x[0];\nx[1];"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 800.0,
+      "WatchHeight": 172.0,
+      "Id": "dc322bca3b544e06a6a303a449bec593",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "3c05d3817b264f90ae3deb6a601564f2",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "209d75dfedab4ba9b5be5c74b81940b0",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "6d54f9ebd6e943428679d642c1e53d5d",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "d1c5d926340b4e11a139109cad7808a6",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "a420669dfbe34ef583ce926aef1187b2",
+          "Name": "parameterName",
+          "Description": "The name of the parameter to set.\n\nstring",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "9e49162c78b740d8931b39645df76bdd",
+          "Name": "value",
+          "Description": "The value.\n\nvar",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "c0c39a4fe6544377bb62ebcb9ea49f93",
+          "Name": "Element",
+          "Description": "Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "Revit.Elements.Element.SetParameterByName@string,var",
+      "Replication": "Auto",
+      "Description": "Set one of the element's parameters.\n\nElement.SetParameterByName (parameterName: string, value: var): Element"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "Id": "716c00c6fd4e4e69a69e4a74cd5cadfc",
+      "NodeType": "CodeBlockNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "e8befdaa3bab4364ae479dd80edebda9",
+          "Name": "string",
+          "Description": "\"TFM\"",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly",
+      "Code": "\"TFM\";"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 200.0,
+      "WatchHeight": 200.0,
+      "Id": "de49e700cbab44bbb86eb34b519e1596",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "6a9cf1bd00bb4a77a2900b1ee532eb4b",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "297148a6749440449df098baddd4bd2f",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 216,
+      "SelectedString": "OST_ElectricalFixtures",
+      "Id": "9a0812616f36469491a0e66bcbd26e01",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "bc5484be99214abb9518f1e0567752a0",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 212,
+      "SelectedString": "OST_ElectricalEquipment",
+      "Id": "47b80eab1ace4643ae72a83601e911e8",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "739aad016936444da03f876c20316c35",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 300,
+      "SelectedString": "OST_LightingDevices",
+      "Id": "40c38ce22f8046379b6a8525f6f173b1",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "9664e4ac544e42699a0126da3486bb80",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 168,
+      "SelectedString": "OST_DataDevices",
+      "Id": "45643d3c99f14122824e7e616b2f437c",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "c3d60f1da525412399609c4cd874e79d",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 147,
+      "SelectedString": "OST_Conduit",
+      "Id": "3337df6e686940e694db13a38d17c018",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "b7e512f98b6c4f8790063b841f69a5bf",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "DSRevitNodesUI.Categories, DSRevitNodesUI",
+      "SelectedIndex": 143,
+      "SelectedString": "OST_ConduitFitting",
+      "Id": "58e84a8b5a364421997d0b292d2b7ad8",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "a1fa5194142049d087206eb68a2b7b8e",
+          "Name": "Category",
+          "Description": "The selected Category.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "All built-in categories."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.CreateList, CoreNodeModels",
+      "VariableInputPorts": true,
+      "Id": "d97623b2df20490c8ea4361ef8670f8c",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "349859771abf4a5aa892f37577e606fe",
+          "Name": "item0",
+          "Description": "Item Index #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "11a1d83db3714e29bcca406d29ae2f49",
+          "Name": "item1",
+          "Description": "Item Index #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "f0f5c2d384b4416d9d54419d8749b3e5",
+          "Name": "item2",
+          "Description": "Item Index #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "d8dd5c2363114906846370b0f92b94a3",
+          "Name": "item3",
+          "Description": "Item Index #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "29152eb7b60f480a8285a7931360c41a",
+          "Name": "item4",
+          "Description": "Item Index #4",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "2c892fec552242ff8bc68e14657e2f54",
+          "Name": "item5",
+          "Description": "Item Index #5",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "20aa02f162924eafa2e0d3d4ca0e8bad",
+          "Name": "item6",
+          "Description": "Item Index #6",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "d9fc85fdd0db466daff836b79b9dde8d",
+          "Name": "list",
+          "Description": "A list (type: var[]..[])",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Makes a new list from the given inputs"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "6f7768d80e544e5da0f9ac9f8dcd65b5",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "d790d73faeeb4c2ebfdd6dec9f6c0a45",
+          "Name": "list",
+          "Description": "List to flatten.\n\nvar[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "eb9c37f0ac6d4a239df5313b12699293",
+          "Name": "amount",
+          "Description": "Layers of list nesting to remove (-1 will remove all list nestings)\n\nint\nDefault value : -1",
+          "UsingDefaultValue": true,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "04baed06bfb048bba685c0f456a9c558",
+          "Name": "list",
+          "Description": "Flattened list by amount",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "DSCore.List.Flatten@var[]..[],int",
+      "Replication": "Auto",
+      "Description": "Flattens a nested list of lists by a certain amount.\n\nList.Flatten (list: var[]..[], amount: int = -1): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "ab0a03f8d1504c16a740ad35ad2d6f36",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "59e64bc09e65472e9b1d327a7840ce66",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "70eb1ba7f9634bc5b047ddd7ff5ad1da",
+          "Name": "ElementType",
+          "Description": "Element Type or Null.",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "Revit.Elements.Element.ElementType",
+      "Replication": "Auto",
+      "Description": "Returns the ElementType for this Element. Returns null if the Element cannot have an ElementType assigned.\n\nElement.ElementType: ElementType"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.ZeroTouch.DSFunction, DynamoCore",
+      "Id": "e30ec511de4042ea96d564edef8fd850",
+      "NodeType": "FunctionNode",
+      "Inputs": [
+        {
+          "Id": "8ae4bb5a221841bdb7b422afe83c8403",
+          "Name": "element",
+          "Description": "Revit.Elements.Element",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "d170025383764d3b8b2c7e643fb05bc6",
+          "Name": "parameterName",
+          "Description": "The name of the parameter whose value you want to obtain.\n\nstring",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "42d8f778136e41ee9694ee9b1ce88f20",
+          "Name": "var[]..[]",
+          "Description": "var[]..[]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "FunctionSignature": "Revit.Elements.Element.GetParameterValueByName@string",
+      "Replication": "Auto",
+      "Description": "Get the value of one of the element's parameters.\n\nElement.GetParameterValueByName (parameterName: string): var[]..[]"
+    },
+    {
+      "ConcreteType": "Dynamo.Graph.Nodes.CodeBlockNodeModel, DynamoCore",
+      "Id": "a5ff5f1e7d944545938880196ba12ec7",
+      "NodeType": "CodeBlockNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "c88df45632b949e19d9512fb73f34e77",
+          "Name": "string",
+          "Description": "\"Family Name\"",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Allows for DesignScript code to be authored directly",
+      "Code": "\"Family Name\";"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 304.0,
+      "WatchHeight": 246.0,
+      "Id": "a5fe918688954d78b2607efc3261b87f",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "fba77c9126ee4f2197ab8d170e5373c6",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "bafd7d800a6e49918911e51ff08e18bc",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Visualizes a node's output"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "0159106031b446b7996fdbc273e6a6ed",
+      "End": "d8dd5c2363114906846370b0f92b94a3",
+      "Id": "a0a73b3c6a3e476d9da78113507af980",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "867b9202daae4dbeae3138004cab394e",
+      "End": "d790d73faeeb4c2ebfdd6dec9f6c0a45",
+      "Id": "ad0431152cae41f49aa95031cd85561e",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "0413ec9740d1414b9e4b18752f5f6766",
+      "End": "d0bbbfcd678047a6a7cfb7d7e37b5c32",
+      "Id": "9002b26b780944dd8fcd1e5b13754867",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "d1669c1b5b734325b5ee44291759caf8",
+      "End": "5b6254d1fab54ecbb9a57284a8fd57e6",
+      "Id": "ee5580062c824b268c3d85dd4e38654e",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "d5af633b62bd42a1baed4387b977cce4",
+      "End": "6730c78c0c3f433e98abf7ea44815d2c",
+      "Id": "ef538512ee804ebebabf9eb265f765bf",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "f38befb8fcd54e0fa63b100bfdce2495",
+      "End": "ee75805f5ed7449f969d3def57054ec8",
+      "Id": "ae117e8d71954994b30f1cdd5c23f216",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "ae400ecf42c64b78898e7085e18584e1",
+      "End": "6a81630365f0451cbe006eb6a8481ed5",
+      "Id": "4ca6f69c090048418b5683072b30d153",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "10d01346d63f4d6c83c82981d3a8cad9",
+      "End": "9e49162c78b740d8931b39645df76bdd",
+      "Id": "09d60b6a528144ffa46d89e6c307312f",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "5ec86c62d5194649b27589284aedefd2",
+      "End": "3c05d3817b264f90ae3deb6a601564f2",
+      "Id": "e78fd8b2373f42519bc1c3f07f497a83",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "c0c39a4fe6544377bb62ebcb9ea49f93",
+      "End": "6a9cf1bd00bb4a77a2900b1ee532eb4b",
+      "Id": "474e648101ed49b6bbe946373f25db15",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "e8befdaa3bab4364ae479dd80edebda9",
+      "End": "a420669dfbe34ef583ce926aef1187b2",
+      "Id": "7258f8ff08e54512a74ca05b29b7833d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "bc5484be99214abb9518f1e0567752a0",
+      "End": "349859771abf4a5aa892f37577e606fe",
+      "Id": "636eea0577d04300ba25d798ffc9a579",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "739aad016936444da03f876c20316c35",
+      "End": "11a1d83db3714e29bcca406d29ae2f49",
+      "Id": "3cc291d5db2a4cd18ed824a597d1b526",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "9664e4ac544e42699a0126da3486bb80",
+      "End": "f0f5c2d384b4416d9d54419d8749b3e5",
+      "Id": "a554927f9b0847339ed046956f3c6678",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "c3d60f1da525412399609c4cd874e79d",
+      "End": "29152eb7b60f480a8285a7931360c41a",
+      "Id": "88de38eb8c334c5aacee97057e7a5669",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "b7e512f98b6c4f8790063b841f69a5bf",
+      "End": "2c892fec552242ff8bc68e14657e2f54",
+      "Id": "d577a652bced4e48bdbd345ae2d438c4",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "a1fa5194142049d087206eb68a2b7b8e",
+      "End": "20aa02f162924eafa2e0d3d4ca0e8bad",
+      "Id": "120d756b7c924e13b8adf827e137c2d8",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "d9fc85fdd0db466daff836b79b9dde8d",
+      "End": "49cf47fd4cd644239d1cd6a10c1cae83",
+      "Id": "2c7bae2b9ca34a519d77c8e1e567d794",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "04baed06bfb048bba685c0f456a9c558",
+      "End": "48801468e0274eb1a27bf4149a1bbc88",
+      "Id": "112e8841be9b4c1a821ac08bbf1e7f71",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "04baed06bfb048bba685c0f456a9c558",
+      "End": "d1c5d926340b4e11a139109cad7808a6",
+      "Id": "5165cb2ad9de4e5fb32c3912fe234b98",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "04baed06bfb048bba685c0f456a9c558",
+      "End": "59e64bc09e65472e9b1d327a7840ce66",
+      "Id": "6159929f6ee34837b130760547d6641e",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "70eb1ba7f9634bc5b047ddd7ff5ad1da",
+      "End": "8ae4bb5a221841bdb7b422afe83c8403",
+      "Id": "f519d3e8351d48089e683a03610e4d56",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "42d8f778136e41ee9694ee9b1ce88f20",
+      "End": "5f5e099d174941edb83f8cb9c62be6d1",
+      "Id": "ee94bfd7efdf4c0db04b515fa5213aa9",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "42d8f778136e41ee9694ee9b1ce88f20",
+      "End": "fba77c9126ee4f2197ab8d170e5373c6",
+      "Id": "a936768fcc464dbe808781d51ef016dc",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "42d8f778136e41ee9694ee9b1ce88f20",
+      "End": "b7c07e33c78f44b98f8146775c262287",
+      "Id": "6b41c41a60314908bed88177eddafcbd",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "c88df45632b949e19d9512fb73f34e77",
+      "End": "d170025383764d3b8b2c7e643fb05bc6",
+      "Id": "d2ca7e41381f4c2d9c24c3430ed51a39",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "EnableLegacyPolyCurveBehavior": false,
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [
+    {
+      "ExtensionGuid": "28992e1d-abb9-417f-8b1b-05e053bee670",
+      "Name": "Properties",
+      "Version": "4.1",
+      "Data": {}
+    },
+    {
+      "ExtensionGuid": "DFBD9CC0-DB40-457A-939E-8C8555555A9D",
+      "Name": "Generative Design",
+      "Version": "10.3",
+      "Data": {}
+    }
+  ],
+  "Author": "",
+  "Linting": {
+    "activeLinter": "None",
+    "activeLinterId": "7b75fb44-43fd-4631-a878-29f4d5d8399a",
+    "warningCount": 0,
+    "errorCount": 0
+  },
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "4.1.1.5050",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "_Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "3811099d8e27455885bdac4969dd5b26",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -121.01155553342699,
+        "Y": 223.26697481422468
+      },
+      {
+        "Id": "fc2e6d97b2e24ed9ad63fbd9906e792c",
+        "Name": "All Elements of Category",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 401.0046222133708,
+        "Y": 177.9309451897584
+      },
+      {
+        "Id": "f490c273f4454abd98928dbc04e4987e",
+        "Name": "Element.GetParameterValueByName",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1077.0,
+        "Y": 479.0
+      },
+      {
+        "Id": "de7a72a0691542d7b0097d8aea8d1d17",
+        "Name": "Code Block",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 775.0,
+        "Y": 593.0
+      },
+      {
+        "Id": "32f5c1d9ee6d469295bfa7939b5765ee",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1523.0,
+        "Y": 479.0
+      },
+      {
+        "Id": "6808e137a0b54b45a170966b23919661",
+        "Name": "Python Script",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 2016.0,
+        "Y": 216.0
+      },
+      {
+        "Id": "85b1d8a6616c4f17a553a082ece3775e",
+        "Name": "Code Block",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1669.3437317469543,
+        "Y": 280.43311900992535
+      },
+      {
+        "Id": "b69f99414ae143cdb0aeaf0e0a1008d0",
+        "Name": "Code Block",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 2283.2848664688427,
+        "Y": 216.37091988130555
+      },
+      {
+        "Id": "dc322bca3b544e06a6a303a449bec593",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 2547.9226295618732,
+        "Y": 355.9739518168087
+      },
+      {
+        "Id": "6d54f9ebd6e943428679d642c1e53d5d",
+        "Name": "Element.SetParameterByName",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 2589.925208183885,
+        "Y": -61.75239342968166
+      },
+      {
+        "Id": "716c00c6fd4e4e69a69e4a74cd5cadfc",
+        "Name": "Code Block",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 2310.1115722134077,
+        "Y": 39.45918669808128
+      },
+      {
+        "Id": "de49e700cbab44bbb86eb34b519e1596",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 2990.2818840498267,
+        "Y": -48.141242225586836
+      },
+      {
+        "Id": "9a0812616f36469491a0e66bcbd26e01",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -138.16584290070784,
+        "Y": -146.76191401934267
+      },
+      {
+        "Id": "47b80eab1ace4643ae72a83601e911e8",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -133.05315545376402,
+        "Y": -22.489161438404494
+      },
+      {
+        "Id": "40c38ce22f8046379b6a8525f6f173b1",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -132.14301022417408,
+        "Y": 96.84917929274718
+      },
+      {
+        "Id": "45643d3c99f14122824e7e616b2f437c",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -124.1669984540506,
+        "Y": 369.6732148022752
+      },
+      {
+        "Id": "3337df6e686940e694db13a38d17c018",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -128.85176878975278,
+        "Y": 504.48222811834825
+      },
+      {
+        "Id": "58e84a8b5a364421997d0b292d2b7ad8",
+        "Name": "Categories",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": -126.73677023612356,
+        "Y": 634.3568295846349
+      },
+      {
+        "Id": "d97623b2df20490c8ea4361ef8670f8c",
+        "Name": "List Create",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 210.99519277077866,
+        "Y": 181.04816424973342
+      },
+      {
+        "Id": "6f7768d80e544e5da0f9ac9f8dcd65b5",
+        "Name": "List.Flatten",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 650.4935986359245,
+        "Y": -80.30404312153044
+      },
+      {
+        "Id": "ab0a03f8d1504c16a740ad35ad2d6f36",
+        "Name": "Element.ElementType",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1014.2746490204081,
+        "Y": 57.145031419473526
+      },
+      {
+        "Id": "e30ec511de4042ea96d564edef8fd850",
+        "Name": "Element.GetParameterValueByName",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1566.824058584883,
+        "Y": 65.54741808970914
+      },
+      {
+        "Id": "a5ff5f1e7d944545938880196ba12ec7",
+        "Name": "Code Block",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1299.5294149253616,
+        "Y": 186.90412930364027
+      },
+      {
+        "Id": "a5fe918688954d78b2607efc3261b87f",
+        "Name": "Watch",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 1881.5964169500353,
+        "Y": -413.11500520170154
+      }
+    ],
+    "Annotations": [],
+    "X": -629.9002545142821,
+    "Y": 318.8275965933212,
+    "Zoom": 0.7434837697301312
+  }
+}

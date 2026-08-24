@@ -149,6 +149,29 @@ uv run tfm-sjekk sjekk eksempler/demo-*.ifc --config eksempler/tfm-sjekk-full.to
 Kopier den til `tfm-sjekk.toml` ved siden av modellene, og `--config` trengs
 heller ikke.
 
+### Den faste ruten
+
+Skal modellen rettes, kjøres den samme kommandoen mange ganger, og da er det
+verdt å slippe å finne eksporten igjen for hånd. Oppsettet kan bære hele ruten:
+
+```toml
+modeller = ["eksport/*.ifc"]
+ut = "rapport"
+```
+
+Da er runden `tfm-sjekk sjekk` uten argumenter. Mønsteret betyr at en ny
+fagmodell bare skal legges i mappa, ikke skrives opp noe sted i tillegg, og
+`ut` betyr at neste ledd — Dynamo-grafen som leser `rapport/funn.csv` — kan
+peke dit én gang og aldri endres.
+
+Filer på kommandolinja vinner over `modeller`, og `--ut` vinner over `ut`, så en
+enkeltfil kan sjekkes uten å røre prosjektets rute.
+
+**Et mønster som ikke treffer noen fil stopper kjøringen** med exit 2. Ruten
+skrives én gang og leses aldri igjen; en eksport som havnet i feil mappe ville
+ellers gitt en tom, grønn rapport hver eneste runde, og ingenting i den ville
+sagt at den handlet om null objekter.
+
 En nøkkel verktøyet ikke kjenner **stopper kjøringen** med exit 2, og meldingen
 sier hvilken nøkkel, hvilken seksjon, og hva den nærmeste gyldige heter:
 

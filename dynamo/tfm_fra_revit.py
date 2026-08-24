@@ -15,6 +15,7 @@ BRUK I DYNAMO
         → GetParameterValueByName("Family Name") ──────> IN[0]  familienavn
     Element.GetParameterValueByName("Circuit Number") ─> IN[1]  kursnumre
     Code Block  "115080";  ───────────────────────────> IN[2]  plassering
+                (prosjektets egen kode — grafen leveres med en plassholder)
     Element.ElementType → Element.Name ───────────────> IN[3]  typenavn, valgfri
 
     «Family Name» er en innebygd parameter på typen, og den virker på begge
@@ -158,6 +159,11 @@ def kursnummer(rå):
     return sifre.zfill(2)[:2]
 
 
+# Verdien Code Block-noden i den ferdige grafen står med. Grafen kan ikke levere
+# et brukbart resultat før noen har byttet den ut, og det skal den si fra om.
+PLASSHOLDER = "SETT-PLASSERING"
+
+
 def tfm_id(plassering, systemkode, kurs, komponentkode, løpenummer):
     """Setter sammen ID-en slik grammatikken krever den."""
     return "++{0}={1}.001.{2}-{3}{4:03d}".format(
@@ -216,6 +222,15 @@ def merk(familienavn, kursnumre, plassering, reservenavn=None):
 
     `reservenavn` brukes der `familienavn` er tomt — se navnet().
     """
+    if not plassering or plassering == PLASSHOLDER:
+        # Uten dette merkes hele modellen med plassholderen, og resultatet ser
+        # ut som en ferdig merket modell helt til noen leser en ID. En ekte
+        # kode i grafen ville vært verre igjen: da ville en fremmed modell
+        # blitt merket med et annet bygg uten at noe protesterte.
+        raise ValueError(
+            "IN[2] er «{0}». Bytt Code Block-noden til prosjektets "
+            "plasseringskode før du kjører.".format(plassering)
+        )
     if len(familienavn) != len(kursnumre):
         raise ValueError(
             "IN[0] har {0} familienavn og IN[1] har {1} kursnumre. "

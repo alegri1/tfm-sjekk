@@ -13,6 +13,18 @@
 # systemtabell = "tabeller/min-ns3451.csv"
 # komponenttabell = "tabeller/min-ns3457-8.csv"
 
+# Den faste ruten: hvilke modeller kjøringen leser, og hvor rapporten legges.
+# Med disse er runden «tfm-sjekk sjekk» uten argumenter. Filnavn eller mønster,
+# relativt til DENNE fila. Filer på kommandolinja vinner, og «--ut» vinner.
+#
+# Et mønster som ikke treffer noen fil stopper kjøringen med exit 2. Ruten
+# skrives én gang og leses aldri igjen; en eksport som havnet i feil mappe ville
+# ellers gitt en tom, grønn rapport hver eneste runde, og ingenting i den ville
+# sagt at den handlet om null objekter.
+#
+# modeller = ["eksport/*.ifc"]
+# ut = "rapport"
+
 # Klassene K1 krever TFM på. Matches mot hele arvekjeden, så
 # «IfcFlowTerminal» dekker også IfcAirTerminal, IfcLamp, IfcOutlet osv.
 #

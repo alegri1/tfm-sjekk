@@ -33,6 +33,41 @@ tfm-sjekk sjekk ... --ut rapport
               Schedule filtrert på TFM_Avvik ≠ tom
 ```
 
+## To sløyfer, ikke én
+
+Det som gjør dette tungt å lese er at engangsjobben og rundejobben står om
+hverandre. De er ikke det samme:
+
+| | Hva | Hvor ofte |
+|---|---|---|
+| **A** | parameter, eksportoppsett, kartleggingsfil, schedule, **grafene** | én gang per prosjekt |
+| **B** | eksporter, `tfm-sjekk sjekk`, kjør grafen, rett | hver runde |
+
+**Grafene finnes ferdig.** `dynamo/tfm-sjekk-tfm-fra-revit.dyn` og
+`dynamo/tfm-sjekk-tfm-til-revit.dyn` er bygget og kjørt mot Snowdon Towers i
+Revit 2027, med alle sju kategoriene koblet. Åpne dem i Dynamo — du skal ikke
+bygge dem opp igjen.
+
+To ting må rettes før første kjøring, og begge er valgt for å feile høylytt om
+du glemmer dem:
+
+| Graf | Node | Leveres med | Skal være |
+|---|---|---|---|
+| `fra-revit` | Code Block → `IN[2]` | `"SETT-PLASSERING";` | prosjektets plasseringskode |
+| `til-revit` | File Path → `IN[0]` | `C:\prosjekt\rapport\funn.csv` | din egen `funn.csv` |
+
+`merk` nekter å merke med plassholderen, og `les_fil` kaster på en sti som ikke
+finnes. En ekte kode i grafen ville vært verre: da hadde en fremmed modell blitt
+merket med et annet bygg uten at noe protesterte.
+
+**Sløyfe B er én kommando** når `tfm-sjekk.toml` bærer ruten — se «Den faste
+ruten» i README-en:
+
+```toml
+modeller = ["eksport/*.ifc"]
+ut = "rapport"
+```
+
 ## Oppsett i Revit, én gang
 
 **Parameteren.** `Manage → Project Parameters → Add…`, navn `TFM_Avvik`, type
@@ -78,12 +113,38 @@ den vet ikke at fila har endret seg. Oppdaterer du skriptet, må du åpne noden 
 lime inn på nytt — ellers kjører grafen videre på den versjonen du limte inn
 første gang.
 
-Det er ikke teoretisk. En graf bygget 21. august manglet feltet `nokkel_fra`, som
-kom inn dagen etter. Alt annet i sammendraget så riktig ut, og tallene stemte, så
-ingenting tydet på at noe var gammelt.
+Det er ikke teoretisk, og det har skjedd to ganger. En graf bygget 21. august
+manglet feltet `nokkel_fra`, som kom inn dagen etter. Alt annet i sammendraget så
+riktig ut, og tallene stemte, så ingenting tydet på at noe var gammelt. Og
+`fra-revit`-grafen beskrev seg selv med en nodekobling repoet dokumenterte som
+feil — ledningene var riktige, beskrivelsen var én generasjon gammel.
 
 **Slik ser du det:** `OUT[1]` skal ha åtte felter for `tfm_til_revit.py`. Er det
 sju, mangler `nokkel_fra`, og kopien er eldre enn 22. august.
+
+**For grafene i repoet er det ikke lenger noe å se etter.** Ansvaret er delt:
+`.py`-fila er fasit for skriptet, `.dyn`-fila for ledningene.
+
+```
+   dynamo/tfm_til_revit.py       fasit for skriptet
+            │
+            │  verktoy/oppdater-grafene.py   (limer inn)
+            ▼
+   dynamo/tfm-sjekk-tfm-til-revit.dyn
+            │
+            │  tests/test_dynamo.py          (sier fra)
+            ▼
+        bygget feiler når de er ulike
+```
+
+Endrer du et av skriptene, kjør:
+
+```bash
+uv run python verktoy/oppdater-grafene.py
+```
+
+Har du limt inn i din egen graf, gjelder advarselen over fortsatt — den kopien
+kjenner ingen test til.
 
 ## Grafen
 
@@ -226,6 +287,10 @@ objekter uten kurs ga åtte flere funn. Et tall som lar seg forklare er noe anne
 enn et tall som ser rimelig ut.
 
 ### Bygg grafen, steg for steg
+
+**Trenger du dette?** Ferdige grafer ligger i `dynamo/` — se «To sløyfer, ikke
+én» øverst. Stegene her er for deg som vil forstå hva de gjør, som kjører en
+eldre Dynamo enn 4.1, eller som skal bygge noe annet av de samme delene.
 
 Skrevet for deg som ikke bruker Dynamo daglig. Ti steg, og du bygger lesesiden
 ferdig før du kobler til noe som skriver.

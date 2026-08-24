@@ -115,13 +115,68 @@ def _fra_oppsett(flagg: Path | None, oppsett: Konfigurasjon, felt: str, hva: str
     return løst
 
 
+def _modellene(flagg: list[Path] | None, oppsett: Konfigurasjon) -> list[Path]:
+    """Modellene kjøringen skal lese. Kommandolinjen vinner over oppsettet.
+
+    Samme regel som for tabellene og mastera, og av samme grunn: den faste ruten
+    er for den gjentatte kjøringen, og en enkeltfil skal kunne sjekkes uten å
+    røre prosjektets oppsett.
+
+    En oppføring uten treff er en feil. Ruten skrives én gang og leses aldri
+    igjen; en eksport som havnet i feil mappe ville ellers gitt en tom, grønn
+    rapport hver eneste runde, og ingenting i den ville sagt at den handlet om
+    null objekter.
+
+    Samme fil telles én gang. To mønstre som overlapper ville lest den to
+    ganger, og K6 ville meldt hver eneste TFM-verdi som duplisert — en rapport
+    som ser alvorlig ut og handler om oppsettet, ikke om modellen.
+    """
+    if flagg:
+        return list(flagg)
+
+    if not oppsett.modeller:
+        raise typer.BadParameter(
+            "ingen modell oppgitt. Oppgi IFC-filer på kommandolinjen, eller sett "
+            "«modeller» i tfm-sjekk.toml.",
+            param_hint="modeller",
+        )
+
+    funnet: list[Path] = []
+    tomme: list[str] = []
+    for rå, løst, treff in oppsett.stier("modeller"):
+        if not treff:
+            tomme.append(f"«{rå}» → {løst}")
+            continue
+        for fil in treff:
+            if fil not in funnet:
+                funnet.append(fil)
+
+    if tomme:
+        raise typer.BadParameter(
+            "modeller i oppsettet finnes ikke: " + ", ".join(tomme),
+            param_hint="modeller",
+        )
+    return funnet
+
+
 @app.command()
 def sjekk(
     modeller: Annotated[
-        list[Path],
-        typer.Argument(help="Én eller flere IFC-filer. Flere filer federeres.", exists=True),
-    ],
-    ut: Annotated[Path, typer.Option("--ut", help="Katalog for rapporter")] = Path("rapport"),
+        list[Path] | None,
+        typer.Argument(
+            help=(
+                "Én eller flere IFC-filer. Flere filer federeres. "
+                "Uten disse leses «modeller» fra oppsettet."
+            ),
+            exists=True,
+        ),
+    ] = None,
+    ut: Annotated[
+        Path | None,
+        typer.Option(
+            "--ut", help="Katalog for rapporter. Standard: «ut» i oppsettet, ellers «rapport»"
+        ),
+    ] = None,
     config: Annotated[
         Path | None, typer.Option("--config", help="tfm-sjekk.toml", exists=True)
     ] = None,
@@ -152,7 +207,9 @@ def sjekk(
     ] = False,
 ) -> None:
     """Kjører kontrollene K1–K9 på modellen(e)."""
-    oppsett = _les_oppsett(config, list(modeller))
+    oppsett = _les_oppsett(config, list(modeller or []))
+    modeller = _modellene(modeller, oppsett)
+    ut = ut or oppsett.sti("ut") or Path("rapport")
     systemtabell = _fra_oppsett(systemtabell, oppsett, "systemtabell", "Systemtabellen")
     komponenttabell = _fra_oppsett(komponenttabell, oppsett, "komponenttabell", "Komponenttabellen")
     master = _fra_oppsett(master, oppsett, "tfm_master", "TFM-mastera")

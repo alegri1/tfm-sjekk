@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "dynamo"))
 
 from tfm_fra_revit import (
     FAMILIER,
+    PLASSHOLDER,
     STANDARD,
     familiekode,
     kursnummer,
@@ -140,6 +141,19 @@ def test_ulik_lengde_stopper_framfor_aa_forskyve():
     """
     with pytest.raises(ValueError, match="samme rekkefølge"):
         merk(["Downlight", "Downlight"], ["1"], PLASSERING)
+
+
+@pytest.mark.parametrize("plassering", [PLASSHOLDER, ""])
+def test_plassholderen_merker_ingenting(plassering):
+    """Grafen leveres med en plassholder i Code Block-noden.
+
+    Kjøres den urørt, blir hele modellen merket med den — og resultatet ser ut
+    som en ferdig merket modell helt til noen leser en ID. En ekte kode i
+    grafen ville vært verre igjen: da hadde en fremmed modell blitt merket med
+    et annet bygg uten at noe protesterte.
+    """
+    with pytest.raises(ValueError, match="Code Block"):
+        merk(["Downlight"], ["1"], plassering)
 
 
 # --- Grafen og IFC-injektoren skal ikke kunne drive fra hverandre ---

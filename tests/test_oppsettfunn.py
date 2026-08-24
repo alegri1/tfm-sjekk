@@ -285,3 +285,24 @@ def test_flere_steder_nevnes_alle():
     assert _som_sted(["toppnivå"]) == "på toppnivå"
     assert _som_sted(["[mmi]"]) == "i [mmi]"
     assert _som_sted(["[mmi]", "[elektro]"]) == "i [mmi] eller i [elektro]"
+
+
+def test_bom_i_oppsettet_gir_en_melding_ikke_en_tilbakesporing(tmp_path):
+    """Notisblokk og PowerShell skriver BOM. tomllib leser den som et tegn.
+
+    Fila ser helt riktig ut i editoren, og verktøyet svarte med en Python-
+    tilbakesporing. Oppsettet er nettopp fila brukeren redigerer selv — og med
+    en fast rute i den, redigeres den i hvert prosjekt.
+    """
+    sti = tmp_path / "tfm-sjekk.toml"
+    sti.write_bytes(b"\xef\xbb\xbf" + b'ifc_klasser = ["IfcFlowTerminal"]\n')
+
+    assert Konfigurasjon.les(sti).ifc_klasser == ["IfcFlowTerminal"]
+
+
+def test_ugyldig_toml_sier_hvilken_fil_og_hvor(tmp_path):
+    sti = tmp_path / "tfm-sjekk.toml"
+    sti.write_text("dette er ikke toml\n", encoding="utf-8")
+
+    with pytest.raises(OppsettFeil, match=r"tfm-sjekk[.]toml"):
+        Konfigurasjon.les(sti)

@@ -334,6 +334,17 @@ class Konfigurasjon(BaseModel):
 
     kontroller: dict[str, KontrollOppsett] = {}
 
+    modeller: list[str] = Field(
+        default=[],
+        description=(
+            "IFC-filene en kjøring leser når ingen er oppgitt på kommandolinjen. "
+            "Filnavn eller mønster, f.eks. «eksport/*.ifc». Løses mot denne fila."
+        ),
+    )
+    ut: Path | None = Field(
+        default=None, description="Hvor rapportene legges når --ut ikke er oppgitt"
+    )
+
     tfm_master: Path | None = Field(default=None, description="TFM-master, XLSX eller CSV (K7)")
     systemtabell: Path | None = Field(
         default=None, description="Din egen CSV med NS 3451 tabell 8 (K3, K4)"
@@ -368,6 +379,29 @@ class Konfigurasjon(BaseModel):
             return verdi
         return (self.kilde.parent / verdi).resolve()
 
+    def stier(self, felt: str) -> list[tuple[str, Path, list[Path]]]:
+        """Per oppføring i et listefelt: teksten, stien den ble løst til, og treffene.
+
+        Tre ledd og ikke bare filene, fordi en oppføring uten treff skal kunne
+        meldes med begge halvdeler. «eksport/*.ifc finnes ikke» er ubrukelig når
+        «eksport» er relativ til en fil brukeren ikke tenkte på.
+
+        Mønstre utvides, og treffene sorteres. Filsystemets egen rekkefølge er
+        ikke lik mellom maskiner, og rapporttittelen og BCF-fila bygges av
+        rekkefølgen — usortert ville fila ikke vært byte-identisk for samme
+        funn, og avviket ville bare vist seg hos noen andre.
+        """
+        rot = self.kilde.parent if self.kilde is not None else Path.cwd()
+        ut: list[tuple[str, Path, list[Path]]] = []
+        for rå in getattr(self, felt):
+            løst = Path(rå) if Path(rå).is_absolute() else (rot / rå)
+            if any(tegn in rå for tegn in "*?["):
+                treff = sorted(p for p in løst.parent.glob(løst.name) if p.is_file())
+            else:
+                treff = [løst.resolve()] if løst.is_file() else []
+            ut.append((rå, løst, treff))
+        return ut
+
     @classmethod
     def les(cls, sti: Path | None) -> Konfigurasjon:
         """Leser TOML. Uten fil brukes standardverdiene over.
@@ -377,8 +411,17 @@ class Konfigurasjon(BaseModel):
         """
         if sti is None:
             return cls()
-        with sti.open("rb") as f:
-            data = tomllib.load(f)
+
+        # utf-8-sig, ikke utf-8: Notisblokk og PowerShells «Set-Content -Encoding
+        # utf8» skriver BOM, og tomllib leser den som et tegn på linje 1. Uten
+        # dette svarte verktøyet med en Python-tilbakesporing og exit 1 på en fil
+        # som så helt riktig ut i editoren — og oppsettet er nettopp fila
+        # brukeren redigerer selv.
+        try:
+            data = tomllib.loads(sti.read_text(encoding="utf-8-sig"))
+        except tomllib.TOMLDecodeError as feil:
+            raise OppsettFeil(f"Feil i {sti.name}:\n  Ugyldig TOML: {feil}") from feil
+
         try:
             oppsett = cls.model_validate(data)
         except ValidationError as feil:

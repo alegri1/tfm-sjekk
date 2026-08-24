@@ -11,6 +11,7 @@ noe sa fra — nøyaktig det mønsteret som har bitt seks ganger her.
 from __future__ import annotations
 
 import csv
+import json
 import sys
 from pathlib import Path
 
@@ -204,3 +205,51 @@ def test_statistikken_skiller_null_treff_fra_ingen_avvik(tmp_path):
     assert traff["elementer_med_avvik"] == 1
     assert bommet["elementer_med_avvik"] == 0
     assert bommet["tfm_verdier_uten_element"] == [TFM]
+
+
+# --- Grafene: kopien inne i .dyn-fila kan ikke drive fra kilden ---
+
+DYNAMO = Path(__file__).parent.parent / "dynamo"
+
+GRAFER = {
+    "tfm-sjekk-tfm-fra-revit.dyn": "tfm_fra_revit.py",
+    "tfm-sjekk-tfm-til-revit.dyn": "tfm_til_revit.py",
+}
+
+
+def python_noden(dyn: Path) -> str:
+    graf = json.loads(dyn.read_text(encoding="utf-8"))
+    noder = [n for n in graf["Nodes"] if n.get("NodeType") == "PythonScriptNode"]
+    assert len(noder) == 1, f"{dyn.name} har {len(noder)} Python-noder, venter én"
+    return noder[0]["Code"]
+
+
+@pytest.mark.parametrize(("dyn", "py"), sorted(GRAFER.items()))
+def test_skriptkopien_i_grafen_er_lik_kilden(dyn, py):
+    """Python-noden lagrer en kopi, ikke en peker.
+
+    Den leser ikke fra `dynamo/*.py`, og den vet ikke at fila har endret seg.
+    Det er ikke teoretisk: grafen beskrev seg selv med en nodekobling repoet
+    dokumenterte som feil, mens ledningene var riktige. Tallene stemte,
+    ingenting så galt ut, og ingenting sa fra.
+    """
+    i_grafen = python_noden(DYNAMO / dyn).replace("\r\n", "\n")
+    i_repoet = (DYNAMO / py).read_text(encoding="utf-8").replace("\r\n", "\n")
+
+    assert i_grafen == i_repoet, (
+        f"{dyn} bærer en eldre kopi av {py}. Kjør «uv run python verktoy/oppdater-grafene.py»."
+    )
+
+
+@pytest.mark.parametrize("dyn", sorted(GRAFER))
+def test_grafen_har_ingen_sti_fra_maskinen_den_ble_bygget_pa(dyn):
+    """En graf som leveres med en sti hjem til den som bygget den, er ubrukelig.
+
+    Verre: den peker på en fil som *kan* finnes hos noen andre. Plassholderne
+    her er valgt for å feile høylytt — `les_fil` kaster på en sti som ikke
+    finnes, og `merk` nekter å merke med plasseringskoden grafen leveres med.
+    """
+    tekst = (DYNAMO / dyn).read_text(encoding="utf-8")
+
+    assert "Users" not in tekst
+    assert "Desktop" not in tekst
