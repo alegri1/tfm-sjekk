@@ -20,5 +20,5 @@
 
 ## 4. Demomappa
 
-- [ ] 4.1 Regenerer de tre BCF-filene der, så de bærer versjonen.
-- [ ] 4.2 Nevn i LES-MEG.txt hvordan man ser hvilken utgave en BCF er laget av.
+- [x] 4.1 Regenerer de tre BCF-filene der, så de bærer versjonen.
+- [x] 4.2 Nevn i LES-MEG.txt hvordan man ser hvilken utgave en BCF er laget av.
