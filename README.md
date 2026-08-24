@@ -121,9 +121,8 @@ ferdig, og du hadde ikke rukket å lese noe.
 tfm-sjekk sjekk rie.ifc riv.ifc
 ```
 
-Så kort fordi prosjektets oppsett ligger i `tfm-sjekk.toml` ved siden av
-modellene. Fila finnes automatisk — hos modellen først, ellers i mappa du står i
-— og kjøringen sier hvilken den leste:
+Så kort fordi prosjektet ditt legger en `tfm-sjekk.toml` ved siden av
+modellene, med stiene til mastera og kodetabellene:
 
 ```toml
 tfm_master = "TFM-master.xlsx"
@@ -131,8 +130,24 @@ systemtabell = "tabeller/min-ns3451.csv"
 komponenttabell = "tabeller/min-ns3457-8.csv"
 ```
 
-Stiene er relative til oppsettsfila, ikke til der du står, så mappa kan flyttes
-og sendes videre.
+Fila finnes automatisk — hos modellen først, ellers i mappa du står i — og
+kjøringen sier hvilken den leste. Stiene er relative til oppsettsfila, ikke til
+der du står, så mappa kan flyttes og sendes videre.
+
+**Repoets egen `tfm-sjekk.toml` har de tre linjene kommentert ut.** Den er en
+mal over alle nøklene med standardverdiene sine, ikke et prosjektoppsett — og en
+ekte TFM-master kan ikke ligge her (§8), så det finnes ingenting for stiene å
+peke på.
+
+Vil du se det virke, ligger et utfylt oppsett i `eksempler/tfm-sjekk-full.toml`.
+Det peker på de fiktive tabellene, og kommandoen blir like kort som over:
+
+```bash
+uv run tfm-sjekk sjekk eksempler/demo-*.ifc --config eksempler/tfm-sjekk-full.toml
+```
+
+Kopier den til `tfm-sjekk.toml` ved siden av modellene, og `--config` trengs
+heller ikke.
 
 En nøkkel verktøyet ikke kjenner **stopper kjøringen** med exit 2, og meldingen
 sier hvilken nøkkel, hvilken seksjon, og hva den nærmeste gyldige heter:
