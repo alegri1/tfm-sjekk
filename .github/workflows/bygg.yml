@@ -202,13 +202,27 @@ jobs:
           if [ "$(git cat-file -t "$tag")" != tag ]; then
             echo "::warning::$tag er ikke annotert — teksten blir commit-meldingen"
           fi
-          # Taggen styrer både tittel og tekst, delt slik git deler den:
-          # første linje er emnet, resten er brødteksten. Skrives teksten
-          # her i stedet, kan tagg og utgivelse komme fra hverandre uten
-          # at noen ser det.
-          tittel=$(git tag -l --format='%(contents:subject)' "$tag")
-          test -n "$tittel" || tittel="tfm-sjekk $tag"
-          git tag -l --format='%(contents:body)' "$tag" > tekst.md
+          # Tittelen utledes av TAGGNAVNET, ikke av det jeg skrev i taggen.
+          # Den kan da ikke bli feil. Emnelinja styrte den før, og v0.7.0 fikk
+          # tittelen «Fast rute i oppsettet, og typeegenskaper leses» mens de
+          # seks før het «tfm-sjekk 0.6.2» og nedover. I utgivelseslista, der
+          # bare tittelen vises, var det den ene raden man ikke kunne lese
+          # versjonen av.
+          #
+          # Dette er andre gang dette steget har drevet på noe jeg måtte huske;
+          # forrige gang tok det tittelen fra commit-meldinga. Det utledede
+          # kan ingen glemme.
+          tittel="tfm-sjekk ${tag#v}"
+
+          # Emnelinja er ikke kastet — den blir overskriften i notatene, der
+          # den hører hjemme. Med mindre den allerede ER tittelen: de eldre
+          # taggene har «tfm-sjekk 0.6.2» som emne, og den skal ikke gjentas.
+          emne=$(git tag -l --format='%(contents:subject)' "$tag")
+          : > tekst.md
+          if [ -n "$emne" ] && [ "$emne" != "$tittel" ]; then
+            printf '## %s\n\n' "$emne" >> tekst.md
+          fi
+          git tag -l --format='%(contents:body)' "$tag" >> tekst.md
 
           cat >> tekst.md <<'SLUTT'
 
