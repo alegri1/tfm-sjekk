@@ -210,3 +210,78 @@ def test_et_forslag_som_peker_galt_kommer_ikke(tmp_path):
         les(tmp_path, "[elektro]\nkrev_plasering = false\n")
     assert "krev_plasering" in str(e.value)
     assert "krets_klasser" not in str(e.value)
+
+
+# --- En nøkkel som bare står feil, skal få vite hvor den hører hjemme ---
+#
+# Seksjonsinndelingen i TOML er usynlig når man skriver: en nøkkel under feil
+# overskrift ser ut som en nøkkel på riktig sted. Det er slik «ifc_klasser»
+# havnet inne i [pset] og ble lest som «pset.ifc_klasser».
+
+
+def test_toppnivanokkel_i_en_seksjon_peker_hjem(tmp_path):
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, '[pset]\nifc_klasser = ["IfcWall"]\n')
+    assert "toppnivå" in str(e.value)
+
+
+def test_nokkel_fra_en_annen_seksjon_peker_hjem(tmp_path):
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, "[elektro]\nkrev_plassering = false\n")
+    assert "[grammatikk]" in str(e.value)
+
+
+def test_enda_en_seksjon(tmp_path):
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, '[master]\ngyldige_verdier = ["300"]\n')
+    assert "[mmi]" in str(e.value)
+
+
+def test_nokkel_som_ikke_finnes_noe_sted_oppforer_seg_som_for(tmp_path):
+    """Låser at endringen ikke tar med seg noe den ikke skal."""
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, "[elektro]\nbanan = 1\n")
+    tekst = str(e.value)
+    assert "banan" in tekst
+    assert "hører hjemme" not in tekst
+
+
+def test_a_peke_hjem_gar_foran_a_foresla_noe_som_ligner(tmp_path):
+    """«krev_plassering» ligner ingenting i [elektro] etter at terskelen ble
+    hevet, men skal uansett aldri få en gjetning når svaret finnes."""
+    with pytest.raises(OppsettFeil) as e:
+        les(tmp_path, "[elektro]\nkrev_plassering = false\n")
+    assert "Mente du" not in str(e.value)
+
+
+def test_kartet_kan_ikke_bli_utdatert():
+    """Hvert felt i hver modell skal finnes i oppslaget.
+
+    Legger noen til en nøkkel uten at oppslaget følger med, feiler denne. Det
+    er hele poenget med å bygge kartet av model_fields framfor av en liste.
+    """
+    from pydantic import BaseModel
+
+    from tfm_sjekk.config import _hvor_horer_nokkelen_hjemme
+
+    for felt in Konfigurasjon.model_fields:
+        assert "toppnivå" in _hvor_horer_nokkelen_hjemme(felt), felt
+    for seksjon, spec in Konfigurasjon.model_fields.items():
+        annotasjon = spec.annotation
+        if isinstance(annotasjon, type) and issubclass(annotasjon, BaseModel):
+            for felt in annotasjon.model_fields:
+                assert f"[{seksjon}]" in _hvor_horer_nokkelen_hjemme(felt), f"{seksjon}.{felt}"
+
+
+def test_flere_steder_nevnes_alle():
+    """Finnes samme navn to steder, skal begge nevnes.
+
+    Å peke på det første i en vilkårlig rekkefølge er en gjetning forkledd som
+    et svar. Tilfellet finnes ikke i modellene i dag, så det prøves på
+    formuleringen direkte.
+    """
+    from tfm_sjekk.config import _som_sted
+
+    assert _som_sted(["toppnivå"]) == "på toppnivå"
+    assert _som_sted(["[mmi]"]) == "i [mmi]"
+    assert _som_sted(["[mmi]", "[elektro]"]) == "i [mmi] eller i [elektro]"

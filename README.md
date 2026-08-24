@@ -158,6 +158,16 @@ Feil i tfm-sjekk.toml:
   Mente du «foring_systemkoder»?
 ```
 
+Står nøkkelen riktig skrevet i feil seksjon, sier meldingen hvor den hører
+hjemme i stedet. Seksjonsinndelingen i TOML er usynlig når man skriver, og en
+nøkkel under feil overskrift ser ut som en nøkkel på riktig sted:
+
+```
+Feil i tfm-sjekk.toml:
+  Ukjent nøkkel «ifc_klasser» i [pset].
+  Den hører hjemme på toppnivå.
+```
+
 Det er samme regel som for en sti som peker feil. En forkastet nøkkel ville gitt
 en rapport laget med andre regler enn du ba om — og den ser like ren ut.
 

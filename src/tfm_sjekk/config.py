@@ -232,6 +232,47 @@ def _gyldige_nokler(sti: tuple) -> list[str]:
     return list(modell.model_fields)
 
 
+def _stedet(loc: tuple) -> str:
+    """Hvor nøkkelen faktisk sto, i samme form som kartet bruker."""
+    return "toppnivå" if len(loc) == 1 else f"[{'.'.join(str(x) for x in loc[:-1])}]"
+
+
+def _som_sted(steder: list[str]) -> str:
+    """«på toppnivå», «i [grammatikk]», «i [mmi] eller [elektro]».
+
+    Preposisjonen følger stedet: man er PÅ toppnivå og I en seksjon.
+    """
+    deler = [("på " if s == "toppnivå" else "i ") + s for s in steder]
+    if len(deler) == 1:
+        return deler[0]
+    return " eller ".join([", ".join(deler[:-1]), deler[-1]])
+
+
+def _hvor_horer_nokkelen_hjemme(nokkel: str) -> list[str]:
+    """Stedene et feltnavn er gyldig, som «toppnivå» eller «[grammatikk]».
+
+    Bygges av modellenes egne `model_fields`. En håndskrevet tabell ville drevet
+    fra modellen første gang noen la til et felt — samme grunn til at
+    `_gyldige_nokler` leser modellen framfor en liste.
+
+    Gir alle stedene, ikke det første. Finnes samme navn to steder, er det å
+    peke på ett av dem i en vilkårlig rekkefølge en gjetning forkledd som et
+    svar.
+    """
+    steder = []
+    if nokkel in Konfigurasjon.model_fields:
+        steder.append("toppnivå")
+    for seksjon, felt in Konfigurasjon.model_fields.items():
+        annotasjon = felt.annotation
+        if (
+            isinstance(annotasjon, type)
+            and issubclass(annotasjon, BaseModel)
+            and nokkel in annotasjon.model_fields
+        ):
+            steder.append(f"[{seksjon}]")
+    return steder
+
+
 def _ukjente_nokler(sti: Path, feil: ValidationError) -> str:
     """Pydantics feil oversatt til noe en BIM-koordinator kan handle på.
 
@@ -257,6 +298,14 @@ def _ukjente_nokler(sti: Path, feil: ValidationError) -> str:
         # → «systemtabell» gir 0.96, mens «krev_plasering» — som hører hjemme i
         # [grammatikk] — traff «krets_klasser» med 0.67. Et forslag som peker
         # galt sender brukeren av gårde i feil retning, og er verre enn ingen.
+        # Å peke hjem går foran å foreslå noe som ligner. Et identisk navn et
+        # annet sted er et svar; et lignende navn i samme seksjon er en
+        # gjetning, og en gjetning som ser ut som en opplysning sender brukeren
+        # til feil sted.
+        hjemme = [s for s in _hvor_horer_nokkelen_hjemme(nokkel) if s != _stedet(e["loc"])]
+        if hjemme:
+            linjer.append(f"  Den hører hjemme {_som_sted(hjemme)}.")
+            continue
         nære = difflib.get_close_matches(nokkel, _gyldige_nokler(e["loc"]), n=1, cutoff=0.85)
         if nære:
             linjer.append(f"  Mente du «{nære[0]}»?")
