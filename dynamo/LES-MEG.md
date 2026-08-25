@@ -671,6 +671,37 @@ svarte «oppsettet dekker modellene som de er», og `sjekk` gikk fra åtte
 K1-feil til null — de gjenværende funnene var de ekte: T1-spriket og
 MMI-avviket, som begge overlevde runden gjennom Revit.
 
+### Lenkeeksport tar IKKE med lenkenes egne parametre
+
+Prøvd 25. august 2026, og det kostet tre eksportrunder å finne.
+
+`File > Export > IFC` med «Export linked files as separate IFCs» gir én IFC per
+lenke, og geometrien kommer riktig ut. **Men TFM-parameteren i de lenkede
+modellene blir ikke med.**
+
+    Electrical.ifc    TFM11_Forekomst: 2426    <- vertsmodellen
+    HVAC.ifc          INGEN TFM                <- lenke
+    Plumbing.ifc      INGEN TFM                <- lenke
+
+`TFM` er en **prosjektparameter**, og prosjektparametre hører til ett dokument.
+Eksporten kjører i vertsmodellens kontekst, og der finnes ikke de lenkede
+modellenes egne parametre.
+
+Feilen er stille. Eksporten lykkes, filstørrelsene ser rimelige ut, og
+`tfm-sjekk` melder K1 på hvert objekt — altså nøyaktig som om modellene var
+umerket. Vi trodde først at merkingen ikke var lagret.
+
+**Slik ser du det:** eksporter én lenket modell ALENE og sammenlign. Fikk den
+TFM da, er det lenkeeksporten. Filstørrelsen sier det også — HVAC gikk fra
+9,2 til 10,7 MB med merkingen med.
+
+**Løsningen er å eksportere hver modell for seg.** Åpne `.rvt`-fila som
+vertsmodell og eksporter den alene, med kartleggingsfila i oppsettet. Da leses
+parameteren fra det dokumentet den bor i.
+
+Modellene som ikke bærer TFM — arkitekt, konstruksjon, tomt — kan gjerne komme
+fra lenkeeksporten. De har ingenting å miste.
+
 ### Relasjonene overlever ikke denne runden
 
 Ett funn kom til: K8 melder «fant 1 fordeling, men ingen kursgrupper». Talt

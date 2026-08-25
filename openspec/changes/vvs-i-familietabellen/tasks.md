@@ -52,12 +52,15 @@
 ## 5. Prøvd der det brukes
 
 - [x] 5.1 `uv run pytest` grønn, `ruff check` og `ruff format --check` rene
-- [ ] 5.2 **Til brukeren:** kjør grafen mot HVAC og Plumbing i Revit. Les
+- [x] 5.2 **Til brukeren:** kjør grafen mot HVAC og Plumbing i Revit. Les
       `OUT[1]`: `elementer_med_tfm` skal være lik `elementer`. Er den lavere,
       mangler tabellen familier
-- [ ] 5.3 **Til brukeren:** lagre modellene. Det er steget som ble glemt sist, og
+- [x] 5.3 **Til brukeren:** lagre modellene. Det er steget som ble glemt sist, og
       merkingen levde bare i Revit-økta
-- [ ] 5.4 **Til brukeren:** eksporter alle seks med kartleggingsfila
-- [ ] 5.5 Kjør federert. Ingen `4390`-koder i RIV-modellene — én slik er en
-      familie tabellen ikke dekker
-- [ ] 5.6 Les rapporten. Er de ekte funnene fortsatt det man ser først?
+- [x] 5.4 **Til brukeren:** eksporter alle seks med kartleggingsfila
+- [x] 5.5 Kjørt federert: 24 456 objekter, 47 s. Null `4390` i begge RIV-modellene.
+      Rørmodellen fikk 6038 med 3100 og 331 med 3600 — de siste er avtrekkskanaler,
+      og at de kodes som ventilasjon er riktig
+- [x] 5.6 Lest. 839 funn: RIE-ens 177 K8 og 662 K6 om delte luftsystemer mellom
+      HVAC og Plumbing. De 662 drukner de 177, men de er ekte — se proposal.md.
+      Prosjekteieren valgte å la dem stå

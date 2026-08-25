@@ -53,6 +53,34 @@ Overrullingen er delvis fiksjon, og det står i koden: hvilke 999 som havner i
 `komponent_lopenummer_siffer = 4`, som ville gitt prosjektet en grammatikk ingen
 andre bruker og skjult at grensen finnes.
 
+## Hva runden fant
+
+Kjørt 25. august 2026 mot seks ekte fagmodeller — 24 456 objekter, 47 sekunder.
+
+    RIE       177  K8 — elektroobjekt uten kursnummer
+    HVAC      331  K6 — duplikat
+    RIV-san   331  K6 — duplikat
+    ARK/RIB/Site   unntatt
+
+**De 662 K6-funnene er ekte, og de er det mest interessante i runden.**
+Rørmodellen inneholder 331 avtrekkskanaler, og de ligger i de samme
+`Mechanical Exhaust Air`-systemene som HVAC-modellens egne. **31 systemnavn er
+identiske i begge filene** — samme system, delt over to Revit-modeller.
+
+Ventilasjonsingeniøren tegnet hovedføringen, rørprosjekterende tegnet avtrekket
+fra våtrommene, og begge koblet til de samme luftsystemene. Ingen av modellene
+har en feil alene. Kollisjonen finnes bare på tvers, og bare et verktøy som
+leser alle filene sammen kan se den.
+
+Det er den ekte grunnen til å federere, demonstrert uten at noe er plantet.
+
+Merkingen skapte den ikke — den avslørte den. Tabellen koder etter hva objektet
+*er*, ikke hvilken fil det ligger i, og ga derfor rørmodellens kanaler
+systemkode 3600. Hadde de fått en sanitærkode, ville kollisjonen vært skjult.
+
+Funnet står. Å nummerere sammenhengende på tvers av modellene ville krevd at
+merkingen ser begge samtidig, og Dynamo ser bare det aktive dokumentet.
+
 ## Capabilities
 
 Ingen. Verktøyets oppførsel er uendret — `FAMILIER` er data i et skript som
