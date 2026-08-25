@@ -541,11 +541,43 @@ et signal om at tabellen mangler en familie. Alternativet — en reservekode per
 fag — ville gjort den manglende raden usynlig: objektet hadde fått en plausibel
 VVS-kode, og ingen hadde lett etter familien som manglet.
 
-**Undernummeret blir «00» for VVS.** `Circuit Number` finnes ikke på
-ventilasjons- og sanitærobjekter, så `IN[1]` gir null og `kursnummer()` svarer
-`UTEN_KURS`. Det er riktig og ikke en mangel: §4 tolker undernummeret som
-kurs-/sløyfenummer bare for NS 3451 kapittel 4 og 5. K8 rører ikke 3xx —
-`er_elektro` er «4» eller «5» — så et VVS-objekt uten kursnummer gir ingen funn.
+### For VVS: send systemnavnet inn på `IN[1]`, ikke kursnummeret
+
+`Circuit Number` finnes ikke på ventilasjons- og sanitærobjekter. Send
+**`System Name`** i stedet — `kursnummer()` trekker ut sifre av hva som helst
+den får, så det krever ingen kodeendring, bare en annen ledning.
+
+    Mechanical Supply Air 22   ->  undernummer «22»
+    Domestic Cold Water 30     ->  undernummer «30»
+
+Det gir undernummeret ekte innhold fra modellen framfor «00», og det er
+nødvendig av en annen grunn også: **komponentens løpenummer er tre siffer.**
+
+Uten inndeling havner alt i én bøtte. Snowdons rørmodell har 6369 objekter i
+omfanget, og med «00» overalt fikk 79 % av dem firesifret løpenummer — altså
+ugyldig grammatikk på noe som så ferdig merket ut. Elektromodellen slapp unna
+fordi ekte kursnumre ga den 64 bøtter.
+
+**Går en bøtte likevel over 999, ruller det over i systemets løpenummer:**
+
+    ++115080=3100.001.01-JSR999
+    ++115080=3100.002.01-JSR001
+
+Det er der formatet er ment å gå. Men **hvilke 999 som havner i «system 1» er
+vilkårlig** — det følger rekkefølgen inn, ikke noe i bygget. Les aldri `.002`
+som et ekte anlegg nummer to.
+
+Alternativet var å sette `komponent_lopenummer_siffer = 4`. Da hadde prosjektet
+hatt en grammatikk ingen andre bruker, og grensen ville vært skjult framfor
+håndtert.
+
+K8 rører uansett ikke 3xx — `er_elektro` er «4» eller «5» — så et VVS-objekt
+uten kursnummer gir ingen funn.
+
+**Sammendraget sier fortsatt «uten kursnummer».** Med systemnavn på `IN[1]` blir
+det tallet ~0 for VVS, og ordet er da upresist: objektene har systemnummer, ikke
+kursnummer. Skriptet vet hvilket fag hvert objekt er, men ikke hvilket fag
+*kjøringen* gjelder, så linja er skrevet for det vanlige tilfellet.
 
 ### Kursnummeret leses fra Revit, ikke fra IFC-en
 

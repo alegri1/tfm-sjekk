@@ -222,10 +222,15 @@ def kursnummer(rå):
 PLASSHOLDER = "SETT-PLASSERING"
 
 
-def tfm_id(plassering, systemkode, kurs, komponentkode, løpenummer):
+# Komponentens løpenummer er tre siffer. Er bøtta full, går det videre i
+# systemets løpenummer — det er der formatet er ment å gå.
+MAKS_LOPENUMMER = 999
+
+
+def tfm_id(plassering, systemkode, kurs, komponentkode, løpenummer, system_lopenummer=1):
     """Setter sammen ID-en slik grammatikken krever den."""
-    return "++{0}={1}.001.{2}-{3}{4:03d}".format(
-        plassering, systemkode, kurs, komponentkode, løpenummer
+    return "++{0}={1}.{2:03d}.{3}-{4}{5:03d}".format(
+        plassering, systemkode, system_lopenummer, kurs, komponentkode, løpenummer
     )
 
 
@@ -309,7 +314,15 @@ def merk(familienavn, kursnumre, plassering, reservenavn=None):
         kurs = kursnummer(rå)
         forekomst = (systemkode, kurs)
         tellere[forekomst] = tellere.get(forekomst, 0) + 1
-        ut.append(tfm_id(plassering, systemkode, kurs, komponentkode, tellere[forekomst]))
+        # Over 999 i samme bøtte ruller det over i systemets løpenummer.
+        # HVILKE 999 som havner i «system 1» er VILKÅRLIG — det følger
+        # rekkefølgen inn, ikke noe i bygget. Les aldri «.002» som et ekte
+        # anlegg nummer to. Alternativet var å utvide løpenummeret til fire
+        # siffer, og da hadde prosjektet hatt en grammatikk ingen andre bruker.
+        system_lop, komponent_lop = divmod(tellere[forekomst] - 1, MAKS_LOPENUMMER)
+        ut.append(
+            tfm_id(plassering, systemkode, kurs, komponentkode, komponent_lop + 1, system_lop + 1)
+        )
     return ut
 
 

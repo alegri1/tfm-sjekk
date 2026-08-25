@@ -155,6 +155,8 @@ FAMILIER: dict[str, tuple[str, str]] = {
     "Plumb_Floor Sink": ("3100", "JSS"),
     "Air Terminal-Vent Cap": ("3100", "JSS"),
 }
+MAKS_LOPENUMMER = 999
+
 STANDARD = ("4390", "QLX")
 
 
@@ -252,10 +254,13 @@ def legg_til_tfm(inn: Path, ut: Path) -> dict[str, int]:
             undernummer = "00"  # ikke på noen kurs — tavler og føringsveier
             tall["uten_kurs"] += 1
 
-        forekomst = f"{systemkode}.001.{undernummer}"
-        teller[forekomst] += 1
-        løpenummer = f"{teller[forekomst]:03d}"
-        verdi = f"++{PLASSERING}={forekomst}-{komponentkode}{løpenummer}"
+        # Samme overrulling som i dynamo/tfm_fra_revit.py, og av samme grunn:
+        # komponentens løpenummer er tre siffer, og bøtta tar 999.
+        boette = f"{systemkode}.{undernummer}"
+        teller[boette] += 1
+        system_lop, komponent_lop = divmod(teller[boette] - 1, MAKS_LOPENUMMER)
+        forekomst = f"{systemkode}.{system_lop + 1:03d}.{undernummer}"
+        verdi = f"++{PLASSERING}={forekomst}-{komponentkode}{komponent_lop + 1:03d}"
 
         # Tilsiktede feil, spredt tynt. En ekte modell er stort sett riktig
         # merket, og en testmodell der annethvert objekt er galt sier ingenting

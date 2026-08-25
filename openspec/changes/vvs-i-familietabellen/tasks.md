@@ -37,6 +37,18 @@
 - [x] 4.2 Si at undernummeret blir «00» for VVS, at det er riktig, og at K8 ikke
       rører 3xx
 
+## 4b. Løpenummeret ruller over (lagt til underveis)
+
+- [x] 4b.1 `tfm_id` tar systemets løpenummer i stedet for å hardkode `.001`
+- [x] 4b.2 `merk` regner `divmod(teller - 1, 999)` og ruller over
+- [x] 4b.3 Samme regel i `verktoy/legg_til_tfm.py`, som hardkodet `.001` likt
+- [x] 4b.4 Test: 999 → `.001`, 1000 → `.002.00-JVZ001`
+- [x] 4b.5 Test: alle ID-er parser etter overrulling, og ingen duplikater
+- [x] 4b.6 Test: elektro er uendret — `.001` overalt
+- [x] 4b.7 Prøvd mot de ekte modellene: 8959 ID-er, alle unike, null ugyldige
+- [x] 4b.8 `dynamo/LES-MEG.md`: `System Name` på `IN[1]`, og at overrullingen er
+      vilkårlig
+
 ## 5. Prøvd der det brukes
 
 - [x] 5.1 `uv run pytest` grønn, `ruff check` og `ruff format --check` rene

@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "dynamo"))
 
 from tfm_fra_revit import (
     FAMILIER,
+    MAKS_LOPENUMMER,
     PLASSHOLDER,
     STANDARD,
     familiekode,
@@ -420,3 +421,51 @@ def test_ukjent_familie_faar_fortsatt_standard():
     """
     assert familiekode("Noe Ingen Har Sett") == STANDARD
     assert STANDARD == ("4390", "QLX")
+
+
+# --- Over 999 i samme bøtte ---
+
+
+def test_lopenummeret_ruller_over_i_systemleddet():
+    """Komponentens løpenummer er tre siffer, og bøtta tar 999.
+
+    Funnet med Snowdons rørmodell: 6369 objekter i samme (systemkode, kurs), og
+    79 % av ID-ene fikk fire siffer — altså ugyldig grammatikk på noe som så
+    ferdig merket ut. Formatet har et sted å gå, og det er systemets løpenummer.
+    """
+    navn = ["Round Duct"] * (MAKS_LOPENUMMER + 2)
+    ut = merk(navn, [None] * len(navn), PLASSERING)
+
+    assert ut[MAKS_LOPENUMMER - 1].endswith(".001.00-JVZ999")
+    assert ut[MAKS_LOPENUMMER].endswith(".002.00-JVZ001")
+    assert ut[MAKS_LOPENUMMER + 1].endswith(".002.00-JVZ002")
+
+
+def test_alle_id_ene_parser_ogsaa_etter_overrulling():
+    navn = ["Round Duct"] * 2500
+    ut = merk(navn, [None] * len(navn), PLASSERING)
+
+    for verdi in ut:
+        parse(verdi, Konfigurasjon().grammatikk)
+
+
+def test_ingen_duplikater_over_grensen():
+    """K6 melder duplikate komponentforekomster. Overrullingen skal ikke lage noen."""
+    navn = ["Round Duct"] * 3500
+    ut = merk(navn, [None] * len(navn), PLASSERING)
+
+    assert len(set(ut)) == len(ut)
+
+
+def test_elektro_er_uendret_av_overrullingen():
+    """4- og 5-koder har aldri hatt en bøtte i nærheten av 999.
+
+    Snowdons elektromodell hadde 64 systemforekomster og 2426 objekter. Ryker
+    denne, har overrullingen begynt å slå inn der den ikke skal.
+    """
+    navn = ["Downlight", "Duplex Receptacle", "Conduit"] * 300
+    kurser = [str(i % 17) for i in range(len(navn))]
+
+    ut = merk(navn, kurser, PLASSERING)
+
+    assert all(".001." in verdi for verdi in ut)

@@ -28,6 +28,31 @@ lager, ikke en test vi kjører, og det er verdt å kalle det det.
   selv.
 - `dynamo/LES-MEG.md` sier at én tabell dekker alle fag, og hvorfor det virker.
 
+## Lagt til underveis: løpenummeret ruller over
+
+Funnet ved å kjøre merkingen mot de ekte modellene, ikke ved å lese koden.
+
+Komponentens løpenummer er tre siffer, og telleren står per (systemkode, kurs).
+VVS har ingen kurs, så alt havnet i én bøtte: **61 % av HVAC og 79 % av Plumbing
+fikk firesifret løpenummer** — ugyldig grammatikk på noe som så ferdig merket ut.
+Elektromodellen slapp unna fordi ekte kursnumre ga den 64 bøtter.
+
+To ting løser det, og bare den ene er kode:
+
+1. **`IN[1]` leser `System Name` for VVS.** Ingen kodeendring — `kursnummer()`
+   trekker ut sifre av hva som helst. Én ledning i Dynamo. Gir undernummeret ekte
+   innhold: «Mechanical Supply Air 22» → «22».
+2. **Over 999 ruller det over i systemets løpenummer.** `3100.001.01-JSR999`
+   etterfølges av `3100.002.01-JSR001`. Det er der formatet er ment å gå.
+
+Tatt med her og ikke som egen endring fordi VVS-tabellen er ubrukelig uten den —
+uten overrullingen er fire av fem merkede rør ugyldige.
+
+Overrullingen er delvis fiksjon, og det står i koden: hvilke 999 som havner i
+«system 1» følger rekkefølgen inn, ikke noe i bygget. Alternativet var
+`komponent_lopenummer_siffer = 4`, som ville gitt prosjektet en grammatikk ingen
+andre bruker og skjult at grensen finnes.
+
 ## Capabilities
 
 Ingen. Verktøyets oppførsel er uendret — `FAMILIER` er data i et skript som
