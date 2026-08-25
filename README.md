@@ -481,6 +481,44 @@ uendret, slik at et legitimt kjør på en arkitektmodell ikke stenger porten i C
 Meldingen nevner klassene fila faktisk inneholder, så den er nok til å rette
 `ifc_klasser`.
 
+### Omfang per fagmodell
+
+Meldingen over spør «skal denne fila sjekkes?». For en arkitektmodell er svaret
+ofte verken *utvid* eller *la være*, men **«ikke sjekk den for TFM — men ha den
+med»**. Arkitekten tegner armaturer og servanter for å vise rommet, og de skal
+ikke merkes av RIE.
+
+Det er ikke teoretisk. Kjørt mot Autodesks Snowdon Towers med fire fagmodeller
+ga arkitektmodellen 675 K1-funn på slikt utstyr, mot 177 ekte funn i
+elektromodellen. Rapporten var teknisk korrekt og ubrukelig som arbeidsliste.
+
+```toml
+[fagmodell."*Architectural*"]
+ifc_klasser = []
+```
+
+Tom liste betyr at fila ikke kontrolleres for TFM. Nøkkelen er et
+filnavnmønster; treffer flere samme fil, gjelder det lengste, og to like lange
+stopper kjøringen framfor å gjette. Unntaket står i utskriften:
+
+```
+ark.ifc   unntatt — kontrolleres ikke for TFM (7745 objekter lest)
+rie.ifc   1492 av 2439 objekter i omfanget
+```
+
+**En unntatt fil er ikke usynlig.** K3–K8 leser alle objekter med en TFM-verdi,
+uansett klasse, så K6 finner fortsatt duplikater på tvers av den og
+elektromodellen — som er hele grunnen til å federere. Bare K1 og dekningen
+følger omfanget.
+
+En fagmodell som er unntatt med vilje gir heller ingen advarsel om tom dekning.
+En advarsel som alltid står der, leses ikke.
+
+**Merk filnavnene ved lenket eksport.** Revit navngir lenkede IFC-er etter
+vertsmodellen, så arkitektfila kan hete
+`...Electrical-...Architectural.ifc` — og `"*Electrical*"` treffer da alle
+fagmodellene i eksporten.
+
 ## Hvordan verktøyet finner TFM-verdien
 
 Norske modeller er rotete, så verktøyet leter i tre trinn — i synkende styrke
