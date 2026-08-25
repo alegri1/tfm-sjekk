@@ -251,9 +251,12 @@ DEN EKTE RUNDEN
 Filene under er én sammenhengende kjede, ikke fem løse ting. De er resultatet
 av at hele veien er gått for første gang uten et eneste ledd som ikke var ekte.
 
-    Snowdon Towers Sample Electrical.rvt
+    Snowdon Towers Sample Electrical.rvt     (LIGGER IKKE HER)
         Autodesks eksempelmodell, merket med TFM av grafen under og lagret
         paa nytt fra Revit 2027 — den er altsaa ikke Autodesks lenger.
+        Revit-modellene er tatt ut av denne mappa: de er 300 MB, og en
+        demomappe skal kunne sendes. Kjeden under er den samme.
+
         Originalen og de seks soesterfilene lastes ned herfra:
         help.autodesk.com -> Revit -> Sample Project Files
 

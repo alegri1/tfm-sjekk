@@ -68,11 +68,15 @@ KOPIER = {
 # finnes fra før. En bygging som ryddet mappa ville tatt med seg det eneste i
 # den som ikke lot seg lage på nytt.
 FRA_REVIT = [
-    "Snowdon Towers Sample Electrical.rvt",
     "snowdon-tfm.ifc",
     "snowdon-eksport.ifc",
     "eksport.ifc",
 ]
+
+# «Snowdon Towers Sample Electrical.rvt» sto her til 25. august 2026. Den er
+# 39 MB, byggingen leser den aldri, og en demomappe er noe man sender til en
+# RIE — Revit-modellene hører hjemme et annet sted. Kjeden de inngår i står
+# fortsatt beskrevet i malen, med en linje om hvor filene ligger.
 
 # Blokkene i repoets tfm-sjekk.toml som byttes ut når mappa bygges. Begge er
 # kommentert ut der: malen er en oversikt over alle nøklene, ikke et oppsett.
