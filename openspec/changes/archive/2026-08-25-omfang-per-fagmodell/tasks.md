@@ -57,5 +57,5 @@
 - [x] 6.3 Plant ett duplikat mellom ARK og RIE og se at K6 melder det med begge
       filene navngitt. Uten denne prøven er kravet ubevist
 - [x] 6.4 Les rapporten. Er de 177 nå det første man ser?
-- [ ] 6.5 **Til brukeren:** åpne BCF-en i vieweren og se at emnene fortsatt
-      zoomer riktig når fire modeller er lastet
+- [x] 6.5 BCF-en åpnet i vieweren med alle fire modellene lastet, 2026-08-25.
+      Emnene zoomer riktig. Bekreftet av brukeren
