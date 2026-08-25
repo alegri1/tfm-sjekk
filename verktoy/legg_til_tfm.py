@@ -96,6 +96,64 @@ FAMILIER: dict[str, tuple[str, str]] = {
     "Wiring Pull Box": ("4360", "QLK"),
     # Tele og data
     "Data Outlet": ("5300", "QTD"),
+    # --- VVS ---
+    #
+    # Navnene er lest ut av Snowdon Towers' egne HVAC- og Plumbing-eksporter,
+    # ikke gjettet. En gjettet rad treffer ingenting, og da faller objektet til
+    # STANDARD — som er en ELEKTRO-kode. Et VVS-objekt merket 4390 er verre enn
+    # et umerket: det ser riktig ut.
+    #
+    # Luftbehandling: kanaler og deler
+    "Round Duct": ("3600", "JVZ"),
+    "Rectangular Duct": ("3600", "JVZ"),
+    "Flex Duct": ("3600", "JVZ"),
+    "Round Elbow": ("3600", "JVZ"),
+    "Round Endcap": ("3600", "JVZ"),
+    "Round Tee": ("3600", "JVZ"),
+    "Round Transition": ("3600", "JVZ"),
+    "Rectangular to Round Transition": ("3600", "JVZ"),
+    "Rectangular Elbow": ("3600", "JVZ"),
+    "Rectangular Endcap": ("3600", "JVZ"),
+    "Rectangular Tee": ("3600", "JVZ"),
+    # Luftbehandling: rister, ventiler og aggregat
+    "Supply Grille": ("3600", "JVT"),
+    "Return Grille": ("3600", "JVT"),
+    "Supply Diffuser": ("3600", "JVT"),
+    "Air Terminal-Supply Cap": ("3600", "JVT"),
+    "Air Terminal-Exhaust Cap": ("3600", "JVT"),
+    "HeatRecoveryUnit": ("3600", "JVA"),
+    # Sanitær: rør og deler
+    "Pipe Types": ("3100", "JSR"),
+    "Elbow - Generic": ("3100", "JSR"),
+    "Bend - PVC": ("3100", "JSR"),
+    "Tee - Generic": ("3100", "JSR"),
+    "Tee Sanitary": ("3100", "JSR"),
+    "Transition - Generic": ("3100", "JSR"),
+    "Reducer - PVC": ("3100", "JSR"),
+    "Plug - PVC": ("3100", "JSR"),
+    "Cap - Generic": ("3100", "JSR"),
+    # Sanitær: ventiler og måling
+    "Ball Valve": ("3100", "JSV"),
+    "Gate Valve": ("3100", "JSV"),
+    "Pressure Regulating Valve": ("3100", "JSV"),
+    "Water Meter Unit": ("3100", "JSV"),
+    # Sanitær: utstyr. «Sink» dekker ogsaa SinkConnection
+    "Sink": ("3100", "JSU"),
+    "Hand Sink": ("3100", "JSU"),
+    "Mop Sink": ("3100", "JSU"),
+    "MopSink": ("3100", "JSU"),
+    "Toilet": ("3100", "JSU"),
+    "WaterClosetConnection": ("3100", "JSU"),
+    "Shower": ("3100", "JSU"),
+    "Urinal": ("3100", "JSU"),
+    "WasherConnection": ("3100", "JSU"),
+    "Hose Bib": ("3100", "JSU"),
+    "Water Heater": ("3100", "JSA"),
+    # Sanitær: sluk, avløp og lufting
+    "Floor Drain": ("3100", "JSS"),
+    "Roof Drain": ("3100", "JSS"),
+    "Plumb_Floor Sink": ("3100", "JSS"),
+    "Air Terminal-Vent Cap": ("3100", "JSS"),
 }
 STANDARD = ("4390", "QLX")
 

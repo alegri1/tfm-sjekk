@@ -519,6 +519,34 @@ fortsatt, er det koblingen inn i `element` som er problemet.
 | `Asked to convert non-convertible types` på `FamilyType.Family` | Systemfamilier — kabelrør, kabelbroer, kanaler — er ikke familietyper. Riktig advarsel, ikke en feil du har gjort. Bruk `Family Name` i stedet, se steg 6. |
 | Verdiene kommer ikke ut i IFC-en | Kartleggingsfila mangler i eksportoppsettet, eller peker på et annet parameternavn. |
 
+### Én tabell dekker alle fag
+
+`FAMILIER` bærer både elektro og VVS. Det virker fordi navnene ikke kolliderer:
+«Round Duct» og «Downlight» deler ingen begynnelse, og `familiekode` treffer på
+begynnelsen av familienavnet. Grafen kan derfor kjøres mot hvilken som helst
+fagmodell uten å byttes.
+
+Navnene i VVS-delen er **lest ut av Snowdon Towers' egne HVAC- og
+Plumbing-eksporter**, ikke gjettet. Det er ikke pedanteri: en gjettet rad
+treffer ingenting, og da faller objektet til `STANDARD = ("4390", "QLX")` — en
+ELEKTRO-kode. Et VVS-objekt merket 4390 er verre enn et umerket, fordi det ser
+riktig ut.
+
+Målingen fanget en forskjell ingen ville gjettet: arkitektmodellen skriver
+`Mop Sink`, rørmodellen `MopSinkConnection`. Samme utstyr, to skrivemåter, og
+uten begge hadde ett objekt falt gjennom.
+
+**`STANDARD` er med vilje elektro, også nå.** En VVS-modell der noe får 4390 er
+et signal om at tabellen mangler en familie. Alternativet — en reservekode per
+fag — ville gjort den manglende raden usynlig: objektet hadde fått en plausibel
+VVS-kode, og ingen hadde lett etter familien som manglet.
+
+**Undernummeret blir «00» for VVS.** `Circuit Number` finnes ikke på
+ventilasjons- og sanitærobjekter, så `IN[1]` gir null og `kursnummer()` svarer
+`UTEN_KURS`. Det er riktig og ikke en mangel: §4 tolker undernummeret som
+kurs-/sløyfenummer bare for NS 3451 kapittel 4 og 5. K8 rører ikke 3xx —
+`er_elektro` er «4» eller «5» — så et VVS-objekt uten kursnummer gir ingen funn.
+
 ### Kursnummeret leses fra Revit, ikke fra IFC-en
 
 Kursen er det eneste leddet i ID-en som ikke kan utledes av objektet selv. I IFC

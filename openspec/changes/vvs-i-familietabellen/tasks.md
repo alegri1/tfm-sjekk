@@ -1,45 +1,45 @@
 ## 1. Familienavnene måles
 
-- [ ] 1.1 **Til brukeren:** last ned `Snowdon Towers Sample HVAC.rvt` (23 MB) og
+- [x] 1.1 **Til brukeren:** last ned `Snowdon Towers Sample HVAC.rvt` (23 MB) og
       `Snowdon Towers Sample Plumbing.rvt` (42 MB) til `Desktop\snowdon\`, slik at
       lenkene i Electrical-modellen løser seg
-- [ ] 1.2 **Til brukeren:** eksporter begge til IFC — umerket, standardoppsett
+- [x] 1.2 **Til brukeren:** eksporter begge til IFC — umerket, standardoppsett
       holder. Det er familienavnene vi er ute etter, ikke egenskaper
-- [ ] 1.3 Les familienavn og antall ut av de to IFC-ene, gruppert per IFC-klasse
-- [ ] 1.4 Sammenlign med sanitærfamiliene i arkitektmodellen. Er de samme
+- [x] 1.3 Les familienavn og antall ut av de to IFC-ene, gruppert per IFC-klasse
+- [x] 1.4 Sammenlign med sanitærfamiliene i arkitektmodellen. Er de samme
       familier brukt begge steder, skal de ha samme kode
 
 ## 2. Tabellen
 
-- [ ] 2.1 Nye rader i `FAMILIER` i `dynamo/tfm_fra_revit.py`, gruppert etter fag
+- [x] 2.1 Nye rader i `FAMILIER` i `dynamo/tfm_fra_revit.py`, gruppert etter fag
       med samme kommentarstil som de elektro
-- [ ] 2.2 Samme rader i `verktoy/legg_til_tfm.py`
-- [ ] 2.3 Kodene er funnet på (§8), og VVS-radene ligger under samme overskrift
+- [x] 2.2 Samme rader i `verktoy/legg_til_tfm.py`
+- [x] 2.3 Kodene er funnet på (§8), og VVS-radene ligger under samme overskrift
       som sier det — forbeholdet skal ikke kunne leses som elektro-bare
-- [ ] 2.4 Kjør `verktoy/oppdater-grafene.py`, ellers bærer `.dyn`-filene en
+- [x] 2.4 Kjør `verktoy/oppdater-grafene.py`, ellers bærer `.dyn`-filene en
       eldre kopi av skriptet
 
 ## 3. Tester
 
-- [ ] 3.1 `test_familietabellen_er_den_samme_som_i_injektoren` skal fortsatt være
+- [x] 3.1 `test_familietabellen_er_den_samme_som_i_injektoren` skal fortsatt være
       grønn — den fanger de nye radene av seg selv
-- [ ] 3.2 Ingen ny nøkkel skygger for en eksisterende. Testen finnes; sjekk at
+- [x] 3.2 Ingen ny nøkkel skygger for en eksisterende. Testen finnes; sjekk at
       den dekker de nye
-- [ ] 3.3 Ny test: hver VVS-familie i tabellen gir en 3xx-systemkode, og ingen
+- [x] 3.3 Ny test: hver VVS-familie i tabellen gir en 3xx-systemkode, og ingen
       elektro-familie gjør det
-- [ ] 3.4 Test: en familie som ikke står i tabellen får fortsatt `STANDARD`, og
+- [x] 3.4 Test: en familie som ikke står i tabellen får fortsatt `STANDARD`, og
       `STANDARD` er uendret
 
 ## 4. Dokumentasjonen
 
-- [ ] 4.1 `dynamo/LES-MEG.md`: én tabell dekker alle fag, og hvorfor det virker —
+- [x] 4.1 `dynamo/LES-MEG.md`: én tabell dekker alle fag, og hvorfor det virker —
       familienavnene kolliderer ikke på tvers av fag
-- [ ] 4.2 Si at undernummeret blir «00» for VVS, at det er riktig, og at K8 ikke
+- [x] 4.2 Si at undernummeret blir «00» for VVS, at det er riktig, og at K8 ikke
       rører 3xx
 
 ## 5. Prøvd der det brukes
 
-- [ ] 5.1 `uv run pytest` grønn, `ruff check` og `ruff format --check` rene
+- [x] 5.1 `uv run pytest` grønn, `ruff check` og `ruff format --check` rene
 - [ ] 5.2 **Til brukeren:** kjør grafen mot HVAC og Plumbing i Revit. Les
       `OUT[1]`: `elementer_med_tfm` skal være lik `elementer`. Er den lavere,
       mangler tabellen familier

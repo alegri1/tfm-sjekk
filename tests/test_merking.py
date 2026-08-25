@@ -378,3 +378,45 @@ def test_statistikken_teller_reservebruken():
 def test_reservebruk_nevnes_ikke_naar_den_ikke_skjer():
     tall = statistikk(["Downlight"], ["1"], merk(["Downlight"], ["1"], PLASSERING))
     assert not any("hentet navnet fra typen" in ln for ln in sammendrag(tall))
+
+
+# --- VVS i tabellen ---
+
+
+def test_vvs_familier_faar_tresifret_systemkode():
+    """NS 3451 kapittel 3 er VVS. Kommer en VVS-familie ut med 4xxx, er den
+    havnet i elektro — og det ser riktig ut i en rapport.
+    """
+    vvs = ["Round Duct", "Supply Grille", "Pipe Types", "Ball Valve", "Toilet", "Floor Drain"]
+
+    for navn in vvs:
+        systemkode, _ = familiekode(navn)
+        assert systemkode.startswith("3"), f"«{navn}» ga {systemkode}, ventet 3xxx"
+
+
+def test_elektrofamilier_er_urort_av_vvs_radene():
+    for navn in ["Downlight", "Duplex Receptacle", "Conduit", "Data Outlet", "Switchboard"]:
+        systemkode, _ = familiekode(navn)
+        assert systemkode[:1] in ("4", "5"), f"«{navn}» ga {systemkode}"
+
+
+def test_de_to_skrivemaatene_av_mop_sink_gir_samme_kode():
+    """Arkitektmodellen skriver «Mop Sink», rørmodellen «MopSinkConnection».
+
+    Fanget ved å måle familienavnene i den ekte eksporten. En gjettet tabell
+    hadde bare hatt den ene, og det ene objektet hadde falt til STANDARD — som
+    er en elektro-kode.
+    """
+    assert familiekode("Mop Sink_Rect") == familiekode("MopSinkConnection")
+    assert familiekode("MopSinkConnection")[0].startswith("3")
+
+
+def test_ukjent_familie_faar_fortsatt_standard():
+    """STANDARD er bevisst elektro, også nå som tabellen dekker VVS.
+
+    En VVS-modell der noe faller til 4390 er et signal om at tabellen mangler
+    en familie. Koden ser gal ut i rapporten, og det er riktig — den er gal.
+    En reservekode per fag ville gjort den manglende raden usynlig.
+    """
+    assert familiekode("Noe Ingen Har Sett") == STANDARD
+    assert STANDARD == ("4390", "QLX")
