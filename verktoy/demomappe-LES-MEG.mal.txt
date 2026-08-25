@@ -252,7 +252,10 @@ Filene under er én sammenhengende kjede, ikke fem løse ting. De er resultatet
 av at hele veien er gått for første gang uten et eneste ledd som ikke var ekte.
 
     Snowdon Towers Sample Electrical.rvt
-        Autodesks eksempelmodell. Utgangspunktet.
+        Autodesks eksempelmodell, merket med TFM av grafen under og lagret
+        paa nytt fra Revit 2027 — den er altsaa ikke Autodesks lenger.
+        Originalen og de seks soesterfilene lastes ned herfra:
+        help.autodesk.com -> Revit -> Sample Project Files
 
     tfm-sjekk-tfm-fra-revit.dyn
         Dynamo-grafen som merket den. Leser familienavn og kursnummer av

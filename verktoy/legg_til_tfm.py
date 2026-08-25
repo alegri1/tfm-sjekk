@@ -8,7 +8,8 @@ porter og 448 systemer med kursnumre som navn — og den avslører ting en
 håndlaget modell aldri kan.
 
 Modellen som brukes er Autodesks «Snowdon Towers Sample Electrical», eksportert
-fra Revit. Den har ingen TFM fra før. Dette skriptet skriver merking inn i den,
+fra Revit. Den har ingen TFM fra før. Hvor den lastes ned står i
+`dynamo/LES-MEG.md` under «Modellen: hvor den kommer fra». Dette skriptet skriver merking inn i den,
 utledet av strukturen som allerede er der:
 
     plassering      ett byggnummer for hele modellen

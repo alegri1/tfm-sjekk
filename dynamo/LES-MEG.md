@@ -254,6 +254,35 @@ IFC-eksporten.
 den bygger en fikstur av en fil. Denne skriver inn i en ekte modell, og det
 skiller seg. Det trengs heller ikke: en ekte modell har sine egne hull.
 
+### Modellen: hvor den kommer fra
+
+Snowdon Towers er Autodesks eget eksempelprosjekt, levert med Revit siden 2024.
+Et blandet bygg på en ekte tomt i Brownsville, Pennsylvania, med sju filer som
+er lenket til hverandre.
+
+Filene lastes ned herfra — én lenke per fagmodell, ikke ett arkiv:
+
+<https://help.autodesk.com/view/RVT/2026/ENU/?guid=GUID-61EF2F22-3A1F-4317-B925-1E85F138BE88>
+
+    Snowdon Towers Sample Electrical.rvt        RIE — den vi merker
+    Snowdon Towers Sample Architectural.rvt     ARK
+    Snowdon Towers Sample Structural.rvt        RIB
+    Snowdon Towers Sample Site.rvt              tomt og terreng
+    Snowdon Towers Sample HVAC.rvt              RIV, ventilasjon
+    Snowdon Towers Sample Plumbing.rvt          RIV, sanitær
+    Snowdon Towers Sample Facades.rvt           fasader
+
+**`.rvt`-fila i demomappa er ikke Autodesks lenger.** Den er Electrical-fila
+merket med TFM av grafen under, og lagret på nytt fra Revit 2027. Den er
+1,8 MB mindre enn nedlastingen, og forskjellen er ikke merkingen alene — en
+lagring fra en nyere Revit skriver fila om. Skal du starte fra bunnen, last ned
+på nytt framfor å bruke den i demomappa.
+
+**Navnene har mellomrom, ikke understrek.** Revit slår opp lenker på filnavn, og
+en fil som heter `Snowdon_Towers_Sample_Architectural.rvt` blir stående med rød
+X i `Manage Links` selv om den ligger rett ved siden av. Enten døp om, eller
+pek på hver enkelt med `Reload From`.
+
 ### Kjørt mot Snowdon Towers
 
 Hele veien er gått i Revit 2027 på Autodesks `Snowdon Towers Sample Electrical
