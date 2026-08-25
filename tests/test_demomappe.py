@@ -25,12 +25,31 @@ from lag_demomappe import (
     MAL,
     Byggefeil,
     kopier_kildene,
+    lag_modellene,
     sjekk_revitfilene,
     skriv_les_meg,
     skriv_oppsettet,
 )
 
 ROT = Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session", autouse=True)
+def modellene_finnes():
+    """De halve kildene i KOPIER er GENERERTE og gitignorerte.
+
+    `demo-*.ifc`, `avveie.ifc`, `blindsone.ifc`, `tidligfase.ifc` og
+    `foringsvei.ifc` finnes på maskinen til den som har kjørt generatoren, og
+    aldri i en fersk klone. Uten dette gikk testene her grønt hos meg og røk på
+    alle tre plattformene i CI — samme feil som `.gitignore` som skjulte hele
+    `rapport/`-pakken, og av samme grunn: tilstand på min disk.
+
+    Byggingen kaller den samme funksjonen, så fiksturen prøver den også — og
+    den er da det eneste som knytter KOPIER-tabellen til at filene faktisk
+    lages. En skrivefeil i et av navnene ville ellers først vist seg i en ekte
+    bygging.
+    """
+    lag_modellene()
 
 
 def mappe_med_revitfiler(tmp_path: Path) -> Path:
