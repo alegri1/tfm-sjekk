@@ -664,6 +664,12 @@ Koblingsgrafen følger samme regel: portene i IFC leses i `loader.py` og legges
 igjen der som `IfcObjekt.tilkoblet` — en liste med GlobalId-er. Kontrollene ser
 en graf av rene strenger og har aldri hørt om `IfcDistributionPort`.
 
+`verktoy/` er ting man kjører, ikke noe som pakkes: `lag_demomappe.py` bygger
+demomappa, `oppdater-grafene.py` limer Dynamo-skriptene inn i `.dyn`-filene,
+`legg_til_tfm.py` merker en ekte IFC-eksport til bruk som testmodell, og
+`kjor-ci-steg.sh` kjører ett steg fra en GitHub-workflow lokalt, med GitHubs
+egne flagg.
+
 Full spesifikasjon: [`specification/tfm-sjekk-spesifikasjon.md`](specification/tfm-sjekk-spesifikasjon.md).
 Paragrafhenvisninger i koden (§4, §8, …) peker dit. Den er grunnlaget og endres
 ikke løpende; `openspec/specs/` beskriver oppførselen verktøyet faktisk har, og
@@ -696,6 +702,24 @@ gang, før første tag:
 
 `workflow_dispatch` kjører bygg og pakkesjekk uten å publisere, så kjeden kan
 prøves før du binder deg til et versjonsnummer.
+
+### Etter taggen: demomappa
+
+Demomappa er den som deles med noen som ikke har repoet. Den er en **utdata**,
+ikke et sted man redigerer:
+
+```bash
+uv run python verktoy/lag_demomappe.py --mappe <sti> --versjon 0.7.0
+```
+
+Modellene genereres, tabellene og grafene kopieres, binæren hentes fra
+utgivelsen, og **hvert tall i `LES-MEG.txt` måles ved å kjøre kommandoen
+dokumentet viser** — med binæren i mappa, ikke med koden i repoet. Et tall som
+ikke ble målt stopper skrivingen framfor å havne i teksten.
+
+Byggingen tar noen minutter og rører ikke filene fra Revit-runden; de kan ikke
+lages på nytt av et skript. Til slutt må mappa åpnes av et menneske: en mappe
+som ble bygget uten feilmelding er ikke det samme som en mappe som virker.
 
 ## Hvem som står bak
 

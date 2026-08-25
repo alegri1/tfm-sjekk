@@ -50,6 +50,6 @@
       ligger der nå. Alt som avviker skal kunne forklares
 - [x] 6.3 Kjør hver kommando i den nye `LES-MEG.txt` og sammenlign med tallet
       den lover — den prøven som fant de tre driftene
-- [ ] 6.4 **Til brukeren:** åpne `LES-MEG.txt` i Notisblokk, dobbeltklikk
-      `kjor.cmd`, og importer BCF-en i en viewer. En mappe som ble bygget uten
-      feilmelding er ikke det samme som en mappe som virker
+- [x] 6.4 Åpnet av brukeren 2026-08-25: `LES-MEG.txt` i Notisblokk, `kjor.cmd`
+      ved dobbeltklikk, og BCF-en i vieweren. Alt virker. En mappe som ble
+      bygget uten feilmelding er ikke det samme som en mappe som virker
