@@ -1,0 +1,393 @@
+TFM-SJEKK {versjon} — DEMOMAPPE
+===========================
+
+Binæren er bygget av GitHub fra taggen v{versjon}, og prøvd utenfor
+prosjektmappa før den ble lagt her. Samme versjon som
+«pipx install tfm-sjekk» gir.
+
+Hentet fra utgivelsen, som ligger permanent på
+github.com/alegri1/tfm-sjekk/releases/latest.
+
+Kommandoene under er for PowerShell. Åpne PowerShell her:
+shift + høyreklikk i mappa -> "Åpne PowerShell-vindu her".
+
+Merk «.\» foran exe-en. PowerShell kjører ikke programmer fra
+gjeldende mappe uten den.
+
+
+TIL VIEWEREN (BIMcollab ZOOM, Solibri, Catenda)
+-----------------------------------------------
+    Modell:  demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc
+    Saker:   rapport\funn.bcfzip
+
+    Last inn de tre modellene, importer BCF-en, og dobbeltklikk et emne.
+    Kameraet står fire meter fra objektet.
+
+    De to emnene uten viewpoint er K7-funn om oppføringer i mastera som
+    ikke er modellert. De peker ikke på et objekt, så det er ingenting å
+    zoome til.
+
+    Får du «None of the viewpoint components are found in your project»,
+    er modellene i vieweren en eldre generasjon enn BCF-en. Last dem inn
+    på nytt. Fra og med denne utgaven har objektene fast identitet, så
+    det skal ikke kunne skje igjen — men en modell lastet inn før det,
+    har fortsatt de gamle ID-ene.
+
+    HVILKEN UTGAVE ER BCF-EN LAGET AV? Se «Author» eller «Created by» på
+    et emne i vieweren. Der står «tfm-sjekk {versjon}». En rapport kan være
+    eldre enn verktøyet uten at noe annet røper det: en BCF laget før
+    0.6.1 har kamera i modellens egen enhet, og i en fot-modell havner
+    det 969 kilometer unna. GUID-ene stemmer, emnene åpner seg, og
+    vieweren har ingen grunn til å si fra.
+
+    Er tallet lavere enn exe-en i denne mappa, kjør på nytt.
+
+
+TIL RAPPORTEN PÅ SKJERM
+-----------------------
+    rapport\rapport.html    {demo_funn} funn, tre fagmodeller, dekning øverst
+    rapport\funn.xlsx       samme, til Excel
+
+    Begge er ferdig kjørt. Du trenger ikke kjøre noe for å vise dem.
+
+
+KOMMANDOENE
+-----------
+Hver kommando står på én linje. Kopier hele linja.
+
+  Hvilke kontroller finnes:
+
+    .\tfm-sjekk.exe kontroller
+
+  Full kjøring over tre fagmodeller (den som ga rapport\):
+
+    dobbeltklikk kjor.cmd
+
+  NYTT I {versjon}. Modellene og rapportmappa står i tfm-sjekk.toml, så
+  filnavnene og --ut trengs ikke:
+
+    modeller = ["demo-rie.ifc", "demo-riv.ifc", "demo-elektro.ifc"]
+    ut = "rapport"
+
+  Et mønster som «eksport/*.ifc» virker også — da skal en ny fagmodell
+  bare legges i mappa. Et mønster som ikke treffer NOEN fil stopper
+  kjøringen med exit 2: en tom rapport ser ut som en modell uten feil,
+  og ruten skrives én gang og leses aldri igjen.
+
+  Filer du skriver på kommandolinja vinner over «modeller», og --ut
+  vinner over «ut». Alle kommandoene under virker derfor som før.
+
+  Tabellene står i kjor.cmd og IKKE i tfm-sjekk.toml. Denne mappa er
+  ikke ett prosjekt, den er flere uavhengige demoer, og noen av dem
+  skal med vilje kjøre uten tabellene — snowdon-tfm.ifc er den
+  viktigste: med FIKTIV-tabellene gir den {snowdon_med_tabeller} funn i stedet
+  for {snowdon_funn}. I et ekte prosjekt hører de hjemme i oppsettet.
+
+  Den samme kjøringen skrevet ut:
+
+    .\tfm-sjekk.exe sjekk demo-rie.ifc demo-riv.ifc demo-elektro.ifc --systemtabell FIKTIV-systemkoder.csv --komponenttabell FIKTIV-komponentkoder.csv --master FIKTIV-tfm-master.csv --ut rapport
+
+  Oppsettrunden — verktøyet foreslår sin egen konfigurasjon:
+
+    .\tfm-sjekk.exe sjekk avveie.ifc --ut a1
+        -> {avveie_for} objekter i omfanget
+
+    .\tfm-sjekk.exe oppsett avveie.ifc --ut forslag.toml
+    .\tfm-sjekk.exe sjekk avveie.ifc --config forslag.toml --ut a2
+        -> {avveie_etter} objekter i omfanget
+
+  Grensen for hva verktøyet ser:
+
+    .\tfm-sjekk.exe oppsett blindsone.ifc
+        -> fant ingen TFM-verdier å utlede noe av
+
+    .\tfm-sjekk.exe sjekk blindsone.ifc --ut bs
+        -> {blindsone_funn} K1-feil på en modell som er merket helt riktig
+
+  Én nøkkel som avgjør om rapporten er brukbar — begge veier:
+
+    .\tfm-sjekk.exe sjekk tidligfase.ifc --ut tf1
+        -> {tidligfase_for} funn, alle om plassering som ikke er bestemt ennå
+
+    .\tfm-sjekk.exe sjekk tidligfase.ifc --config tidligfase.toml --ut tf2
+        -> {tidligfase_etter} funn. De ekte feilene lå under dem.
+
+    .\tfm-sjekk.exe sjekk foringsvei.ifc --ut fv1
+        -> {foringsvei_for} K8-funn. Det ene er en koblingsboks som IKKE skulle vært
+           krevd kursnummer — TFM-en sier føringsvei, IFC-klassen sier
+           ingenting, og K8 tror på klassen.
+
+    .\tfm-sjekk.exe sjekk foringsvei.ifc --config foringsvei.toml --ut fv2
+        -> {foringsvei_etter} funn, det ekte
+
+
+  Vil du dele en lang kommando over flere linjer, er fortsettelses-
+  tegnet i PowerShell backtick (`), ikke ^ som i cmd:
+
+    .\tfm-sjekk.exe sjekk demo-rie.ifc `
+        --systemtabell FIKTIV-systemkoder.csv `
+        --master FIKTIV-tfm-master.csv `
+        --ut rapport
+
+
+EXIT-KODER
+----------
+    0 = ingen feil, 1 = minst én feil. Advarsler og info teller ikke.
+    2 = noe er galt med selve kjøringen — se under.
+    I PowerShell: skriv  $LASTEXITCODE  rett etter kjøringen.
+
+    Det er dette som gjør verktøyet kjørbart som port i en
+    leveranseprosess.
+
+
+REDIGERER DU TFM-SJEKK.TOML: SKRIVEFEIL STOPPER KJØRINGEN
+---------------------------------------------------------
+Fra og med 0.6.0 gir en nøkkel verktøyet ikke kjenner exit 2 og ingen rapport:
+
+    Feil i tfm-sjekk.toml:
+      Ukjent nøkkel «foring_systemkode» i [elektro].
+      Mente du «foring_systemkoder»?
+
+Før ble den forkastet i stillhet, og du fikk en rapport laget med andre regler
+enn du ba om — som så nøyaktig like ren ut som en riktig. Det gjaldt også en
+gyldig nøkkel i feil seksjon: i TOML hører en nøkkel til seksjonen over den.
+
+Får du meldingen på en fil du ikke har rørt, er verktøyet eldre enn fila.
+
+
+DE TO DYNAMO-GRAFENE
+--------------------
+    tfm-sjekk-tfm-til-revit.dyn   funnene TILBAKE til Revit
+    tfm-sjekk-tfm-fra-revit.dyn   merkingen INN i en umerket modell
+
+Den første leser funn.csv og skriver avviksteksten inn i en parameter på hvert
+Revit-element. Da får du en schedule som tømmer seg selv etter hvert som du
+retter. Den andre merker en modell som ikke har TFM fra før, av familienavnet
+og kursnummeret modellen allerede bærer.
+
+Python-skriptet ligger inne i grafen, så du trenger ingen andre filer.
+Laget i Dynamo 4.1.1 under Revit 2027, med motoren PythonNet3. Fra 0.7.0
+ligger begge i repoet under dynamo\, og de er samme generasjon som denne
+mappa.
+
+GRAFENE LEVERES MED TO PLASSHOLDERE. Begge feiler høylytt om du glemmer dem,
+og det er med vilje — en ekte verdi som ser riktig ut er farligere enn en gal.
+
+    til-revit    File Path-noden      C:\prosjekt\rapport\funn.csv
+                 -> skriv inn din egen. Vil du bruke rapporten i denne
+                    mappa, er det stien til rapport\funn.csv.
+
+    fra-revit    Code Block, IN[2]    "SETT-PLASSERING";
+                 -> skriv inn prosjektets plasseringskode. Grafen nekter
+                    å merke noe før du har gjort det.
+
+FOR AT TIL-REVIT SKAL VIRKE MÅ TRE TING STEMME:
+
+  1. Parameteren TFM_Avvik må finnes i Revit-modellen.
+     Manage > Project Parameters > Add
+         Name                TFM_Avvik
+         Type of Parameter   Text
+         Instance / Type     Instance      <- ikke Type
+         Categories          den kategorien objektene har
+
+  2. Stien til funn.csv i File Path-noden må endres. Se plassholderen over.
+
+  3. Parameternavnet må stemme med modellen din.
+     Grafen leter etter «TFM11_Forekomst.TFM». Det er navnet Revit gir
+     egenskapen etter en IFC-import. I en modell der TFM er en vanlig delt
+     parameter heter den trolig bare «TFM».
+
+     Finn navnet med en Python-node, ett element som IN[0]:
+         OUT = sorted(p.Name for p in IN[0].Parameters)
+
+LES TALLENE FØR DU STOLER PÅ RESULTATET
+Grafen gir to ting ut. Indeks 0 er tekstene, indeks 1 er tallene. En kobling
+som treffer null elementer ser i modellen NØYAKTIG ut som en modell uten
+avvik — begge gir tomme felter. Tallene er det eneste som skiller dem:
+
+    elementer_med_tfm   0    -> parameternavnet er feil (punkt 3)
+    elementer           0    -> feil kategori, eller feil modell er aktiv
+    nokkel_fra               -> «tfm-kolonnen» er normalt
+
+En fyldigere gjennomgang, for deg som er ny i Revit og Dynamo, ligger i
+repoet under dynamo/LES-MEG.md.
+
+
+ALT SOM LIGGER HER
+------------------
+    demo-rie.ifc, demo-riv.ifc, demo-elektro.ifc
+        kontrollene K1-K9 og T1, {demo_funn} funn til sammen
+
+    kjor.cmd         den faste ruten — dobbeltklikk, ingenting å skrive
+    tfm-sjekk.toml   oppsettet — leses av seg selv når du står her
+
+    tidligfase.ifc   merking uten plassering
+    tidligfase.toml    {tidligfase_for} K2 uten, {tidligfase_etter} K6 med. De første
+                       prosjektet ikke har tatt stilling til ennå, og de
+                       drukner de to ekte K6-ene under.
+
+    foringsvei.ifc   koblingsbokser som ikke fikk en føringsvei-klasse
+    foringsvei.toml    {foringsvei_for} K8 uten, {foringsvei_etter} med. TFM-en sier føringsvei, IFC-
+                       klassen sier ingenting, og K8 trodde på klassen.
+                       Koden i fila er FIKTIV — se §8.
+
+    avveie.ifc       verdier utenfor oppsettet
+    blindsone.ifc    verdier verktøyet ikke finner i det hele tatt
+
+    eksport.ifc      IKKE en demomodell — se under
+    snowdon-tfm.ifc  en ekte modell, {snowdon_objekter} objekter — se under
+
+    tfm-sjekk-tfm-til-revit.dyn, tfm-sjekk-tfm-fra-revit.dyn
+                     Dynamo-grafene — se over
+
+MERK: --config BYTTER UT HELE OPPSETTET, det slås ikke sammen med
+tfm-sjekk.toml. Kjører du med tidligfase.toml eller foringsvei.toml, er
+tabellene og mastera fra kjor.cmd ikke med, og K3, K5 og K7 hopper over.
+Det er derfor tallene over er lavere enn du kanskje venter.
+
+
+DEN EKTE RUNDEN
+---------------
+Filene under er én sammenhengende kjede, ikke fem løse ting. De er resultatet
+av at hele veien er gått for første gang uten et eneste ledd som ikke var ekte.
+
+    Snowdon Towers Sample Electrical.rvt
+        Autodesks eksempelmodell. Utgangspunktet.
+
+    tfm-sjekk-tfm-fra-revit.dyn
+        Dynamo-grafen som merket den. Leser familienavn og kursnummer av
+        modellen selv og skriver TFM-ID-en i parameteren «TFM».
+        2426 elementer, ekte kursnumre.
+
+    snowdon-eksport.ifc
+        Modellen eksportert til IFC med kartleggingsfila i eksportoppsettet.
+
+    ut-snowdon\
+        Det tfm-sjekk fant: {snowdon_eksport_funn} funn, ALLE K8 — objekter som ikke ligger på
+        noen kurs. Null K1, K2 og K6: merkingen er ren, og hvert funn er et
+        ekte hull i Autodesks modell. Ingen av dem er lagt inn med vilje.
+
+        ÅPNE funn.bcfzip I EN VIEWER OG DOBBELTKLIKK ET EMNE. Modellen
+        skal stå i bildet med objektet valgt. Gjorde den ikke det før:
+        modellen er i fot, BCF krever meter, og kameraet havnet 969
+        kilometer unna. Nå regnes posisjonen om, og kameraet står 4 meter
+        fra objektet — nært nok til å se hva funnet gjelder, langt nok til
+        at rommet rundt er med.
+
+    tfm-sjekk-tfm-til-revit.dyn
+        Grafen som skrev de {snowdon_eksport_funn} funnene tilbake i parameteren
+        «TFM_Avvik». Alle traff elementet sitt; ingen falt ut.
+
+I Revit ligger arbeidslista som en Multi-Category-schedule filtrert på at
+TFM_Avvik ikke er tom. Rett et objekt, kjør runden om igjen, og raden
+forsvinner.
+
+Rekkefølgen om du vil gjøre det selv står i repoet under dynamo/LES-MEG.md.
+
+
+EKSPORT.IFC: KARTLEGGINGSFILA VIRKER
+------------------------------------
+En ekte IFC-eksport fra Revit 2027, av en modell der alle åtte objektene var
+TFM-merket — eksportert MED kartleggingsfila revit/TFM-egenskapssett.txt lagt
+inn i eksportoppsettet.
+
+Verdiene kom med, i egenskapssett med nøyaktig de navnene verktøyet leter etter:
+
+    [TFM11_Forekomst]  TFM        8 objekter
+    [TFM11_Type]       TFMType    2 objekter
+    [MMI]              MMI        8 objekter
+
+Kjør verktøyet på den:
+
+    .\tfm-sjekk.exe sjekk eksport.ifc --ut ut-eksport
+
+Du får {eksport_feil} funn: T1-spriket mellom TFM-ID-en og typefeltet, som
+overlevde runden gjennom Revit. Pluss {eksport_info} info-linjer, den ene om at
+kursgrupperingen mangler — se under.
+
+DET SAMME UTEN KARTLEGGINGSFILA
+Med Revits standardoppsett kom det NULL TFM-verdier ut. Fila inneholdt da bare
+Pset_DistributionFlowElementCommon og Pset_QuantityTakeOff, og verktøyet meldte
+åtte K1-feil på åtte korrekt merkede objekter.
+
+Det er verdt å vite for ethvert prosjekt som skal ta verktøyet i bruk: uten
+kartleggingsfila i eksportoppsettet er det ingen TFM i IFC-en, og verktøyet ser
+ut som det er ødelagt.
+
+    File > Export > IFC > Edit setup > fanen «Parameter Mapping»
+    kryss av «Export user defined property sets»
+    filvalget dukker opp ETTER avkryssingen — pek på fila der
+
+KURSGRUPPERINGEN KOM IKKE MED
+Objektene og TFM-verdiene overlevde runden. Strukturen mellom dem gjorde ikke:
+kurser, grupper, porter og koblinger ble alle borte. Derfor melder K8 «fant 1
+fordeling, men ingen kursgrupper».
+
+Tapet skjer ved import, ikke ved eksport: objektene kom inn i Revit som Generic
+Models, og en Generic Model kan ikke ligge på en kurs. Om en ekte Revit-modell
+med virkelige elektriske kurser eksporterer dem, vet vi ikke.
+
+
+
+SNOWDON-TFM.IFC: EN EKTE MODELL, IKKE EN FIKSTUR
+------------------------------------------------
+Autodesks eksempelmodell «Snowdon Towers Sample Electrical Solar», eksportert
+fra Revit og merket med TFM i ettertid. {snowdon_objekter} objekter og 45 familier. Kursnumrene
+er ekte: de er lest av navnene Revit selv ga hver elektriske kurs.
+
+De fem modellene over er laget av meg, og de har den strukturen jeg forestilte
+meg. Denne har ikke det. Det er hele grunnen til at den finnes.
+
+Kjør den UTEN kodetabellene:
+
+    .\tfm-sjekk.exe sjekk snowdon-tfm.ifc --ut ut-snowdon
+
+Du får {snowdon_funn} funn:
+
+{snowdon_fordeling}
+
+De {snowdon_tilsiktet} første er lagt inn med vilje da modellen ble merket. De
+{snowdon_ekte} andre er ekte, og de fordeler seg på {snowdon_klasser} — utstyr som
+virkelig mangler kursnummer. Ingen kabelrør, og det er nytt: før v0.4.0 ga
+den samme modellen 1029 funn, hvorav 1018 var rør og bend som ble krevd
+kursnummer de ikke kan ha.
+
+TAR DU MED FIKTIV-TABELLENE FÅR DU {snowdon_med_tabeller}
+Nesten alle er K3, K5 og K7 som sier «finnes ikke i tabellen». Det er et riktig
+svar på et meningsløst spørsmål: FIKTIV-tabellene er små demotabeller laget for
+de fem modellene over, og de kjenner ikke Snowdons koder. Mot en ekte modell
+trenger du prosjektets egne tabeller.
+
+snowdon-rapport\ er {snowdon_funn}-kjøringen, lagret til sammenligning.
+
+Merk forskjellen på denne og ut-snowdon\: her er modellen merket av
+injektoren i repoet, som legger inn noen feil med vilje. I den ekte runden
+er den merket av Dynamo-grafen, som ikke gjør det.
+
+
+SPØRSMÅL JEG TRENGER SVAR PÅ
+----------------------------
+Tre ting jeg ikke kan finne ut av selv. Svarene avgjør hva som er
+verdt å bygge videre.
+
+1. Merker dere TFM på forekomsten, eller på familien/typen?
+
+   Verktøyet leser i dag bare forekomsten — verifisert i både IFC4
+   og IFC 2x3. Er TFM en typeparameter i Revit, ser det ingenting,
+   og K1 melder at hvert eneste objekt mangler TFM.
+
+2. Hvilke MMI-nivåer skiller «prosjektert, ikke tegnet» fra «utgått»?
+
+   K7 melder i dag hva i TFM-mastera som ikke er modellert, men bare
+   som info. Uten dette skillet kan den ikke skjerpes uten å kunne
+   stoppe en leveranse på noe som bare ikke er tegnet ennå.
+
+3. Hva havner det tekniske utstyret i i deres eksporter?
+
+   Er IfcBuildingElementProxy et reelt problem hos dere? Det avgjør
+   om omfangsforslaget i «oppsett» er verdt noe.
+
+
+Alle verdier er fiktive. Kodetabellene bærer prefikset FIKTIV- og kan ikke brukes
+til å validere et virkelig prosjekt — NS 3451 og NS 3457 er betalt
+materiale fra Standard Norge.
