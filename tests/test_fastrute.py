@@ -169,3 +169,22 @@ def test_dra_og_slipp_beholder_rapporten_hos_modellen(tmp_path):
 
     assert argumenter[-2] == "--ut"
     assert Path(argumenter[-1]) == rot / "rapport"
+
+
+def test_unntatt_fagmodell_staar_i_utskriften(tmp_path):
+    """En fil som er unntatt og ellers usynlig ser ut som en fagmodell uten feil.
+
+    Derfor står unntaket på dekningslinja og ikke i en egen bolk: den som leser
+    dekningen leser den for å vite hva som ble sett på.
+    """
+    rot = prosjekt(
+        tmp_path,
+        'modeller = ["*.ifc"]\nut = "rapport"\n\n[fagmodell."*ARK*"]\nifc_klasser = []\n',
+        {"ARK.ifc": None, "RIE.ifc": None},
+    )
+
+    resultat = kjor(["sjekk"], mappe=rot)
+    tekst = uten_ansi(resultat.stdout)
+
+    assert "ARK.ifc: unntatt — kontrolleres ikke for TFM" in tekst
+    assert "RIE.ifc: 1 av 1 objekter i omfanget" in tekst

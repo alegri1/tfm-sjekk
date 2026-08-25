@@ -18,6 +18,12 @@ Vurderingen gjøres per fagmodell, som K9 gjør for MMI. I en federering av RIE,
 RIV og ARK er det ARK-fila som skal si fra, selv om kjøringen samlet har
 objekter nok — samlet vurdering ville latt nettopp det tilfellet gå stille
 forbi.
+
+En fagmodell som er unntatt i oppsettet melder ikke. Tallene kan ikke skille et
+bevisst unntak fra en forglemmelse — begge gir null i omfanget — så kontrollen
+må spørre konfigurasjonen. Uten det ville et prosjekt som med vilje federerer
+inn ARK og RIB for kontrollene på tvers, fått en advarsel per fil hver eneste
+kjøring. En advarsel som alltid står der, leses ikke.
 """
 
 from __future__ import annotations
@@ -37,8 +43,9 @@ class D1Dekning(Kontroll):
 
     def kjor(self, k: Kontekst) -> list[Funn]:
         funn = []
+        unntatt = set(k.unntatte_filer())
         for fil, (i_omfang, lest) in k.dekning().items():
-            if i_omfang:
+            if i_omfang or fil in unntatt:
                 continue
 
             klasser = k.klasser_i(fil)

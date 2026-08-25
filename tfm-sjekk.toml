@@ -140,6 +140,26 @@ kolonne_komponentforekomst = ["komponentforekomst", "forekomst", "komponent"]
 # tabellen. Så mange rader letes det i etter overskriftsraden.
 maks_overskriftsrader = 10
 
+# OMFANG PER FAGMODELL. En federering blander filer med ulikt ansvar:
+# arkitekten tegner armaturer og servanter for å vise rommet, og de skal ikke
+# merkes av RIE. Kjørt mot Autodesks Snowdon Towers ga arkitektmodellen 675
+# K1-funn på slikt utstyr, mot 177 ekte funn i elektromodellen.
+#
+# Nøkkelen er et filnavnmønster. TOM LISTE betyr at fila ikke kontrolleres for
+# TFM — og det er den eneste måten å unnta på.
+#
+#     [fagmodell."*Architectural*"]
+#     ifc_klasser = []
+#
+# En unntatt fil er ikke usynlig. K3–K8 leser alle objekter med en TFM-verdi,
+# uansett klasse, så K6 finner fortsatt duplikater på tvers av den og RIE —
+# som er hele grunnen til å federere. Bare K1 og dekningen følger omfanget.
+#
+# Treffer flere mønstre samme fil, gjelder det lengste. To like lange stopper
+# kjøringen: da finnes det ikke noe riktig svar, og verktøyet gjetter ikke.
+# Merk at Revit navngir lenkede eksporter etter verten, så ARK-fila kan hete
+# «...Electrical-...Architectural.ifc» og inneholde begge fagnavnene.
+
 # Slå av kontroller eller endre alvorlighetsgrad per kontroll.
 # Gyldige grader: "feil", "advarsel", "info".
 [kontroller.K4]

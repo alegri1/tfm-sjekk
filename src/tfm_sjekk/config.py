@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import difflib
 import tomllib
+from fnmatch import fnmatch
 from pathlib import Path
+from typing import get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -197,6 +199,30 @@ class MasterOppsett(BaseModel):
     )
 
 
+class FagmodellOppsett(BaseModel):
+    """Omfanget for fagmodellene som treffer ett filnavnmønster.
+
+    Finnes fordi en federering blander filer med ulikt ansvar. Arkitekten
+    tegner armaturer og servanter for å vise rommet, og de skal ikke merkes av
+    RIE — en ekte kjøring mot Snowdon Towers ga 675 K1-funn på dem, mot 177
+    ekte funn i elektromodellen.
+
+    Tom liste betyr at fila ikke kontrolleres for TFM. Det er den eneste måten
+    å unnta på; en egen «aktiv»-nøkkel ved siden av lista ville før eller siden
+    kommet i konflikt med den.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ifc_klasser: list[str] = Field(
+        default=[],
+        description=(
+            "Klassene som kontrolleres i fagmodeller som treffer mønsteret. "
+            "Tom liste: fila kontrolleres ikke for TFM."
+        ),
+    )
+
+
 class KontrollOppsett(BaseModel):
     model_config = ConfigDict(extra="forbid")
     aktiv: bool = True
@@ -215,6 +241,27 @@ class OppsettFeil(Exception):
     """
 
 
+def _er_kart(annotasjon: object) -> bool:
+    """Sant for `dict[str, EnEllerAnnenModell]`."""
+    return get_origin(annotasjon) is dict
+
+
+def _modellen_bak(annotasjon: object) -> type[BaseModel] | None:
+    """Pydantic-modellen et felt beskriver, enten direkte eller som verdi i et kart.
+
+    `kontroller` og `fagmodell` er begge `dict[str, Modell]`. Uten dette
+    stoppet oppslaget på dem, og nøklene under fikk aldri et forslag.
+    """
+    if isinstance(annotasjon, type) and issubclass(annotasjon, BaseModel):
+        return annotasjon
+    if _er_kart(annotasjon):
+        argumenter = get_args(annotasjon)
+        verdi = argumenter[1] if len(argumenter) > 1 else None
+        if isinstance(verdi, type) and issubclass(verdi, BaseModel):
+            return verdi
+    return None
+
+
 def _gyldige_nokler(sti: tuple) -> list[str]:
     """Feltnavnene som hører hjemme der den ukjente nøkkelen sto.
 
@@ -222,13 +269,21 @@ def _gyldige_nokler(sti: tuple) -> list[str]:
     modellen første gang noen legger til en nøkkel.
     """
     modell: type[BaseModel] = Konfigurasjon
-    for ledd in sti[:-1]:
-        felt = modell.model_fields.get(str(ledd))
-        if felt is None or not isinstance(felt.annotation, type):
+    ledd = list(sti[:-1])
+    while ledd:
+        felt = modell.model_fields.get(str(ledd.pop(0)))
+        if felt is None:
             return []
-        if not issubclass(felt.annotation, BaseModel):
+        neste = _modellen_bak(felt.annotation)
+        if neste is None:
             return []
-        modell = felt.annotation
+        modell = neste
+        # En seksjon som «[kontroller.K4]» eller «[fagmodell."*Arch*"]» har et
+        # ledd til som er en nøkkel brukeren fant på, ikke et feltnavn. Det
+        # hoppes over — uten dette ga hele denne grenen ingen forslag, og en
+        # skrivefeil under [kontroller.K4] sto uten «Mente du?».
+        if _er_kart(felt.annotation) and ledd:
+            ledd.pop(0)
     return list(modell.model_fields)
 
 
@@ -334,6 +389,14 @@ class Konfigurasjon(BaseModel):
 
     kontroller: dict[str, KontrollOppsett] = {}
 
+    fagmodell: dict[str, FagmodellOppsett] = Field(
+        default={},
+        description=(
+            "Omfang per fagmodell, nøklet på filnavnmønster, f.eks. "
+            '[fagmodell."*Architectural*"]. Tom klasseliste unntar fila.'
+        ),
+    )
+
     modeller: list[str] = Field(
         default=[],
         description=(
@@ -378,6 +441,50 @@ class Konfigurasjon(BaseModel):
         if verdi is None or verdi.is_absolute() or self.kilde is None:
             return verdi
         return (self.kilde.parent / verdi).resolve()
+
+    def _fagmodelltreff(self, kildefil: str) -> FagmodellOppsett | None:
+        """Seksjonen som gjelder for en fagmodell, eller None.
+
+        Treffer flere mønstre, vinner det lengste — «*Sample Architectural*» er
+        mer spesifikt enn «*». Å ta det første i en vilkårlig rekkefølge ville
+        vært en gjetning forkledd som et svar; det er samme grunn til at
+        `_hvor_horer_nokkelen_hjemme` nekter å peke på ett av flere steder.
+
+        To like lange som begge treffer er en feil i oppsettet, ikke noe å
+        velge mellom.
+        """
+        treff = [(m, o) for m, o in self.fagmodell.items() if fnmatch(kildefil, m)]
+        if not treff:
+            return None
+
+        lengst = max(len(m) for m, _ in treff)
+        beste = [m for m, _ in treff if len(m) == lengst]
+        if len(beste) > 1:
+            raise OppsettFeil(
+                "Flere like spesifikke mønstre i [fagmodell] treffer «{}»: {}. "
+                "Verktøyet kan ikke velge mellom dem — gjør ett av dem mer "
+                "spesifikt, eller fjern det ene.".format(kildefil, ", ".join(sorted(beste)))
+            )
+        return dict(treff)[beste[0]]
+
+    def omfang_for(self, kildefil: str) -> list[str]:
+        """IFC-klassene som kontrolleres i denne fagmodellen.
+
+        Uten treff gjelder `ifc_klasser` på toppnivå, som før. Det er dette som
+        gjør at et oppsett uten [fagmodell] oppfører seg bit for bit som i dag.
+        """
+        oppsett = self._fagmodelltreff(kildefil)
+        return self.ifc_klasser if oppsett is None else oppsett.ifc_klasser
+
+    def er_unntatt(self, kildefil: str) -> bool:
+        """Sant når fila er unntatt med vilje: et mønster med tom klasseliste.
+
+        Skiller seg fra «omfanget ble tomt» ved at noen har skrevet det. D1 kan
+        ikke se forskjellen på tallene — begge gir null i omfanget — og det er
+        nettopp derfor kontrollen må spørre oppsettet.
+        """
+        oppsett = self._fagmodelltreff(kildefil)
+        return oppsett is not None and not oppsett.ifc_klasser
 
     def stier(self, felt: str) -> list[tuple[str, Path, list[Path]]]:
         """Per oppføring i et listefelt: teksten, stien den ble løst til, og treffene.

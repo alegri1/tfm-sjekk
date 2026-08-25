@@ -82,9 +82,16 @@ class Kontekst(BaseModel):
         `IfcFlowTerminal`, treffer du også `IfcAirTerminal` og de andre
         IFC4-subklassene. Ellers måtte konfigurasjonen liste hundrevis av
         klassenavn.
+
+        Omfanget slås opp per fagmodell. En federering blander filer med ulikt
+        ansvar — arkitekten tegner armaturer for å vise rommet — og uten dette
+        måles de mot RIE-ens krav.
         """
-        klasser = self.config.ifc_klasser
-        return [o for o in self.objekter if any(o.er_av_type(k) for k in klasser)]
+        return [
+            o
+            for o in self.objekter
+            if any(o.er_av_type(k) for k in self.config.omfang_for(o.kildefil))
+        ]
 
     def med_tfm(self) -> list[tuple[IfcObjekt, TfmId]]:
         """Objekter som har en TFM-ID som faktisk parset."""
@@ -146,6 +153,14 @@ class Kontekst(BaseModel):
             i_omfang[objekt.kildefil] += 1
 
         return {fil: (i_omfang[fil], antall) for fil, antall in sorted(lest.items())}
+
+    def unntatte_filer(self) -> list[str]:
+        """Fagmodellene oppsettet unntar med vilje.
+
+        Skilles fra de som endte med tomt omfang ved et uhell: bare oppsettet
+        vet hvilken av de to det er, og D1 og utskriften trenger begge svar.
+        """
+        return sorted(f for f in self.kildefiler if self.config.er_unntatt(f))
 
     def klasser_i(self, kildefil: str) -> list[str]:
         """IFC-klassene som faktisk finnes i én fagmodell.

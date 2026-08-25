@@ -236,7 +236,14 @@ def sjekk(
     funn, hoppet_over = kjor_alle(kontekst)
     dekning = kontekst.dekning()
 
+    # Et unntak står på dekningslinja, ikke i en egen bolk lenger nede. Den som
+    # leser dekningen leser den for å vite hva som ble sett på, og en fil som
+    # mangler fra lista er verre enn en som står der med en forklaring.
+    unntatt = set(kontekst.unntatte_filer())
     for fil, (i_omfang, lest) in dekning.items():
+        if fil in unntatt:
+            typer.echo(f"  {fil}: unntatt — kontrolleres ikke for TFM ({lest} objekter lest)")
+            continue
         merke = "  <- ingenting kontrollert" if not i_omfang else ""
         typer.echo(f"  {fil}: {i_omfang} av {lest} objekter i omfanget{merke}")
 
