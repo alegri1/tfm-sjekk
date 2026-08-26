@@ -136,6 +136,14 @@ For `tfm_til_revit.py` er versjonen første nøkkel i `OUT[1]`: `skript`.
 Linja står i hver kjøring, også når alt er i orden. En melding som bare dukker
 opp av og til, blir ikke lest den gangen den betyr noe.
 
+**Vil du prøve linja, må du koble fra skrivenoden først.** Grafen skriver til
+modellen hver gang den kjører, og en gammel kopi merker alt med elektro-koden
+4390 eller med ugyldige løpenummer — oppå merkingen som allerede ligger der.
+
+`OUT[1]` beregnes uten at noe skrives, så koble ledningen ut av `element` på
+`Element.SetParameterByName`, kjør, les linja, og koble tilbake. Og sjekk at
+kjøremodus står på `Manual`.
+
 **For grafene i repoet er det ikke lenger noe å se etter.** Ansvaret er delt:
 `.py`-fila er fasit for skriptet, `.dyn`-fila for ledningene.
 
