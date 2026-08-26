@@ -158,3 +158,47 @@ def test_hoppet_over_bruker_bare_farger_som_finnes_i_begge_paletter(tmp_path):
         lys = re.search(r":root \{[^}]*" + variabel + r":", html, re.S)
         assert lys, f"{variabel} mangler i den lyse paletten"
         assert html.count(variabel + ":") >= 2, f"{variabel} finnes bare i én palett"
+
+
+def test_unntatt_fagmodell_markeres_ikke_som_advarsel(tmp_path):
+    """Et bevisst unntak er ikke en forglemmelse.
+
+    Rapporten viste tre oransje advarselstriper ved siden av «0 advarsler» —
+    to paastander paa samme side som motsa hverandre. Konsollen sa
+    «unntatt», tabellen sa «0».
+    """
+    sti = skriv_html(
+        [],
+        tmp_path / "rapport.html",
+        "ark.ifc, rie.ifc",
+        100,
+        None,
+        {"ark.ifc": (0, 7745), "rie.ifc": (1492, 2439)},
+        ["ark.ifc"],
+    )
+    html = sti.read_text(encoding="utf-8")
+
+    ark = next(ln for ln in html.split(chr(10)) if "ark.ifc" in ln and "<td>" in ln)
+    assert "unntatt" in ark
+    assert "advarsel" not in ark
+
+
+def test_uteglemt_fagmodell_markeres_fortsatt_som_advarsel(tmp_path):
+    """Tomt omfang ved et uhell skal fortsatt se ut som noe aa se paa."""
+    sti = skriv_html(
+        [], tmp_path / "rapport.html", "ark.ifc", 100, None, {"ark.ifc": (0, 7745)}, []
+    )
+    html = sti.read_text(encoding="utf-8")
+
+    assert 'class="advarsel"' in html
+
+
+def test_unntatt_raden_bruker_ingen_farge_som_mangler_i_moerk_modus(tmp_path):
+    import re
+
+    sti = skriv_html([], tmp_path / "r.html", "m.ifc", 1, None, {"a.ifc": (0, 5)}, ["a.ifc"])
+    html = sti.read_text(encoding="utf-8")
+
+    regel = re.search(r"tr\.unntatt td \{[^}]*\}", html).group(0)
+    for variabel in re.findall(r"var\((--[a-zæøå-]+)\)", regel):
+        assert html.count(variabel + ":") >= 2, f"{variabel} finnes bare i én palett"

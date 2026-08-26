@@ -277,6 +277,7 @@ def sjekk(
         len(objekter),
         hoppet,
         dekning,
+        sorted(unntatt),
     )
     skriv_csv(funn, ut / "funn.csv")
     skriv_xlsx(funn, ut / "funn.xlsx")

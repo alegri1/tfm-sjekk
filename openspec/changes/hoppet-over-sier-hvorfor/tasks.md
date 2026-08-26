@@ -34,11 +34,30 @@ brukt både i konsollen og i rapporten. Det så man først ved å kjøre.
 - [x] 4.1 Alle kallere av `kjor_alle` i `src/`, `tests/` og `verktoy/` oppdatert
 - [x] 4.2 `uv run pytest` grønn, `ruff check` og `ruff format --check` rene
 
+## 4b. Dekningstabellen motsa konsollen (funnet ved 5.4)
+
+Rapporten viste tre oransje advarselstriper for de unntatte fagmodellene, ved
+siden av «0 advarsler» i sammendraget — to påstander på samme side som motsa
+hverandre. `omfang-per-fagmodell` rettet D1 og konsollinja, men `skriv_html`
+fikk aldri vite hvilke filer som var unntatt.
+
+Tatt med her og ikke som egen sak: endringen handler nettopp om at rapporten
+skal si det samme som konsollen. Å rette linja over mens tabellen under motsier
+den, ville vært halvt arbeid.
+
+- [x] 4b.1 `skriv_html` tar imot hvilke fagmodeller som er unntatt
+- [x] 4b.2 Raden viser «unntatt — kontrolleres ikke for TFM», ikke `0`
+- [x] 4b.3 Dempet farge, IKKE advarselsfargen. Et bevisst unntak er ikke en
+      forglemmelse, og det var nettopp forvekslingen
+- [x] 4b.4 Test: unntatt fagmodell får ikke advarselsklassen
+- [x] 4b.5 Test: uteglemt fagmodell får den fortsatt
+- [x] 4b.6 Test: fargen finnes i begge paletter
+
 ## 5. Prøvd der det brukes
 
 - [x] 5.1 Kjør demomappa med `--config tidligfase.toml` — fella selv. Meldingen
       skal si at tabellene mangler, ikke bare at kontrollene hoppet over
 - [x] 5.2 Kjør uten tabeller i det hele tatt og les konsollen
 - [x] 5.3 Kjør med en kontroll slått av i oppsettet og se at grunnen skiller seg
-- [ ] 5.4 **Åpne HTML-rapporten**, i lys OG mørk modus. Linja er lengre nå enn
-      den er tegnet for
+- [x] 5.4 Åpnet av brukeren 2026-08-26. Avdekket at dekningstabellen motsa
+      konsollen — se 4b. Rettet, og rapporten kjørt på nytt

@@ -72,6 +72,9 @@ MAL = Template(
   code { font-size: .9em; }
   /* Arver fargen fra .meta, som finnes i BEGGE palettene. En ny farge her
      ville vært usynlig i den ene — det har skjedd før. */
+  /* Dempet, ikke advarselsfarge. Et bevisst unntak er ikke en forglemmelse,
+     og oransje stripe ved siden av «0 advarsler» motsa hverandre. */
+  tr.unntatt td { color: var(--dempet); font-style: italic; }
   ul.hoppet { margin: 0 0 1.5rem 1.25rem; padding: 0; color: var(--dempet); font-size: 0.9rem; }
   ul.hoppet li { margin: 0.15rem 0; }
   table.dekning { width: auto; margin-bottom: 1.5rem; }
@@ -104,9 +107,15 @@ MAL = Template(
 <thead><tr><th>Fagmodell</th><th>I omfanget</th><th>Lest</th></tr></thead>
 <tbody>
 {% for fil, tall in dekning.items() %}
+{% if fil in unntatte %}
+<tr class="unntatt">
+  <td>{{ fil }}</td><td colspan="2">unntatt — kontrolleres ikke for TFM ({{ tall[1] }} lest)</td>
+</tr>
+{% else %}
 <tr{% if not tall[0] %} class="advarsel"{% endif %}>
   <td>{{ fil }}</td><td>{{ tall[0] }}</td><td>{{ tall[1] }}</td>
 </tr>
+{% endif %}
 {% endfor %}
 </tbody>
 </table>
@@ -162,6 +171,7 @@ def skriv_html(
     objekter: int = 0,
     hoppet_over: list[tuple[str, str, str]] | None = None,
     dekning: dict[str, tuple[int, int]] | None = None,
+    unntatte: list[str] | None = None,
 ) -> Path:
     """`dekning` er (i omfanget, lest) per fagmodell.
 
@@ -177,6 +187,7 @@ def skriv_html(
             objekter=objekter,
             hoppet_over=hoppet_over or [],
             dekning=dekning or {},
+            unntatte=set(unntatte or []),
             i_omfang=sum(tall[0] for tall in (dekning or {}).values()),
             antall={
                 "feil": teller[Alvorlighet.FEIL],
