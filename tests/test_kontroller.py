@@ -178,8 +178,12 @@ def test_k7_umodellert_forblir_info_selv_om_graden_overstyres(config):
 
 
 def test_k7_hoppes_over_uten_master(config):
+    from tfm_sjekk.kontroller import Hoppgrunn
+
     _, hoppet_over = kjor_alle(Kontekst.bygg([objekt()], config))
-    assert "K7" in {k.id for k in hoppet_over}
+    grunner = {k.id: grunn for k, grunn in hoppet_over}
+
+    assert grunner["K7"] is Hoppgrunn.MANGLER_MASTER
 
 
 def test_k8_krever_kursnummer_pa_elektro(config):

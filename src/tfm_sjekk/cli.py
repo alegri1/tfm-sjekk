@@ -21,7 +21,7 @@ import typer
 from tfm_sjekk.config import Konfigurasjon, OppsettFeil, finn_oppsett
 from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
-from tfm_sjekk.kontroller import alle_kontroller, kjor_alle
+from tfm_sjekk.kontroller import Hoppgrunn, alle_kontroller, kjor_alle
 from tfm_sjekk.modell import Alvorlighet
 from tfm_sjekk.oppsett import til_toml, utled
 from tfm_sjekk.rapport import (
@@ -250,9 +250,24 @@ def sjekk(
     antall_feil = sum(1 for f in funn if f.alvorlighet is Alvorlighet.FEIL)
     antall_advarsler = sum(1 for f in funn if f.alvorlighet is Alvorlighet.ADVARSEL)
 
-    for kontroll in hoppet_over:
-        grunn = "ikke implementert ennå" if not kontroll.implementert else "hoppet over"
-        typer.echo(f"  {kontroll.id}: {grunn}")
+    # Grunnen kommer fra kjor_alle, ikke regnet ut på nytt her. To steder som
+    # utleder det samme blir før eller siden uenige.
+    #
+    # Grupperes per grunn: uten det gjentar K3, K4 og K5 den samme setningen
+    # på tre rader, og rådet drukner i sin egen gjentakelse.
+    per_grunn: dict[Hoppgrunn, list[str]] = {}
+    for kontroll, grunn in hoppet_over:
+        per_grunn.setdefault(grunn, []).append(kontroll.id)
+
+    # Grupperingen gjøres ÉN gang og brukes både her og i rapporten. Gjort to
+    # steder ville de to kunnet gruppere ulikt, og en leser som sammenligner
+    # konsoll og rapport ville trodd noe var galt.
+    hoppet = [(", ".join(ider), grunn.tekst, grunn.raad) for grunn, ider in per_grunn.items()]
+
+    for ider, tekst, raad in hoppet:
+        typer.echo(f"  {ider}: hoppet over — {tekst}")
+        if raad:
+            typer.echo(f"      {raad}")
 
     tittel = ", ".join(m.name for m in modeller)
     skriv_html(
@@ -260,7 +275,7 @@ def sjekk(
         ut / "rapport.html",
         tittel,
         len(objekter),
-        [k.id for k in hoppet_over],
+        hoppet,
         dekning,
     )
     skriv_csv(funn, ut / "funn.csv")

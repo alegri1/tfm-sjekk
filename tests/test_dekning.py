@@ -142,3 +142,55 @@ def test_graden_kan_overstyres():
 def test_full_dekning_gir_ingen_funn(config):
     k = Kontekst.bygg([objekt(global_id="a", kildefil="rie.ifc")], config)
     assert d1(k) == []
+
+
+# --- Hoppet over skal si hvorfor ---
+
+
+def test_hver_grunn_navngis_riktig(tmp_path):
+    """Tre ulike aarsaker falt sammen til ett ord for denne endringen.
+
+    For den som leser er de motsatte handlinger: la det vaere, skaff dataene,
+    vent paa en senere utgave.
+    """
+    from tfm_sjekk.kontroller import Hoppgrunn
+
+    config = Konfigurasjon()
+    config.kontroller["K8"] = KontrollOppsett(aktiv=False)
+    _, hoppet = kjor_alle(Kontekst.bygg([objekt()], config))
+    grunner = {k.id: grunn for k, grunn in hoppet}
+
+    assert grunner["K8"] is Hoppgrunn.SLATT_AV
+    assert grunner["K3"] is Hoppgrunn.MANGLER_KODETABELL
+    assert grunner["K7"] is Hoppgrunn.MANGLER_MASTER
+
+
+def test_slaatt_av_vinner_over_manglende_data():
+    """Rekkefoelgen i _hoppgrunn ER betydningen.
+
+    En kontroll som baade er slaatt av og mangler tabell skal melde at den er
+    slaatt av — det er valget brukeren tok. Snus rekkefoelgen, faar hun beskjed
+    om aa skaffe data hun bevisst har valgt bort.
+    """
+    from tfm_sjekk.kontroller import Hoppgrunn
+
+    config = Konfigurasjon()
+    config.kontroller["K3"] = KontrollOppsett(aktiv=False)
+
+    _, hoppet = kjor_alle(Kontekst.bygg([objekt()], config))
+
+    assert {k.id: g for k, g in hoppet}["K3"] is Hoppgrunn.SLATT_AV
+
+
+def test_grunnen_sier_hva_som_skal_til():
+    """Forskjellen mellom aa lete i dokumentasjonen og aa rette en linje."""
+    from tfm_sjekk.kontroller import Hoppgrunn
+
+    tabell = Hoppgrunn.MANGLER_KODETABELL.raad
+    assert "--systemtabell" in tabell
+    assert "--komponenttabell" in tabell
+    assert "tfm-sjekk.toml" in tabell
+
+    master = Hoppgrunn.MANGLER_MASTER.raad
+    assert "--master" in master
+    assert "tfm_master" in master

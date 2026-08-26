@@ -5,11 +5,14 @@ Se proposal.md — Why. `kjor_alle` kjenner allerede årsaken; den kastes på ve
 ```python
 for kontroll in _REGISTER:
     if not kontroll.aktiv(k):
-        hoppet_over.append(kontroll); continue
+        hoppet_over.append(kontroll)
+        continue
     if kontroll.krever_kodetabell and k.systemtabell is None and k.komponenttabell is None:
-        hoppet_over.append(kontroll); continue
+        hoppet_over.append(kontroll)
+        continue
     if kontroll.krever_master and k.master is None:
-        hoppet_over.append(kontroll); continue
+        hoppet_over.append(kontroll)
+        continue
 ```
 
 Tre grener, én liste. Informasjonen finnes i kontrollflyten og forsvinner i

@@ -115,3 +115,46 @@ def test_lest_og_i_omfanget_er_ulike_tall(tmp_path):
     # Tallet ved «kontrollert» skal være omfanget, ikke antall leste.
     kontrollert = html.split("objekter kontrollert")[0].rsplit("<b>", 1)[1].split("</b>")[0]
     assert kontrollert == "0"
+
+
+def test_hoppet_over_viser_grunnen(tmp_path):
+    """Rapporten skal si det samme som konsollen.
+
+    Sto det bare «Hoppet over: K3, K4», maatte den som fikk rapporten gjette
+    om kontrollene var slaatt av eller om data manglet — motsatte handlinger.
+    """
+    from tfm_sjekk.kontroller import Hoppgrunn
+
+    sti = skriv_html(
+        [],
+        tmp_path / "rapport.html",
+        "modell.ifc",
+        1,
+        [
+            ("K3", Hoppgrunn.MANGLER_KODETABELL.tekst, Hoppgrunn.MANGLER_KODETABELL.raad),
+            ("K8", Hoppgrunn.SLATT_AV.tekst, Hoppgrunn.SLATT_AV.raad),
+        ],
+    )
+    html = sti.read_text(encoding="utf-8")
+
+    assert "--systemtabell" in html
+    assert "slått av" in html
+    assert "K3" in html and "K8" in html
+
+
+def test_hoppet_over_bruker_bare_farger_som_finnes_i_begge_paletter(tmp_path):
+    """En farge som bare finnes i den lyse paletten blir usynlig i den moerke.
+
+    Det har skjedd her foer: moerk modus hadde 1,11:1 kontrast, og CSS-en var
+    syntaktisk feilfri.
+    """
+    import re
+
+    sti = skriv_html([], tmp_path / "rapport.html", "m.ifc", 1, [("K3", "ingen kodetabell", "")])
+    html = sti.read_text(encoding="utf-8")
+
+    regel = re.search(r"ul\.hoppet \{[^}]*\}", html).group(0)
+    for variabel in re.findall(r"var\((--[a-zæøå-]+)\)", regel):
+        lys = re.search(r":root \{[^}]*" + variabel + r":", html, re.S)
+        assert lys, f"{variabel} mangler i den lyse paletten"
+        assert html.count(variabel + ":") >= 2, f"{variabel} finnes bare i én palett"

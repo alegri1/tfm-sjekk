@@ -70,6 +70,10 @@ MAL = Template(
   tr.advarsel td:first-child { border-left: 4px solid var(--advarsel); }
   tr.info td:first-child { border-left: 4px solid var(--info); }
   code { font-size: .9em; }
+  /* Arver fargen fra .meta, som finnes i BEGGE palettene. En ny farge her
+     ville vært usynlig i den ene — det har skjedd før. */
+  ul.hoppet { margin: 0 0 1.5rem 1.25rem; padding: 0; color: var(--dempet); font-size: 0.9rem; }
+  ul.hoppet li { margin: 0.15rem 0; }
   table.dekning { width: auto; margin-bottom: 1.5rem; }
   table.dekning th { cursor: default; position: static; }
   table.dekning td { font-variant-numeric: tabular-nums; }
@@ -87,7 +91,12 @@ MAL = Template(
 </div>
 
 {% if hoppet_over %}
-<p class="meta">Hoppet over: {{ hoppet_over|join(', ') }}</p>
+<p class="meta">Hoppet over — disse kontrollene så ikke etter noe:</p>
+<ul class="hoppet">
+{% for id, grunn, raad in hoppet_over %}
+  <li><code>{{ id }}</code> {{ grunn }}{% if raad %} — {{ raad }}{% endif %}</li>
+{% endfor %}
+</ul>
 {% endif %}
 
 {% if dekning %}
@@ -151,7 +160,7 @@ def skriv_html(
     sti: Path,
     tittel: str,
     objekter: int = 0,
-    hoppet_over: list[str] | None = None,
+    hoppet_over: list[tuple[str, str, str]] | None = None,
     dekning: dict[str, tuple[int, int]] | None = None,
 ) -> Path:
     """`dekning` er (i omfanget, lest) per fagmodell.

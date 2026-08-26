@@ -5,7 +5,13 @@ Legger du til en kontroll: lag en fil, dekorer klassen med `@registrer`,
 og importer den her.
 """
 
-from tfm_sjekk.kontroller.base import Kontroll, alle_kontroller, kjor_alle, registrer
+from tfm_sjekk.kontroller.base import (
+    Hoppgrunn,
+    Kontroll,
+    alle_kontroller,
+    kjor_alle,
+    registrer,
+)
 
 # Registrering skjer ved import — rekkefølgen er signifikant.
 from tfm_sjekk.kontroller import k1_tilstedevaerelse  # noqa: F401  isort:skip
@@ -23,4 +29,4 @@ from tfm_sjekk.kontroller import k9_mmi  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import t1_komponenttype  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import d1_dekning  # noqa: F401  isort:skip
 
-__all__ = ["Kontroll", "alle_kontroller", "kjor_alle", "registrer"]
+__all__ = ["Hoppgrunn", "Kontroll", "alle_kontroller", "kjor_alle", "registrer"]
