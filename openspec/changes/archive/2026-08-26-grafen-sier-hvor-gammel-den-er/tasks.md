@@ -47,5 +47,5 @@ Prosjekteieren fanget dette; oppgaven sto opprinnelig uten advarselen.
 - [x] 5.3 Prøvd av brukeren 2026-08-26: `VERSJON` redigert til «0.7.0» i noden,
       skrivenoden frakoblet, grafen kjørt. Sammendraget svarte «Skript 0.7.0.»
       Varselet leses der det skal, og ingen TFM-verdi ble rørt
-- [ ] 5.4 **Til brukeren:** lim inn den ferske, se at tallet endrer seg, og
-      koble skrivenoden tilbake
+- [x] 5.4 Grafen tilbake på «0.8.1», og skrivenoden koblet til igjen.
+      Bekreftet av brukeren 2026-08-26
