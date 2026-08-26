@@ -200,6 +200,17 @@ FOR AT TIL-REVIT SKAL VIRKE MÅ TRE TING STEMME:
      Finn navnet med en Python-node, ett element som IN[0]:
          OUT = sorted(p.Name for p in IN[0].Parameters)
 
+ER GRAFEN GAMMEL? SAMMENDRAGET SIER DET
+Foerste linje i OUT[1] oppgir hvilken utgave skriptet er fra:
+
+    Skript {versjon}.
+
+Er tallet lavere enn versjonen paa denne mappa, kjoerer grafen paa en gammel
+kopi av skriptet. Aapne Python-noden og lim inn paa nytt fra .dyn-fila her.
+
+Python-noden lagrer skriptet som en KOPI, ikke en peker. Den vet ikke at
+kilden har endret seg, og en gammel kopi gir tall som ser riktige ut.
+
 LES TALLENE FØR DU STOLER PÅ RESULTATET
 Grafen gir to ting ut. Indeks 0 er tekstene, indeks 1 er tallene. En kobling
 som treffer null elementer ser i modellen NØYAKTIG ut som en modell uten

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -224,6 +225,16 @@ def python_noden(dyn: Path) -> str:
     return noder[0]["Code"]
 
 
+def uten_versjon(skript: str) -> str:
+    """Skriptet med versjonslinja normalisert bort.
+
+    Versjonen er den ENE tilsiktede forskjellen mellom kilde og kopi: kilden
+    bærer «ukjent», og skriveren setter pakkens versjon på vei inn i .dyn-fila.
+    Alt annet skal være likt.
+    """
+    return re.sub('VERSJON = "[^"]*"', 'VERSJON = "?"', skript)
+
+
 @pytest.mark.parametrize(("dyn", "py"), sorted(GRAFER.items()))
 def test_skriptkopien_i_grafen_er_lik_kilden(dyn, py):
     """Python-noden lagrer en kopi, ikke en peker.
@@ -236,7 +247,7 @@ def test_skriptkopien_i_grafen_er_lik_kilden(dyn, py):
     i_grafen = python_noden(DYNAMO / dyn).replace("\r\n", "\n")
     i_repoet = (DYNAMO / py).read_text(encoding="utf-8").replace("\r\n", "\n")
 
-    assert i_grafen == i_repoet, (
+    assert uten_versjon(i_grafen) == uten_versjon(i_repoet), (
         f"{dyn} bærer en eldre kopi av {py}. Kjør «uv run python verktoy/oppdater-grafene.py»."
     )
 
@@ -253,3 +264,28 @@ def test_grafen_har_ingen_sti_fra_maskinen_den_ble_bygget_pa(dyn):
 
     assert "Users" not in tekst
     assert "Desktop" not in tekst
+
+
+@pytest.mark.parametrize(("dyn", "py"), sorted(GRAFER.items()))
+def test_grafen_baerer_pakkens_versjon_kilden_baerer_ukjent(dyn, py):
+    """Kilden kan ikke drive fra kopien, fordi kilden ikke har noen versjon.
+
+    Uten dette kunne versjonsstrengen blitt staaende igjen mens alt annet ble
+    oppdatert — referansedata som driver fra det de beskriver, en etasje ned.
+    """
+    import tomllib
+
+    pyproject = tomllib.loads((DYNAMO.parent / "pyproject.toml").read_text(encoding="utf-8"))
+    versjon = pyproject["project"]["version"]
+
+    assert f'VERSJON = "{versjon}"' in python_noden(DYNAMO / dyn)
+    assert 'VERSJON = "ukjent"' in (DYNAMO / py).read_text(encoding="utf-8")
+
+
+def test_statistikken_oppgir_skriptets_versjon(tmp_path):
+    """Samme grunn som i tfm_fra_revit: kopien i Dynamo naas av ingen test."""
+    from tfm_til_revit import VERSJON
+
+    rader = csv_funn([Funn.for_objekt("K2", Alvorlighet.FEIL, "m", objekt())], tmp_path)
+
+    assert statistikk(rader, [TFM])["skript"] == VERSJON

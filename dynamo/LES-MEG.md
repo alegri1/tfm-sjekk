@@ -119,8 +119,22 @@ riktig ut, og tallene stemte, så ingenting tydet på at noe var gammelt. Og
 `fra-revit`-grafen beskrev seg selv med en nodekobling repoet dokumenterte som
 feil — ledningene var riktige, beskrivelsen var én generasjon gammel.
 
-**Slik ser du det:** `OUT[1]` skal ha åtte felter for `tfm_til_revit.py`. Er det
-sju, mangler `nokkel_fra`, og kopien er eldre enn 22. august.
+**Slik ser du det: sammendraget oppgir skriptets versjon.**
+
+    Skript 0.8.1.
+    2590 elementer merket.
+    74 systemforekomster.
+
+Er tallet lavere enn utgivelsen du hentet, kjører grafen på en gammel kopi. Lim
+inn på nytt fra `dynamo/tfm_fra_revit.py`.
+
+Står det `ukjent`, har du limt inn direkte fra `.py`-fila. Det er ikke galt —
+men da vet ingen hvor gammel kopien er, og linja sier det.
+
+For `tfm_til_revit.py` er versjonen første nøkkel i `OUT[1]`: `skript`.
+
+Linja står i hver kjøring, også når alt er i orden. En melding som bare dukker
+opp av og til, blir ikke lest den gangen den betyr noe.
 
 **For grafene i repoet er det ikke lenger noe å se etter.** Ansvaret er delt:
 `.py`-fila er fasit for skriptet, `.dyn`-fila for ledningene.
@@ -141,10 +155,22 @@ Endrer du et av skriptene, kjør:
 
 ```bash
 uv run python verktoy/oppdater-grafene.py
+uv run python verktoy/oppdater-grafene.py --demomappe <sti>   # tar demomappa òg
 ```
 
-Har du limt inn i din egen graf, gjelder advarselen over fortsatt — den kopien
-kjenner ingen test til.
+Skriveren setter samtidig pakkens versjon inn i `.dyn`-fila. Kilden beholder
+`VERSJON = "ukjent"`, så de to kan ikke bli uenige: kopien får versjonen sin i
+samme operasjon som skriptet.
+
+**Kjeden er fire ledd, og testen når bare det andre:**
+
+    dynamo/tfm_fra_revit.py          kilden
+    dynamo/*.dyn                     kopi 1 — voktet av en test
+    demomappa/*.dyn                  kopi 2 — tas av --demomappe
+    noden i din Dynamo               kopi 3 — INGEN test når hit
+
+Det er kopi 3 som produserer merkingen. Versjonslinja i sammendraget er det
+eneste som avslører at den er gammel.
 
 ## Grafen
 

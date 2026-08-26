@@ -469,3 +469,25 @@ def test_elektro_er_uendret_av_overrullingen():
     ut = merk(navn, kurser, PLASSERING)
 
     assert all(".001." in verdi for verdi in ut)
+
+
+def test_sammendraget_oppgir_skriptets_versjon():
+    """En gammel kopi i Dynamo roeper seg selv der brukeren allerede leser.
+
+    Kopien i Python-noden er fjerde ledd i kjeden og naas av ingen test. Vi kan
+    ikke gjore den fersk — bare gjore alderen synlig.
+    """
+    from tfm_fra_revit import VERSJON
+
+    linjer = sammendrag(statistikk(["Downlight"], ["12"], ["++115080=4320.001.12-QLF001"]))
+
+    assert any(VERSJON in ln for ln in linjer), linjer
+
+
+def test_versjonslinja_staar_ogsaa_naar_ingenting_kom_inn():
+    """En linje som bare vises av og til, blir ikke lest naar den betyr noe."""
+    from tfm_fra_revit import VERSJON
+
+    linjer = sammendrag(statistikk([], [], []))
+
+    assert any(VERSJON in ln for ln in linjer), linjer

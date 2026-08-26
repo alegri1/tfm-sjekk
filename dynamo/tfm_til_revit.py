@@ -47,6 +47,21 @@ import io
 
 # --- Ren logikk. Ingen Revit-avhengighet, slik at den kan prøves utenfor Dynamo. ---
 
+# Hvilken utgave dette skriptet er fra.
+#
+# «ukjent» i repoet, og verktoy/oppdater-grafene.py bytter den til pakkens
+# versjon PÅ VEI INN i .dyn-fila. Da kan de to ikke bli uenige: kilden har
+# ingen versjon å drive fra, og kopien får sin i samme operasjon som skriptet.
+#
+# Limer du inn direkte fra .py-fila, står det «ukjent» — og det er riktig, for
+# da ER alderen ukjent.
+#
+# Finnes fordi Dynamos Python-node lagrer skriptet som en STRENG inne i
+# .dyn-fila. Kopien har drevet fra kilden tre ganger på to dager, og hver gang
+# så tallene riktige ut. Sammendraget kan ikke gjøre kopien fersk — det kan
+# bare gjøre alderen synlig.
+VERSJON = "ukjent"
+
 SKILLETEGN = ";"
 BOM = "﻿"
 MAKS_PER_ELEMENT = 5
@@ -212,6 +227,8 @@ def statistikk(funn, verdier):
     ukoblede_funn = [n for n in etter_verdi if n not in set(lest)]
     ukoblede = len(funn) - sum(len(v) for v in etter_verdi.values())
     return {
+        # Først, så den er det øverste øyet møter i Watch-noden.
+        "skript": VERSJON,
         "funn_i_fila": len(funn),
         "nokkel_fra": "tfm-kolonnen" if har_tfm_kolonne(funn) else "utledet av søskenrader",
         "funn_uten_nokkel": ukoblede,

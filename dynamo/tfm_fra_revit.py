@@ -66,6 +66,22 @@ from __future__ import unicode_literals
 
 PY2 = str is bytes
 
+# Hvilken utgave dette skriptet er fra.
+#
+# «ukjent» i repoet, og verktoy/oppdater-grafene.py bytter den til pakkens
+# versjon PÅ VEI INN i .dyn-fila. Da kan de to ikke bli uenige: kilden har
+# ingen versjon å drive fra, og kopien får sin i samme operasjon som skriptet.
+#
+# Limer du inn direkte fra .py-fila, står det «ukjent» — og det er riktig, for
+# da ER alderen ukjent.
+#
+# Finnes fordi Dynamos Python-node lagrer skriptet som en STRENG inne i
+# .dyn-fila. Kopien har drevet fra kilden tre ganger på to dager, og hver gang
+# så tallene riktige ut. Sammendraget kan ikke gjøre kopien fersk — det kan
+# bare gjøre alderen synlig.
+VERSJON = "ukjent"
+
+
 # Familienavn -> (systemkode, komponentkode).
 #
 # KODENE ER FUNNET PÅ. De er valgt så de ser plausible ut i en rapport, og de er
@@ -371,12 +387,15 @@ def sammendrag(tall):
     n = tall["elementer"]
     if not n:
         return [
+            "Skript {0}.".format(VERSJON),
             "Ingen elementer inn.",
             "Sjekk at kategorivalget faktisk traff noe — en tom liste ser",
             "nøyaktig ut som en modell der alt allerede er merket.",
         ]
 
-    linjer = [antall(n, "element", "elementer") + " merket."]
+    # Versjonen står i HVER kjøring, ikke bare ved avvik. En linje som bare
+    # vises av og til, blir ikke lest den gangen den betyr noe.
+    linjer = ["Skript {0}.".format(VERSJON), antall(n, "element", "elementer") + " merket."]
     if tall["unike_tfm"] != n:
         linjer.append(
             "ADVARSEL: bare {0} av {1} TFM-ID-er er unike. Det skal ikke "
