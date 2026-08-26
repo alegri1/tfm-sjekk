@@ -44,10 +44,8 @@ hver gang. Med en gammel kopi limt inn merkes alt med elektro-restkoden 4390
 eller med ugyldige firesifrede løpenummer, og den lagrede merkingen er borte.
 Prosjekteieren fanget dette; oppgaven sto opprinnelig uten advarselen.
 
-- [ ] 5.3 **Til brukeren:** KOBLE FRA `Element.SetParameterByName` først —
-      versjonslinja ligger i `OUT[1]` og beregnes uten at noe skrives. Sjekk at
-      kjøremodus står på `Manual`. Lim så en bevisst GAMMEL kopi inn og kjør.
-      Sammendraget skal oppgi den gamle versjonen. Det er hele poenget, og en
-      test kan ikke vise det
+- [x] 5.3 Prøvd av brukeren 2026-08-26: `VERSJON` redigert til «0.7.0» i noden,
+      skrivenoden frakoblet, grafen kjørt. Sammendraget svarte «Skript 0.7.0.»
+      Varselet leses der det skal, og ingen TFM-verdi ble rørt
 - [ ] 5.4 **Til brukeren:** lim inn den ferske, se at tallet endrer seg, og
       koble skrivenoden tilbake
