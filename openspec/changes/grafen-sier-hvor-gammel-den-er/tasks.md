@@ -1,0 +1,45 @@
+## 1. Skriptene bærer en versjon
+
+- [ ] 1.1 `VERSJON = "ukjent"` i `dynamo/tfm_fra_revit.py`, med en kommentar om
+      at `oppdater-grafene.py` setter den på vei inn i `.dyn`-fila
+- [ ] 1.2 Samme i `dynamo/tfm_til_revit.py`
+- [ ] 1.3 `sammendrag` skriver «Skript <versjon>.» som egen linje
+- [ ] 1.4 Linja står i hver kjøring, også når alt er i orden — en linje som bare
+      vises av og til blir ikke lest når den først dukker opp
+- [ ] 1.5 Test: linja finnes i sammendraget fra begge skriptene
+
+## 2. Skriveren setter versjonen
+
+- [ ] 2.1 `oppdater-grafene.py` leser versjonen fra `pyproject.toml`
+- [ ] 2.2 Bytter `VERSJON = "ukjent"` til den, på vei inn i `.dyn`
+- [ ] 2.3 Finner den ikke plassholderen, stopper den og navngir fila. En graf
+      uten versjon er den tilstanden vi prøver å fjerne
+- [ ] 2.4 Test: `.dyn`-filene bærer pakkens versjon, `.py`-filene «ukjent»
+- [ ] 2.5 Test: skriptkopien er ellers lik kilden — den eksisterende testen må
+      justeres, siden versjonslinja nå skal skille seg
+
+## 3. Demomappa slutter å være et eget ledd
+
+- [ ] 3.1 `oppdater-grafene.py` skriver også til demomappa når stien finnes,
+      og sier hvilke filer den rørte
+- [ ] 3.2 Stien oppgis med et flagg, ikke hardkodet hjem til mitt skrivebord
+- [ ] 3.3 Mappa finnes ikke: ikke en feil. Den er ikke i git
+- [ ] 3.4 Sjekk at `lag_demomappe.py` og skriveren ikke kommer i konflikt —
+      begge skriver `.dyn` til demomappa
+
+## 4. Dokumentasjonen
+
+- [ ] 4.1 `dynamo/LES-MEG.md`: hva linja betyr, og hva man gjør når tallet er
+      lavere enn utgivelsen man hentet
+- [ ] 4.2 Avsnittet «Grafen holder en kopi, ikke en peker» peker på den nye
+      linja som måten å se det på — i dag sier det «tell feltene i OUT[1]»
+- [ ] 4.3 `verktoy/demomappe-LES-MEG.mal.txt`: samme, for den som ikke har repoet
+
+## 5. Prøvd der det brukes
+
+- [ ] 5.1 `uv run pytest` grønn, `ruff check` og `ruff format --check` rene
+- [ ] 5.2 Kjør `oppdater-grafene.py` og se at begge `.dyn` bærer riktig versjon
+- [ ] 5.3 **Til brukeren:** lim en bevisst GAMMEL kopi inn i Dynamo og kjør.
+      Sammendraget skal oppgi den gamle versjonen. Det er hele poenget, og en
+      test kan ikke vise det
+- [ ] 5.4 **Til brukeren:** lim inn den ferske og se at tallet endrer seg
