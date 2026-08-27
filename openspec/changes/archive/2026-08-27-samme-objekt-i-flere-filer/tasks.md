@@ -35,5 +35,5 @@
 - [x] 4.3 Den federerte Snowdon-kjøringen: INGEN D3-funn, fordi de to delte
       objektene er `IfcGrid` utenfor omfanget
 - [x] 4.4 Demoen normalt: ingenting nytt
-- [ ] 4.5 **Åpne HTML-rapporten** og se at advarselen leses som en forklaring,
-      ikke som enda et funn i mengden
+- [x] 4.5 Åpnet av brukeren 2026-08-27. Advarselen leses som en forklaring
+      blant de elleve K6-funnene den handler om
