@@ -519,6 +519,32 @@ vertsmodellen, så arkitektfila kan hete
 `...Electrical-...Architectural.ifc` — og `"*Electrical*"` treffer da alle
 fagmodellene i eksporten.
 
+## Samme modell to ganger
+
+Federerer du to filer som inneholder de samme objektene — to eksporter av samme
+modell, eller et mønster som fanget en gammel eksport ved siden av en ny — sier
+verktøyet fra:
+
+```
+D3  6 objekt(er) i omfanget har samme IFC-identitet i 2 fagmodeller
+    (rie.ifc, rie-eksport-2.ifc). Vanligvis betyr det at samme modell er
+    sendt inn to ganger.
+```
+
+Grunnen er at objekter slås opp på `GlobalId`. Går identiteten igjen, er det
+tilfeldig hvilken av filene et funn tilskrives, og K6 kan melde duplikat på det
+som er ett objekt talt to ganger. Funntallene er riktige; det er
+fil-tilhørigheten som ikke er det.
+
+**Verktøyet velger ikke selv.** Hvilket av to like objekter som er det rette,
+kan bare den som sendte inn filene svare på — så begge blir stående, og du får
+spørsmålet.
+
+Delte objekter **utenfor** omfanget meldes ikke. Revit legger det samme
+rutenettet inn i hver lenkede eksport; Snowdon-kjøringen har 24 456 objekter og
+24 452 unike, og de fire er `IfcGrid`. De kontrolleres ikke, og en advarsel om
+dem ville stått i hver eneste federerte kjøring.
+
 ## Hvordan verktøyet finner TFM-verdien
 
 Norske modeller er rotete, så verktøyet leter i tre trinn — i synkende styrke

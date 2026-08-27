@@ -204,8 +204,42 @@ class Kontekst(BaseModel):
     def objekt(self, global_id: str) -> IfcObjekt | None:
         return self._etter_id.get(global_id)
 
+    def delt_identitet(self) -> dict[str, list[str]]:
+        """Identiteter i omfanget som går igjen i flere fagmodeller.
+
+        IFC krever unik GlobalId i én fil. På tvers av filer krever ingen det,
+        og Revit eksporterer delte objekter — rutenett, romlig struktur — inn i
+        hver lenke. Den federerte Snowdon-kjøringen har 24 456 objekter og
+        24 452 unike.
+
+        Bare objekter i omfanget teller. Et delt rutenett kontrolleres ikke,
+        ingen funn festes til det, og en advarsel om det ville stått i hver
+        eneste federerte kjøring — og en advarsel som alltid står der, leses
+        ikke.
+
+        Samme identitet flere ganger i SAMME fil er ikke dette. IFC krever
+        unikhet der; bryter en fil det, er det en annen sak enn to filer som
+        overlapper.
+        """
+        filer: dict[str, set[str]] = defaultdict(set)
+        for objekt in self.relevante_objekter():
+            filer[objekt.global_id].add(objekt.kildefil)
+        return {gid: sorted(f) for gid, f in filer.items() if len(f) > 1}
+
     @cached_property
     def _etter_id(self) -> dict[str, IfcObjekt]:
+        """Oppslag på GlobalId. Nøkkelen er BEVISST bare identiteten.
+
+        Går samme identitet igjen i to filer, kollapser de her — den siste
+        vinner — og funn festes til en vilkårlig av dem. Det er ikke en
+        forglemmelse: D3 melder tilfellet framfor at nøkkelen skjuler det.
+
+        En sammensatt nøkkel `(kildefil, global_id)` ville gjort funnene
+        korrekte, men den gjør ikke K6 entydig: to objekter med samme ID i to
+        filer er enten ETT objekt telt to ganger, eller to som ved en feil deler
+        ID. Ingen nøkkel svarer på det — bare den som sendte inn filene vet, og
+        derfor er det hun som skal få spørsmålet.
+        """
         return {o.global_id: o for o in self.objekter}
 
     def er_fordeling(self, objekt: IfcObjekt) -> bool:

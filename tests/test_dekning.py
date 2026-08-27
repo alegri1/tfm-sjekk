@@ -361,3 +361,98 @@ def test_k2_meldingen_sier_hva_funnet_koster():
     assert "ikke kontrollert av de øvrige" in k2.melding
     for nummer in ("K3", "K6", "K9"):
         assert nummer not in k2.melding, "numrene tar plassen fra selve feilen"
+
+
+# --- D3: er funnene festet til riktig fil? ---
+
+
+def i_fil(gid: str, fil: str, klasse: str = "IfcFlowTerminal", supertyper=None):
+    from tfm_sjekk.modell import IfcObjekt
+
+    return IfcObjekt(
+        global_id=gid,
+        ifc_klasse=klasse,
+        ifc_supertyper=(supertyper if supertyper is not None else ["IfcDistributionFlowElement"]),
+        kildefil=fil,
+        tfm_forekomst="++115080=4310.001.12-QLF001",
+    )
+
+
+def test_samme_identitet_i_to_filer_finnes():
+    """_etter_id er en dict paa global_id. To like ID-er kollapser, og funn
+    festes til en vilkaarlig av filene."""
+    k = Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "kopi.ifc")], Konfigurasjon())
+
+    assert k.delt_identitet() == {"a": ["kopi.ifc", "rie.ifc"]}
+
+
+def test_delt_identitet_utenfor_omfanget_meldes_ikke():
+    """Revit eksporterer delte rutenett inn i hver lenke. Snowdon-kjoringen har
+    to IfcGrid i tre filer — normalt, og uten folger."""
+    k = Kontekst.bygg(
+        [
+            i_fil("g", "rie.ifc", "IfcGrid", ["IfcProduct"]),
+            i_fil("g", "riv.ifc", "IfcGrid", ["IfcProduct"]),
+        ],
+        Konfigurasjon(),
+    )
+
+    assert k.delt_identitet() == {}
+
+
+def test_samme_identitet_i_samme_fil_er_noe_annet():
+    """IFC krever unikhet i EN fil. Bryter en fil det, er det en annen sak enn
+    to filer som overlapper."""
+    k = Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "rie.ifc")], Konfigurasjon())
+
+    assert k.delt_identitet() == {}
+
+
+def test_d3_melder_med_advarsel_og_navngir_filene():
+    funn, _ = kjor_alle(
+        Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "kopi.ifc")], Konfigurasjon())
+    )
+    d3 = [f for f in funn if f.kontroll == "D3"]
+
+    assert len(d3) == 1
+    assert d3[0].alvorlighet is Alvorlighet.ADVARSEL
+    assert "rie.ifc" in d3[0].melding and "kopi.ifc" in d3[0].melding
+    assert "sendt inn to ganger" in d3[0].melding
+
+
+def test_d3_sier_hva_som_ER_paalitelig():
+    """En bruker skal ikke lese advarselen som at verktoyet ikke virker."""
+    funn, _ = kjor_alle(
+        Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "kopi.ifc")], Konfigurasjon())
+    )
+    melding = next(f for f in funn if f.kontroll == "D3").melding
+
+    assert "riktige" in melding
+    assert "tilfeldig hvilken av filene" in melding
+
+
+def test_uten_kollisjon_ingen_d3():
+    funn, _ = kjor_alle(
+        Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("b", "kopi.ifc")], Konfigurasjon())
+    )
+
+    assert not [f for f in funn if f.kontroll == "D3"]
+
+
+def test_begge_objektene_staar_igjen():
+    """Ingen sammenslaaing eller forkasting. Hvilket av to like objekter som er
+    det rette, kan bare den som sendte inn filene svare paa."""
+    k = Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "kopi.ifc")], Konfigurasjon())
+
+    assert len(k.objekter) == 2
+    assert k.dekning() == {"kopi.ifc": (1, 1), "rie.ifc": (1, 1)}
+
+
+def test_ett_funn_per_filkombinasjon_ikke_per_objekt():
+    """Deler to filer tusen objekter, er det ETT problem."""
+    objekter = [i_fil(f"o{i}", fil) for i in range(5) for fil in ("rie.ifc", "kopi.ifc")]
+    funn, _ = kjor_alle(Kontekst.bygg(objekter, Konfigurasjon()))
+    d3 = [f for f in funn if f.kontroll == "D3"]
+
+    assert len(d3) == 1
+    assert "5 objekt(er)" in d3[0].melding
