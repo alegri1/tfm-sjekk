@@ -178,9 +178,10 @@ def test_unntatt_fagmodell_markeres_ikke_som_advarsel(tmp_path):
     )
     html = sti.read_text(encoding="utf-8")
 
-    ark = next(ln for ln in html.split(chr(10)) if "ark.ifc" in ln and "<td>" in ln)
-    assert "unntatt" in ark
-    assert "advarsel" not in ark
+    # Hele raden, ikke en enkelt linje: malen bryter lange rader over flere.
+    rad = next(r for r in re.findall(r"<tr.*?</tr>", html, re.S) if "ark.ifc" in r)
+    assert "unntatt" in rad
+    assert "advarsel" not in rad
 
 
 def test_uteglemt_fagmodell_markeres_fortsatt_som_advarsel(tmp_path):
@@ -202,3 +203,15 @@ def test_unntatt_raden_bruker_ingen_farge_som_mangler_i_moerk_modus(tmp_path):
     regel = re.search(r"tr\.unntatt td \{[^}]*\}", html).group(0)
     for variabel in re.findall(r"var\((--[a-zæøå-]+)\)", regel):
         assert html.count(variabel + ":") >= 2, f"{variabel} finnes bare i én palett"
+
+
+def test_kolonnen_for_uleselig_tfm_vises_bare_naar_noe_falt_ut(tmp_path):
+    """En kolonne med null i hver rad i hver kjoering blir ikke lest."""
+    uten = skriv_html([], tmp_path / "a.html", "m.ifc", 9, None, {"m.ifc": (9, 9)}, [], {})
+    med = skriv_html([], tmp_path / "b.html", "m.ifc", 9, None, {"m.ifc": (9, 9)}, [], {"m.ifc": 3})
+
+    assert "Uleselig TFM" not in uten.read_text(encoding="utf-8")
+    html = med.read_text(encoding="utf-8")
+    assert "Uleselig TFM" in html
+    rad = next(r for r in re.findall(r"<tr.*?</tr>", html, re.S) if "m.ifc" in r and "<td>" in r)
+    assert ">3<" in rad

@@ -154,6 +154,38 @@ class Kontekst(BaseModel):
 
         return {fil: (i_omfang[fil], antall) for fil, antall in sorted(lest.items())}
 
+    def uleselige(self) -> dict[str, int]:
+        """Per fagmodell: objekter i omfanget med en TFM som ikke lot seg tolke.
+
+        `med_tfm()` returnerer bare det som parset, og sju kontroller leser den.
+        Et objekt i `parsefeil` er dermed lest, i omfanget, og likevel usynlig
+        for K3 til K9 — uten at noe sier det.
+
+        Bare objekter i omfanget telles. Et objekt utenfor `ifc_klasser` er ikke
+        ukontrollert av denne grunnen; det er ikke kontrollert i det hele tatt,
+        og det er dekningen som svarer for det.
+
+        Tallet regnes ikke ut på nytt: `parsefeil` er fylt i `bygg` og bæres med.
+        """
+        ut: dict[str, int] = defaultdict(int)
+        for objekt in self.relevante_objekter():
+            if objekt.global_id in self.parsefeil:
+                ut[objekt.kildefil] += 1
+        return dict(ut)
+
+    def med_tfm_verdi(self) -> dict[str, int]:
+        """Per fagmodell: objekter i omfanget som HAR en TFM-verdi.
+
+        Skiller «ingen tolkbar TFM» fra «ingen TFM i det hele tatt». Det siste
+        er K1s jobb, og en umerket modell skal ikke i tillegg få en advarsel om
+        grammatikken.
+        """
+        ut: dict[str, int] = defaultdict(int)
+        for objekt in self.relevante_objekter():
+            if objekt.tfm_forekomst:
+                ut[objekt.kildefil] += 1
+        return dict(ut)
+
     def unntatte_filer(self) -> list[str]:
         """Fagmodellene oppsettet unntar med vilje.
 

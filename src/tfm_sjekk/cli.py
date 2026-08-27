@@ -240,12 +240,21 @@ def sjekk(
     # leser dekningen leser den for å vite hva som ble sett på, og en fil som
     # mangler fra lista er verre enn en som står der med en forklaring.
     unntatt = set(kontekst.unntatte_filer())
+    uleselige = kontekst.uleselige()
     for fil, (i_omfang, lest) in dekning.items():
         if fil in unntatt:
             typer.echo(f"  {fil}: unntatt — kontrolleres ikke for TFM ({lest} objekter lest)")
             continue
         merke = "  <- ingenting kontrollert" if not i_omfang else ""
         typer.echo(f"  {fil}: {i_omfang} av {lest} objekter i omfanget{merke}")
+        if uleselige.get(fil):
+            typer.echo(
+                f"      {uleselige[fil]} av dem har en TFM som ikke lot seg tolke — "
+                "de er ikke kontrollert av kontrollene som krever en tolket ID"
+            )
+
+    if dekning and not uleselige:
+        typer.echo("  alle TFM-verdiene lot seg tolke")
 
     antall_feil = sum(1 for f in funn if f.alvorlighet is Alvorlighet.FEIL)
     antall_advarsler = sum(1 for f in funn if f.alvorlighet is Alvorlighet.ADVARSEL)
@@ -278,6 +287,7 @@ def sjekk(
         hoppet,
         dekning,
         sorted(unntatt),
+        uleselige,
     )
     skriv_csv(funn, ut / "funn.csv")
     skriv_xlsx(funn, ut / "funn.xlsx")

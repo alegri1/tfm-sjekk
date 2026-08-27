@@ -249,9 +249,16 @@ def test_bcf_tittelen_forblir_lesbar_og_beskrivelsen_baerer_opphavet(tmp_path):
     funn, _ = kjor_alle(Kontekst.bygg([o], Konfigurasjon()))
     sti = skriv_bcf(funn, tmp_path / "funn.bcfzip", "2026-01-01T12:00:00Z")
 
+    # Emnet for K2 spesifikt. Modellen har ett objekt med uleselig TFM, saa
+    # D2 fyrer ogsaa — «alle TFM-verdiene falt ut» er teknisk sant med ett
+    # objekt. Aa plukke et vilkaarlig emne var upresist fra foer.
     with zipfile.ZipFile(sti) as arkiv:
-        navn = next(n for n in arkiv.namelist() if n.endswith("markup.bcf"))
-        topic = ET.fromstring(arkiv.read(navn)).find("Topic")
+        topics = [
+            ET.fromstring(arkiv.read(n)).find("Topic")
+            for n in arkiv.namelist()
+            if n.endswith("markup.bcf")
+        ]
+        topic = next(t for t in topics if t.findtext("Title").startswith("K2:"))
 
     tittel = topic.findtext("Title")
     assert len(tittel) <= 100

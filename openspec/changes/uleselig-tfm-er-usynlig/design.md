@@ -4,8 +4,7 @@ Se proposal.md — Why. Mekanismen er én linje i `Kontekst`:
 
 ```python
 def med_tfm(self):
-    return [(o, self.parsede[o.global_id]) for o in self.objekter
-            if o.global_id in self.parsede]
+    return [(o, self.parsede[o.global_id]) for o in self.objekter if o.global_id in self.parsede]
 ```
 
 `parsede` og `parsefeil` fylles side om side i `Kontekst.bygg`. Sju kontroller

@@ -194,3 +194,170 @@ def test_grunnen_sier_hva_som_skal_til():
     master = Hoppgrunn.MANGLER_MASTER.raad
     assert "--master" in master
     assert "tfm_master" in master
+
+
+# --- Uleselig TFM er usynlig for sju kontroller ---
+
+
+def utenfor(gid: str, tfm: str | None):
+    """Et objekt i en klasse som IKKE staar i ifc_klasser."""
+    from tfm_sjekk.modell import IfcObjekt
+
+    return IfcObjekt(
+        global_id=gid,
+        ifc_klasse="IfcWall",
+        ifc_supertyper=["IfcBuildingElement", "IfcProduct"],
+        kildefil="test.ifc",
+        tfm_forekomst=tfm,
+    )
+
+
+def test_uleselige_telles_per_fagmodell():
+    """med_tfm() returnerer bare det som parset, og sju kontroller leser den.
+
+    Et objekt i parsefeil er lest, i omfanget, og likevel usynlig for K3 til K9.
+    """
+    k = Kontekst.bygg(
+        [
+            objekt(tfm="++11508=4310.001.12-QLF005", global_id="a"),
+            objekt(tfm="++115080=4310.001.12-QLF001", global_id="b"),
+        ],
+        Konfigurasjon(),
+    )
+
+    assert k.uleselige() == {"test.ifc": 1}
+
+
+def test_alt_parser_gir_ingen_uleselige():
+    k = Kontekst.bygg([objekt(tfm="++115080=4310.001.12-QLF001", global_id="a")], Konfigurasjon())
+
+    assert k.uleselige() == {}
+
+
+def test_objekter_utenfor_omfanget_telles_ikke():
+    """Et objekt utenfor ifc_klasser er ikke ukontrollert AV DENNE GRUNNEN.
+
+    Det er ikke kontrollert i det hele tatt, og det er dekningen som svarer
+    for det. Blandes de to, blir tallet meningsløst i en federering med ARK.
+    """
+    k = Kontekst.bygg(
+        [
+            objekt(tfm="++11508=4310.001.12-QLF005", global_id="a"),
+            utenfor("b", "++11508=4310.001.12-QLF009"),
+        ],
+        Konfigurasjon(),
+    )
+
+    assert k.uleselige() == {"test.ifc": 1}
+
+
+def test_med_tfm_verdi_skiller_umerket_fra_uleselig():
+    """«Ingen tolkbar TFM» og «ingen TFM i det hele tatt» er ulike ting.
+
+    Det siste er K1s jobb, og en umerket modell skal ikke i tillegg faa en
+    advarsel om grammatikken.
+    """
+    k = Kontekst.bygg(
+        [
+            objekt(tfm="++11508=4310.001.12-QLF005", global_id="a"),
+            objekt(tfm=None, global_id="b"),
+        ],
+        Konfigurasjon(),
+    )
+
+    assert k.med_tfm_verdi() == {"test.ifc": 1}
+    assert k.uleselige() == {"test.ifc": 1}
+
+
+# --- D2: falt ALT ut paa grammatikken? ---
+
+
+def d2_funn(objekter, config=None):
+    funn, _ = kjor_alle(Kontekst.bygg(objekter, config or Konfigurasjon()))
+    return [f for f in funn if f.kontroll == "D2"]
+
+
+def test_alle_faller_ut_gir_funn():
+    """Enkeltfeil rettes objekt for objekt. Faller alt ut, er det en
+    merkekonvensjon som ikke stemmer med oppsettet — motsatt handling.
+    """
+    funn = d2_funn(
+        [
+            objekt(tfm="++11508=4310.001.12-QLF001", global_id="a"),
+            objekt(tfm="++11508=4310.001.12-QLF002", global_id="b"),
+        ]
+    )
+
+    assert len(funn) == 1
+    assert funn[0].alvorlighet is Alvorlighet.ADVARSEL
+
+
+def test_en_som_parser_er_nok_til_at_det_ikke_er_konvensjonen():
+    """Grensen er ALLE, ikke en terskel.
+
+    En terskel ville vaert et tall uten begrunnelse. Staar noen igjen, er de
+    ekte funn, og K2 sier fortsatt hva som er galt med hver enkelt.
+    """
+    funn = d2_funn(
+        [
+            objekt(tfm="++11508=4310.001.12-QLF001", global_id="a"),
+            objekt(tfm="++115080=4310.001.12-QLF002", global_id="b"),
+        ]
+    )
+
+    assert not funn
+
+
+def test_umerket_modell_gir_ikke_konvensjonsfunn():
+    """«Ingen tolkbar TFM» og «ingen TFM i det hele tatt» er ulike ting.
+
+    Det siste er K1s jobb. En umerket modell skal ikke i tillegg faa en
+    advarsel om grammatikken.
+    """
+    funn = d2_funn([objekt(tfm=None, global_id="a"), objekt(tfm=None, global_id="b")])
+
+    assert not funn
+
+
+def test_vurderingen_er_per_fagmodell():
+    """I en federering kan RIE vaere riktig merket mens RIV bruker en annen
+    konvensjon. Samlet vurdering ville latt nettopp det gaa stille forbi.
+    """
+    funn = d2_funn(
+        [
+            objekt(tfm="++115080=4310.001.12-QLF001", global_id="a", kildefil="rie.ifc"),
+            objekt(tfm="++11508=3600.001.04-JVZ001", global_id="b", kildefil="riv.ifc"),
+        ]
+    )
+
+    assert [f.kildefil for f in funn] == ["riv.ifc"]
+
+
+def test_meldingen_navngir_grammatikken_og_viser_et_avvik():
+    """Et tall sier at noe er galt; meldingen sier hva."""
+    funn = d2_funn([objekt(tfm="++11508=4310.001.12-QLF001", global_id="a")])
+
+    assert "[grammatikk]" in funn[0].melding
+    assert "5 siffer" in funn[0].melding, "det foerste avviket skal staa ordrett"
+
+
+def test_d2_endrer_ikke_exit_koden():
+    """Advarsel, som D1. Verktoyet staar som port i en leveranseprosess (§5),
+    og et prosjekt med en annen grammatikk skal ikke stenge doera paa et funn
+    som handler om oppsettet.
+    """
+    funn = d2_funn([objekt(tfm="++11508=4310.001.12-QLF001", global_id="a")])
+
+    assert all(f.alvorlighet is not Alvorlighet.FEIL for f in funn)
+
+
+def test_k2_meldingen_sier_hva_funnet_koster():
+    """Et syntaksfunn ser ut som en detalj, men skjuler sju kontroller."""
+    funn, _ = kjor_alle(
+        Kontekst.bygg([objekt(tfm="++11508=4310.001.12-QLF001", global_id="a")], Konfigurasjon())
+    )
+    k2 = next(f for f in funn if f.kontroll == "K2")
+
+    assert "ikke kontrollert av de øvrige" in k2.melding
+    for nummer in ("K3", "K6", "K9"):
+        assert nummer not in k2.melding, "numrene tar plassen fra selve feilen"

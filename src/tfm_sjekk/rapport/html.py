@@ -104,16 +104,20 @@ MAL = Template(
 
 {% if dekning %}
 <table class="dekning">
-<thead><tr><th>Fagmodell</th><th>I omfanget</th><th>Lest</th></tr></thead>
+<thead><tr><th>Fagmodell</th><th>I omfanget</th><th>Lest</th>
+{% if uleselige %}<th>Uleselig TFM</th>{% endif %}</tr></thead>
 <tbody>
 {% for fil, tall in dekning.items() %}
 {% if fil in unntatte %}
 <tr class="unntatt">
-  <td>{{ fil }}</td><td colspan="2">unntatt — kontrolleres ikke for TFM ({{ tall[1] }} lest)</td>
+  <td>{{ fil }}</td>
+  <td colspan="{{ 3 if uleselige else 2 }}">unntatt — kontrolleres ikke for TFM
+  ({{ tall[1] }} lest)</td>
 </tr>
 {% else %}
 <tr{% if not tall[0] %} class="advarsel"{% endif %}>
   <td>{{ fil }}</td><td>{{ tall[0] }}</td><td>{{ tall[1] }}</td>
+  {% if uleselige %}<td>{{ uleselige.get(fil, 0) or "" }}</td>{% endif %}
 </tr>
 {% endif %}
 {% endfor %}
@@ -172,6 +176,7 @@ def skriv_html(
     hoppet_over: list[tuple[str, str, str]] | None = None,
     dekning: dict[str, tuple[int, int]] | None = None,
     unntatte: list[str] | None = None,
+    uleselige: dict[str, int] | None = None,
 ) -> Path:
     """`dekning` er (i omfanget, lest) per fagmodell.
 
@@ -188,6 +193,9 @@ def skriv_html(
             hoppet_over=hoppet_over or [],
             dekning=dekning or {},
             unntatte=set(unntatte or []),
+            # Kolonnen vises bare naar noe faktisk falt ut. En kolonne med
+            # null i hver rad i hver kjoering blir ikke lest.
+            uleselige=uleselige or {},
             i_omfang=sum(tall[0] for tall in (dekning or {}).values()),
             antall={
                 "feil": teller[Alvorlighet.FEIL],
