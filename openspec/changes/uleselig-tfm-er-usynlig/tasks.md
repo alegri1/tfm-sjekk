@@ -42,5 +42,10 @@
       utgivelsen, ikke arbeidstreet. Prøven må gjøres med `python -m tfm_sjekk.cli`
 - [x] 5.4 Kjør den federerte Snowdon-kjøringen — 24 456 objekter — og se at
       tallet stemmer med det K2 melder
-- [ ] 5.5 **Åpne HTML-rapporten**, i lys og mørk modus. Tabellen får en kolonne til
-- [ ] 5.6 Se på en K2-melding i XLSX og i BCF. Setningen er lengre nå
+- [x] 5.5 Åpnet av brukeren 2026-08-27. Fire kolonner leser fint, tomme celler
+      der ingenting falt ut
+- [x] 5.6 **Fant en regresjon.** Den nye setningen dyttet K2-tittelen over 100
+      tegn, og BCF kuttet den midt i et ord: «… Objektet er derfor ikk». Tittelen
+      er det man ser i emnelista i en viewer. `_tittel` kutter nå ved
+      SETNINGSSLUTT; K2 er tilbake til 51 tegn og komplett. De fire som fortsatt
+      får ellipse er enkeltsetninger uten brudd innen grensen — uendret oppførsel

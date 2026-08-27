@@ -378,3 +378,40 @@ def test_uten_installert_pakke_faller_den_tilbake_pa_navnet(monkeypatch):
 
     monkeypatch.setattr(modul, "version", feiler)
     assert modul._forfatter() == "tfm-sjekk"
+
+
+def test_tittelen_kuttes_ved_setningsslutt(tmp_path):
+    """Et hardt kutt paa tegn nummer hundre gir «... Objektet er derfor ikk».
+
+    Tittelen er det man ser i emnelista i en viewer, og en halv setning leses
+    som en halv opplysning. Fanget ved aa se paa BCF-en etter at K2-meldingen
+    fikk en setning til.
+    """
+    from tfm_sjekk.rapport.bcf import MAKS_TITTEL, _tittel
+
+    f = Funn(
+        kontroll="K2",
+        alvorlighet=Alvorlighet.FEIL,
+        melding=(
+            "Plasseringen «11508» har 5 siffer, forventet 6. Objektet er derfor "
+            "ikke kontrollert av de øvrige kontrollene, som krever en tolket TFM-ID."
+        ),
+    )
+
+    tittel = _tittel(f)
+
+    assert len(tittel) <= MAKS_TITTEL
+    assert tittel.endswith("forventet 6.")
+    assert "…" not in tittel
+
+
+def test_tittel_uten_setningsslutt_kuttes_som_for(tmp_path):
+    """Finnes ingen setningsslutt innenfor grensen, er ellipse det beste vi har."""
+    from tfm_sjekk.rapport.bcf import MAKS_TITTEL, _tittel
+
+    f = Funn(kontroll="K1", alvorlighet=Alvorlighet.FEIL, melding="x" * 200)
+
+    tittel = _tittel(f)
+
+    assert len(tittel) <= MAKS_TITTEL
+    assert tittel.endswith("…")

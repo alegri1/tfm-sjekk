@@ -354,10 +354,23 @@ def _normaliser(v: tuple[float, ...]) -> tuple[float, float, float]:
 
 
 def _tittel(f: Funn) -> str:
-    """Kort nok til å leses i en emneliste; hele meldinga står i Description."""
+    """Kort nok til å leses i en emneliste; hele meldinga står i Description.
+
+    Kuttes det, kuttes det ved en SETNINGSSLUTT. Et hardt kutt på tegn nummer
+    hundre gir «… Objektet er derfor ikk», og det er tittelen man ser i
+    emnelista i en viewer — der en halv setning leses som en halv opplysning.
+
+    Meldingene her er bygget slik at første setning er selve funnet og resten
+    utdyper. Å beholde hele setninger som får plass er derfor både penere og
+    mer presist enn å fylle linja til randen.
+    """
     tekst = f"{f.kontroll}: {f.melding}"
     if len(tekst) <= MAKS_TITTEL:
         return tekst
+
+    kutt = tekst.rfind(". ", 0, MAKS_TITTEL)
+    if kutt > 0:
+        return tekst[: kutt + 1]
     return tekst[: MAKS_TITTEL - 1].rstrip() + "…"
 
 
