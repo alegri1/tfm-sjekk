@@ -13,6 +13,7 @@ import atexit
 import contextlib
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Annotated
 
@@ -22,7 +23,7 @@ from tfm_sjekk.config import Konfigurasjon, OppsettFeil, finn_oppsett
 from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import Hoppgrunn, alle_kontroller, kjor_alle
-from tfm_sjekk.modell import Alvorlighet
+from tfm_sjekk.modell import GRADSORD, Alvorlighet, gradsord
 from tfm_sjekk.oppsett import til_toml, utled
 from tfm_sjekk.rapport import (
     normaliser_tidsstempel,
@@ -256,8 +257,8 @@ def sjekk(
     if dekning and not uleselige:
         typer.echo("  alle TFM-verdiene lot seg tolke")
 
-    antall_feil = sum(1 for f in funn if f.alvorlighet is Alvorlighet.FEIL)
-    antall_advarsler = sum(1 for f in funn if f.alvorlighet is Alvorlighet.ADVARSEL)
+    teller = Counter(f.alvorlighet for f in funn)
+    antall_feil = teller[Alvorlighet.FEIL]
 
     # Grunnen kommer fra kjor_alle, ikke regnet ut på nytt her. To steder som
     # utleder det samme blir før eller siden uenige.
@@ -279,23 +280,34 @@ def sjekk(
             typer.echo(f"      {raad}")
 
     tittel = ", ".join(m.name for m in modeller)
-    skriv_html(
-        funn,
-        ut / "rapport.html",
-        tittel,
-        len(objekter),
-        hoppet,
-        dekning,
-        sorted(unntatt),
-        uleselige,
-    )
-    skriv_csv(funn, ut / "funn.csv")
-    skriv_xlsx(funn, ut / "funn.xlsx")
-    skriv_bcf(funn, ut / "funn.bcfzip", opprettet)
 
-    typer.echo(
-        f"\n{antall_feil} feil, {antall_advarsler} advarsler → {ut}/rapport.html, {ut}/funn.bcfzip"
-    )
+    # Lista bygges AV skrivekallene, ikke ved siden av dem. Skrevet for hånd
+    # ville den kunne komme i utakt med hva som faktisk ble skrevet, og det er
+    # nøyaktig den utakten linja under fantes for å rette: den navnga to av de
+    # fire filene, så den som ikke visste at et regneark fantes lette ikke.
+    skrevet = [
+        skriv_html(
+            funn,
+            ut / "rapport.html",
+            tittel,
+            len(objekter),
+            hoppet,
+            dekning,
+            sorted(unntatt),
+            uleselige,
+        ),
+        skriv_csv(funn, ut / "funn.csv"),
+        skriv_xlsx(funn, ut / "funn.xlsx"),
+        skriv_bcf(funn, ut / "funn.bcfzip", opprettet),
+    ]
+
+    # ALLE gradene som har funn, ikke bare de to som avgjør exit-koden. Linja
+    # er det første og ofte det eneste som leses, og sa den «13 feil, 1
+    # advarsler» om en kjøring med sytten funn, hadde leseren ingen måte å vite
+    # at det lå tre rader til i rapporten.
+    gradene = ", ".join(gradsord(grad, teller[grad]) for grad in GRADSORD if teller[grad])
+    stier = ", ".join(str(s) for s in skrevet)
+    typer.echo(f"\n{gradene or 'ingen funn'} → {stier}")
     raise typer.Exit(code=1 if antall_feil else 0)
 
 

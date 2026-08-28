@@ -476,6 +476,19 @@ eller at ingen kontroll hadde noe å se på. Omfanget bestemmes av `ifc_klasser`
 en modell uten tekniske fag — eller en eksport som legger utstyr i
 `IfcBuildingElementProxy` — gir null i omfanget og en rapport som ser ren ut.
 
+Oppsummeringslinja teller **hver grad som har funn**, og navngir **hver fil
+som ble skrevet**:
+
+```
+13 feil, 1 advarsel, 3 info → rapport\rapport.html, rapport\funn.csv, rapport\funn.xlsx, rapport\funn.bcfzip
+```
+
+En grad uten funn nevnes ikke, og en kjøring helt uten funn sier «ingen funn».
+Advarsler og info endrer ikke exit-koden, men de står i rapporten — og en linje
+som ikke teller dem lar dem gå ubemerket forbi. Det samme gjelder et format
+ingen vet finnes: navngir linja to av fire filer, er de to andre skrevet til
+ingen.
+
 En fagmodell med tomt omfang gir en **advarsel**, ikke en feil. Exit-koden er
 uendret, slik at et legitimt kjør på en arkitektmodell ikke stenger porten i CI.
 Meldingen nevner klassene fila faktisk inneholder, så den er nok til å rette

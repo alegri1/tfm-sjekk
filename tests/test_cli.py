@@ -68,7 +68,7 @@ def test_exit_koden_overlever_en_cp1252_konsoll(tmp_path):
 
     assert resultat.returncode == 0, resultat.stdout + resultat.stderr
     assert "UnicodeEncodeError" not in resultat.stderr
-    assert "advarsler" in resultat.stdout  # oppsummeringslinja kom ut
+    assert "ingen funn" in resultat.stdout  # oppsummeringslinja kom ut
 
 
 def test_federering_over_prosessgrensa(tmp_path):
@@ -90,7 +90,7 @@ def test_filsti_forst_virker_uten_kommandoord(tmp_path):
     modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "ren.ifc")
     resultat = kjor([str(modell), "--ut", str(tmp_path / "ut")])
     assert resultat.returncode == 0, resultat.stdout + resultat.stderr
-    assert "advarsler" in resultat.stdout
+    assert "ingen funn" in resultat.stdout
 
 
 def test_skrivefeil_i_kommandoen_gir_fortsatt_kommandofeil():
@@ -227,7 +227,7 @@ def test_fil_som_heter_som_en_kommando_gar_til_sjekk(tmp_path):
     modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "oppsett.ifc")
     resultat = kjor([str(modell), "--ut", str(tmp_path / "ut")])
     assert resultat.returncode == 0, resultat.stdout + resultat.stderr
-    assert "advarsler" in resultat.stdout
+    assert "ingen funn" in resultat.stdout
 
 
 def test_oppsett_listes_i_hjelpeteksten():
@@ -392,3 +392,106 @@ def test_meldingen_sier_hva_som_er_galt(tmp_path):
     tekst = uten_ansi(r.stdout + r.stderr).replace("\n", " ")
     assert "foring_systemkode" in tekst
     assert "elektro" in tekst
+
+
+# --- Oppsummeringslinja skal stemme med rapporten den nettopp skrev ---
+
+
+ROT = Path(__file__).parent.parent
+
+
+def demomodellene(tmp_path: Path) -> list[str]:
+    """De tre demomodellene, bygget i tmp_path.
+
+    Bygges her framfor å leses fra `eksempler/`: de filene er genererte og
+    gitignorerte, og finnes ikke i en fersk klone.
+    """
+    sys.path.insert(0, str(ROT / "eksempler"))
+    from fixtures.syntetisk import lag_elektromodell
+    from lag_demomodell import ELEKTRO, RIE, RIV
+
+    return [
+        str(lag_modell(RIE, tmp_path / "demo-rie.ifc", plassering=True)),
+        str(lag_modell(RIV, tmp_path / "demo-riv.ifc", plassering=True)),
+        str(lag_elektromodell(ELEKTRO, tmp_path / "demo-elektro.ifc", geometri=True)),
+    ]
+
+
+def oppsummeringen(tmp_path: Path) -> tuple[str, Path]:
+    ut = tmp_path / "ut"
+    r = kjor(
+        [
+            "sjekk",
+            *demomodellene(tmp_path),
+            "--config",
+            str(ROT / "eksempler" / "tfm-sjekk-full.toml"),
+            "--ut",
+            str(ut),
+        ]
+    )
+    assert r.returncode == 1, r.stdout + r.stderr
+    linjer = [linje for linje in uten_ansi(r.stdout).splitlines() if "→" in linje]
+    assert linjer, r.stdout
+    return linjer[-1], ut
+
+
+def test_oppsummeringen_teller_alle_gradene(tmp_path):
+    """Linja sa «13 feil, 1 advarsler» om en kjøring med sytten funn.
+
+    De tre infofunnene sto i HTML-en, i CSV-en, i regnearket og i BCF-en — bare
+    ikke i linja brukeren leser først. Et funn ingen vet om er like usynlig som
+    et funn som aldri ble meldt.
+    """
+    import csv
+
+    linje, ut = oppsummeringen(tmp_path)
+
+    assert "13 feil" in linje
+    assert "3 info" in linje
+
+    with (ut / "funn.csv").open(encoding="utf-8-sig", newline="") as f:
+        rader = list(csv.DictReader(f, delimiter=";"))
+    assert len(rader) == 13 + 1 + 3, linje
+
+
+def test_en_grad_uten_funn_nevnes_ikke(tmp_path):
+    """Fraværet av ordet er beskjeden. «0 info» ville gjort linja lengre uten
+    å si noe."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "ren.ifc")
+    r = kjor(["sjekk", str(modell), "--ut", str(tmp_path / "ut")])
+
+    linje = [linje for linje in uten_ansi(r.stdout).splitlines() if "→" in linje][-1]
+    assert "0 " not in linje
+    assert "ingen funn" in linje
+
+
+def test_entallsformen_er_riktig(tmp_path):
+    """«1 advarsler» er ikke norsk, og flertall her er ikke en «+s»."""
+    linje, _ = oppsummeringen(tmp_path)
+
+    assert "1 advarsel" in linje
+    assert "1 advarsler" not in linje
+
+
+def test_oppsummeringen_navngir_hver_fil_som_ble_skrevet(tmp_path):
+    """En bruker som ikke vet at et format finnes, leter ikke etter det.
+
+    Linja navnga rapport.html og funn.bcfzip. CSV-en og regnearket ble skrevet
+    til ingen.
+    """
+    linje, ut = oppsummeringen(tmp_path)
+
+    skrevet = sorted(p.name for p in ut.iterdir())
+    assert skrevet == ["funn.bcfzip", "funn.csv", "funn.xlsx", "rapport.html"]
+    for navn in skrevet:
+        assert navn in linje, f"{navn} ble skrevet, men ikke nevnt"
+
+
+def test_stien_er_skrevet_i_plattformens_form(tmp_path):
+    r"""`f"{ut}/rapport.html"` ga «...\ut/rapport.html» på Windows."""
+    linje, ut = oppsummeringen(tmp_path)
+
+    B = chr(92)  # ren backslash; en literal her ville vært en escape-sekvens
+    stier = linje.split("→", 1)[1]
+    assert str(ut / "rapport.html") in stier
+    assert B + "/" not in stier and "/" + B not in stier

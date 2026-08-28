@@ -13,6 +13,7 @@ import struct
 import xml.etree.ElementTree as ET
 import zipfile
 import zlib
+from pathlib import Path
 
 import pytest
 from conftest import uten_ansi
@@ -24,6 +25,7 @@ from tfm_sjekk.modell import Alvorlighet, Funn
 from tfm_sjekk.rapport import normaliser_tidsstempel, skriv_bcf
 
 OPPRETTET = "2026-01-01T12:00:00Z"
+ROT = Path(__file__).parent.parent
 
 
 def funn_med_objekt() -> Funn:
@@ -415,3 +417,169 @@ def test_tittel_uten_setningsslutt_kuttes_som_for(tmp_path):
 
     assert len(tittel) <= MAKS_TITTEL
     assert tittel.endswith("…")
+
+
+# --- Kuttet skal lande et sted teksten kan slutte ---
+
+
+def _siste_ord(tittel: str) -> str:
+    return tittel.rstrip("…").rsplit(" ", 1)[-1]
+
+
+def _er_helt_ord(tittel: str, tekst: str) -> bool:
+    """Er det siste ordet i tittelen et helt ord fra teksten den kom fra?"""
+    return _siste_ord(tittel) in tekst.split()
+
+
+def test_tittel_uten_setningsslutt_kuttes_ved_ordgrense():
+    """«… men er merket med system…» — halvert ord, ikke halvert setning.
+
+    Setningsgrensen fra 0.8.2 virker bare når det FINNES en setningsgrense
+    innenfor hundre tegn. Er første setning lengre, falt den tilbake på et hardt
+    kutt, og K8-meldingen endte midt i «systemet». Fanget ved å pakke ut
+    BCF-en etter en demokjøring og lese titlene.
+    """
+    from tfm_sjekk.rapport.bcf import MAKS_TITTEL, _tittel
+
+    melding = (
+        "Objektet er tilkoblet fordelingen «Fordeling 1» med systemet 4310.001, "
+        "men er merket med systemet 4320.001. Alt som mates fra samme fordeling "
+        "skal tilhøre samme system."
+    )
+    f = Funn(kontroll="K8", alvorlighet=Alvorlighet.FEIL, melding=melding)
+
+    tittel = _tittel(f)
+
+    assert len(tittel) <= MAKS_TITTEL
+    assert tittel.endswith("…")
+    assert _er_helt_ord(tittel, f"K8: {melding}"), tittel
+
+
+def test_tittelen_slutter_ikke_pa_et_tegn_som_apner_noe():
+    """«… på tvers av 2 filer (» lover en fortsettelse som aldri kommer."""
+    from tfm_sjekk.rapport.bcf import _tittel
+
+    f = Funn(
+        kontroll="K6",
+        alvorlighet=Alvorlighet.FEIL,
+        melding=(
+            "Komponentforekomsten «++115080=4310.001.12-QLF001» er brukt på 2 "
+            "objekter på tvers av 2 filer (demo-rie.ifc, demo-riv.ifc)."
+        ),
+    )
+
+    tittel = _tittel(f)
+
+    assert not tittel.rstrip("…").rstrip().endswith(("(", "«", "[", "-")), tittel
+
+
+def test_en_parentes_som_aldri_lukkes_faller_bort():
+    """Å strippe fra ENDEN er ikke nok.
+
+    K9-meldingen kuttes til «… på «300» (fordeling: 200» — den slutter på et
+    tall, så ingen stripping slår inn, og parentesen står likevel åpen ut
+    tittelen.
+    """
+    from tfm_sjekk.rapport.bcf import _forste_ulukkede, _tittel
+
+    f = Funn(
+        kontroll="K9",
+        alvorlighet=Alvorlighet.INFO,
+        melding=(
+            "MMI «200» avviker fra resten av systemet 4310.001, der de fleste "
+            "står på «300» (fordeling: 200 (1), 300 (7))."
+        ),
+    )
+
+    tittel = _tittel(f)
+
+    assert _forste_ulukkede(tittel) is None, tittel
+    assert "fordeling:" not in tittel
+
+
+def test_en_tekst_uten_ordgrenser_kuttes_hardt_men_beholder_innhold():
+    """En TFM-ID er 26 tegn uten mellomrom.
+
+    En melding som ramser opp flere av dem har ett mellomrom — det etter
+    kontroll-ID-en. En ordgrense-regel uten grense mot det ga tittelen «K8:…»:
+    innenfor grensen, uten halve ord, og fullstendig ubrukelig.
+    """
+    from tfm_sjekk.rapport.bcf import MAKS_TITTEL, _tittel
+
+    kjede = "/".join(f"++115080=4310.001.{n:02d}-QLF{n:03d}" for n in range(12, 16))
+    f = Funn(kontroll="K6", alvorlighet=Alvorlighet.FEIL, melding=kjede)
+
+    tittel = _tittel(f)
+
+    assert len(tittel) <= MAKS_TITTEL
+    assert len(tittel) > MAKS_TITTEL // 2, "kuttet til kontroll-ID-en alene"
+    assert tittel.startswith("K6: ++115080=")
+
+
+def test_setningsgrensen_har_fortsatt_forrang():
+    """En hel setning er ikke avkuttet, den er kort — og får ingen ellipse."""
+    from tfm_sjekk.rapport.bcf import _tittel
+
+    f = Funn(
+        kontroll="K2",
+        alvorlighet=Alvorlighet.FEIL,
+        melding=(
+            "Plasseringen «11508» har 5 siffer, forventet 6. Objektet er derfor "
+            "ikke kontrollert av de øvrige kontrollene."
+        ),
+    )
+
+    assert _tittel(f) == "K2: Plasseringen «11508» har 5 siffer, forventet 6."
+
+
+def test_alle_titlene_i_demoen_er_hele(tmp_path):
+    """Ikke konstruerte strenger — meldingene verktøyet faktisk lager.
+
+    Testen som slapp «… Objektet er derfor ikk» gjennom i 0.8.2 sjekket at
+    tittelen var under hundre tegn. Det var den. Grensen var aldri problemet;
+    stedet kuttet landet var det, og det ser man bare på ekte meldinger.
+    """
+    import sys
+
+    from tfm_sjekk.rapport.bcf import MAKS_TITTEL, _forste_ulukkede
+
+    sys.path.insert(0, str(ROT / "eksempler"))
+    from fixtures.syntetisk import lag_elektromodell
+    from lag_demomodell import ELEKTRO, RIE, RIV
+
+    modeller = [
+        str(lag_modell(RIE, tmp_path / "demo-rie.ifc", plassering=True)),
+        str(lag_modell(RIV, tmp_path / "demo-riv.ifc", plassering=True)),
+        str(lag_elektromodell(ELEKTRO, tmp_path / "demo-elektro.ifc", geometri=True)),
+    ]
+    resultat = CliRunner().invoke(
+        app,
+        [
+            "sjekk",
+            *modeller,
+            "--config",
+            str(ROT / "eksempler" / "tfm-sjekk-full.toml"),
+            "--ut",
+            str(tmp_path / "rapport"),
+            "--opprettet",
+            OPPRETTET,
+        ],
+    )
+    assert resultat.exit_code == 1, uten_ansi(resultat.output)
+
+    sti = tmp_path / "rapport" / "funn.bcfzip"
+    emner = []
+    with zipfile.ZipFile(sti) as arkiv:
+        for navn in arkiv.namelist():
+            if navn.endswith("markup.bcf"):
+                rot = ET.fromstring(arkiv.read(navn))
+                emner.append((rot.find("./Topic/Title").text, rot.find("./Topic/Description").text))
+
+    assert len(emner) == 17, f"demoen har endret seg: {len(emner)} emner"
+    assert any(t.endswith("…") for t, _ in emner), "ingen tittel ble kuttet — testen ser ingenting"
+    for tittel, melding in emner:
+        assert len(tittel) <= MAKS_TITTEL, tittel
+        assert _forste_ulukkede(tittel) is None, f"åpen parentes: {tittel}"
+        if tittel.endswith("…"):
+            # Ordet skal finnes helt igjen i meldingen tittelen kom fra.
+            assert _siste_ord(tittel) in melding.split(), tittel

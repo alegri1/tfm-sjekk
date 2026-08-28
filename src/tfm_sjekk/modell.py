@@ -21,6 +21,26 @@ class Alvorlighet(StrEnum):
     INFO = "info"
 
 
+# Entall og flertall per grad, i den rekkefølgen verktøyet ellers bruker:
+# alvorligst først. Norsk flertall er ikke en «+s», og tre kjente ord trenger
+# ingen pluraliseringsfunksjon for å bli riktige.
+#
+# Her, ikke i konsollen eller i malen. Skrevet begge steder ville de to kunnet
+# bli uenige, og en leser som sammenligner konsollen med rapporten ville trodd
+# noe var galt — samme grunn som at «hoppet over» grupperes én gang.
+GRADSORD: dict[Alvorlighet, tuple[str, str]] = {
+    Alvorlighet.FEIL: ("feil", "feil"),
+    Alvorlighet.ADVARSEL: ("advarsel", "advarsler"),
+    Alvorlighet.INFO: ("info", "info"),
+}
+
+
+def gradsord(grad: Alvorlighet, antall: int) -> str:
+    """«1 advarsel», «3 advarsler»."""
+    entall, flertall = GRADSORD[grad]
+    return f"{antall} {entall if antall == 1 else flertall}"
+
+
 class Kilde(StrEnum):
     """Hvordan verktøyet kom fram til en verdi.
 

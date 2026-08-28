@@ -8,6 +8,9 @@ forekommer blant funnene. En grad uten funn SKAL ikke nevnes.
 Antallene SKAL stemme med rapportene: summen av gradene i oppsummeringen er
 antallet funn i rapportfilene.
 
+Oppsummeringen står to steder — i konsollen og øverst i rapporten — og de to
+SKAL bruke de samme ordene om de samme tallene.
+
 Oppsummeringen er det første og ofte det eneste den som kjørte verktøyet leser.
 Nevner den bare to av tre grader, har leseren ingen måte å vite at det ligger
 flere rader i rapporten — og et funn ingen vet om er like usynlig som et funn
@@ -29,6 +32,12 @@ ubemerket forbi.
 #### Scenario: Entall og flertall
 - **WHEN** en grad har nøyaktig ett funn
 - **THEN** står ordet for den graden i entall
+- **AND** står det likt i konsollen og i rapporten
+
+#### Scenario: Ingen funn i det hele tatt
+- **WHEN** en kjøring gir ingen funn av noen grad
+- **THEN** sier oppsummeringen at det ikke ble funnet noe
+- **AND** ramser den ikke opp gradene med null
 
 ### Requirement: Oppsummeringen skal navngi hver fil kjøringen skrev
 

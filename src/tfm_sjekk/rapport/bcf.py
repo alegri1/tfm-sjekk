@@ -96,6 +96,14 @@ FAST_TIDSSTEMPEL = (1980, 1, 1, 0, 0, 0)
 
 MAKS_TITTEL = 100
 
+# Tegn som åpner noe. Står ett av dem sist i en forkortet tittel, lover det en
+# fortsettelse leseren aldri får se.
+APNE_TEGN = "([{«\"'-–—"
+
+# Parentesene som må lukkes, og tegnet som lukker dem. Kuttet kan lande etter
+# at en er åpnet, og da står den åpen ut tittelen.
+PARENTESER = {"(": ")", "[": "]", "{": "}", "«": "»"}
+
 # Etikett på emner som peker på modellen som helhet framfor på et objekt.
 MODELLNIVA = "modellnivå"
 
@@ -356,22 +364,86 @@ def _normaliser(v: tuple[float, ...]) -> tuple[float, float, float]:
 def _tittel(f: Funn) -> str:
     """Kort nok til å leses i en emneliste; hele meldinga står i Description.
 
-    Kuttes det, kuttes det ved en SETNINGSSLUTT. Et hardt kutt på tegn nummer
-    hundre gir «… Objektet er derfor ikk», og det er tittelen man ser i
-    emnelista i en viewer — der en halv setning leses som en halv opplysning.
+    Fire trinn, i denne rekkefølgen:
+
+        1. hele teksten         passer den, står den som den er
+        2. siste setningsslutt  finnes en «. » innenfor grensen
+        3. siste ordgrense      siste mellomrom innenfor grensen
+        4. hardt kutt           siste utvei
 
     Meldingene her er bygget slik at første setning er selve funnet og resten
     utdyper. Å beholde hele setninger som får plass er derfor både penere og
-    mer presist enn å fylle linja til randen.
+    mer presist enn å fylle linja til randen — derfor trinn 2 før trinn 3.
+
+    TRINN 4 KAN IKKE FJERNES. En tekst uten ett eneste mellomrom innenfor
+    grensen har ingen ordgrense å kutte ved, og det er ikke hypotetisk: en
+    TFM-ID er 26 tegn uten mellomrom, og et funn som ramser opp fire av dem er
+    forbi hundre tegn før mellomrommene nødvendigvis kommer. Da er et hardt
+    kutt riktig svar — en halvert identifikator er tydeligere avkuttet enn en
+    halvert setning, fordi ingen leser en identifikator som språk.
+
+    Tittelen er alt en viewer viser i emnelista. Hele meldinga står i
+    Description, så ingenting går tapt uansett hvor det kuttes; forskjellen er
+    om den som blar gjennom hundre emner leser noe som ser villet ut. Trinn 3
+    kom etter at «… men er merket med system…» sto i emnelista etter en
+    demokjøring.
     """
     tekst = f"{f.kontroll}: {f.melding}"
     if len(tekst) <= MAKS_TITTEL:
         return tekst
 
+    # En hel setning er ikke avkuttet, den er kort. Derfor ingen ellipse her.
     kutt = tekst.rfind(". ", 0, MAKS_TITTEL)
     if kutt > 0:
         return tekst[: kutt + 1]
-    return tekst[: MAKS_TITTEL - 1].rstrip() + "…"
+
+    # Ellipsen er ett tegn og skal INN i budsjettet, ikke legges på etterpå.
+    rom = MAKS_TITTEL - 1
+
+    # rom + 1, ikke rom: står mellomrommet nøyaktig på grensen, er ordet foran
+    # det siste som får plass, og uten dette hadde vi mistet det.
+    ordgrense = tekst.rfind(" ", 0, rom + 1)
+
+    # Et «ord» som legger beslag på mer enn halve tittelen er ikke et ord, det
+    # er en identifikator — og da faller vi ned på trinn 4. Uten denne grensen
+    # er ordgrensen verre enn den den erstatter: en melding som er én lang
+    # TFM-kjede har ett mellomrom, det etter kontroll-ID-en, og tittelen blir
+    # «K8:…».
+    kortet = _uten_apen_slutt(tekst[:ordgrense] if ordgrense > rom // 2 else tekst[:rom])
+    return (kortet or tekst[:rom].rstrip()) + "…"
+
+
+def _uten_apen_slutt(tekst: str) -> str:
+    """Fjerner tegn som åpner noe fra enden.
+
+    En parentes eller et hermetegn til slutt venter på en fortsettelse som
+    aldri kommer, og «… på tvers av 2 filer (» leses som en ødelagt fil framfor
+    en forkortet setning.
+
+    Åpner kuttet en parentes uten å lukke den, faller hele parentesen bort.
+    Å bare fjerne åpne tegn fra ENDEN er ikke nok: «… på «300» (fordeling: 200»
+    slutter på et tall og har likevel en parentes som aldri går igjen.
+
+    Gjøres ETTER kuttet, ikke før. Stripper man først, flytter grensen seg og
+    lengden må regnes på nytt; etterpå er det ett trinn som bare gjør teksten
+    kortere, og kortere kan ikke bryte lengdekravet.
+    """
+    tekst = tekst.rstrip().rstrip(APNE_TEGN).rstrip()
+    apen = _forste_ulukkede(tekst)
+    if apen is not None:
+        tekst = tekst[:apen].rstrip().rstrip(APNE_TEGN).rstrip()
+    return tekst
+
+
+def _forste_ulukkede(tekst: str) -> int | None:
+    """Posisjonen til den første parentesen som aldri blir lukket."""
+    stabel: list[tuple[str, int]] = []
+    for i, tegn in enumerate(tekst):
+        if tegn in PARENTESER:
+            stabel.append((tegn, i))
+        elif stabel and tegn == PARENTESER[stabel[-1][0]]:
+            stabel.pop()
+    return stabel[0][1] if stabel else None
 
 
 def _detaljer(f: Funn) -> str:

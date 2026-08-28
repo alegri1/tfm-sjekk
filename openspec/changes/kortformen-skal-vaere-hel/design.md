@@ -23,7 +23,15 @@ navngir to av fire filer.
   for å bli lest i sin helhet i rapporten; å tvinge dem under hundre tegn ville
   gjort dem dårligere der de faktisk leses.
 - Ikke endre BCF-ens `Description`. Den er hel i dag og skal forbli det.
-- Ikke røre CSV, XLSX eller HTML. De teller allerede alle tre gradene.
+- Ikke røre CSV eller XLSX. De er rader, ikke en oppsummering.
+
+**Rettet under bygging:** HTML-rapporten sto opprinnelig her også, med
+begrunnelsen «den teller allerede alle tre gradene». Den gjør det — og skrev
+«1 advarsler» i toppen, rett ved siden av tallet konsollen nå skriver riktig.
+Ordene ligger derfor i `modell.py` ved siden av `Alvorlighet`, og brukes begge
+steder. Skrevet to steder ville de før eller siden blitt uenige, og en leser som
+sammenligner konsollen med rapporten ville trodd noe var galt — samme grunn som
+at «hoppet over» grupperes én gang.
 
 ## Decisions
 
@@ -47,6 +55,14 @@ en halvert setning, fordi ingen leser en identifikator som språk.
 **Vurdert og forkastet:** å øke `MAKS_TITTEL`. Hundre er BCF 2.1-formatets egen
 grense, ikke vår.
 
+**Rettet under bygging:** trinn 3 må kreve at ordgrensen ligger forbi halve
+budsjettet, ellers er den verre enn den den erstatter. Meldingen som er én lang
+TFM-kjede har nøyaktig ett mellomrom — det etter kontroll-ID-en — og en
+ordgrense-regel uten denne betingelsen ga tittelen «K8:…». Grensen sier det
+docstringen allerede sa med ord: et «ord» som legger beslag på mer enn halve
+tittelen er ingen ord, det er en identifikator, og da hører teksten hjemme i
+trinn 4.
+
 **Vurdert og forkastet:** å kutte ved komma eller semikolon i tillegg. Det ville
 gitt «… er brukt på 2 objekter,» — en avslutning som lover en fortsettelse i
 samme setning, og som derfor leses som avkuttet uansett. Ordgrensen er nok.
@@ -55,6 +71,13 @@ samme setning, og som derfor leses som avkuttet uansett. Ordgrensen er nok.
 
 Tegn som `(`, `«` og `-` åpner noe som aldri lukkes. De strippes fra enden av
 det som ble igjen, etter at kuttet er gjort.
+
+**Rettet under bygging:** å strippe fra enden er ikke nok. K9-meldingen kuttes
+til «… på «300» (fordeling: 200» — den slutter på et tall, så ingen stripping
+slår inn, og parentesen står likevel åpen ut tittelen. Åpner tittelen en
+parentes den ikke lukker, faller hele parentesen bort, og kuttet flyttes til
+siste hele ord foran den. Hermetegnene i norsk er retningsbestemte, så samme
+lille stabelen håndterer «» sammen med (), [] og {}.
 
 Rekkefølgen har en grunn: stripper man først, flytter grensen seg og man må
 regne på nytt. Etter kuttet er det ett enkelt trinn som bare gjør teksten

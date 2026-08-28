@@ -11,7 +11,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
-from tfm_sjekk.modell import Alvorlighet, Funn
+from tfm_sjekk.modell import GRADSORD, Funn
 
 MAL = Template(
     """<!doctype html>
@@ -86,9 +86,8 @@ MAL = Template(
 <p class="meta">{{ tittel }}</p>
 
 <div class="tall">
-  <div><b>{{ antall.feil }}</b>feil</div>
-  <div><b>{{ antall.advarsel }}</b>advarsler</div>
-  <div><b>{{ antall.info }}</b>info</div>
+  {% for tall, ord in gradene %}<div><b>{{ tall }}</b>{{ ord }}</div>
+  {% endfor %}
   <div><b>{{ i_omfang }}</b>objekter kontrollert</div>
   <div><b>{{ objekter }}</b>objekter lest</div>
 </div>
@@ -197,11 +196,12 @@ def skriv_html(
             # null i hver rad i hver kjoering blir ikke lest.
             uleselige=uleselige or {},
             i_omfang=sum(tall[0] for tall in (dekning or {}).values()),
-            antall={
-                "feil": teller[Alvorlighet.FEIL],
-                "advarsel": teller[Alvorlighet.ADVARSEL],
-                "info": teller[Alvorlighet.INFO],
-            },
+            # Ordene kommer fra modell.py, ikke fra malen: «1 advarsler» sto
+            # her og i konsollen, og to steder som skriver det samme blir før
+            # eller siden uenige.
+            gradene=[
+                (teller[grad], GRADSORD[grad][0 if teller[grad] == 1 else 1]) for grad in GRADSORD
+            ],
         ),
         encoding="utf-8",
     )

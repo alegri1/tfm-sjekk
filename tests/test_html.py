@@ -215,3 +215,26 @@ def test_kolonnen_for_uleselig_tfm_vises_bare_naar_noe_falt_ut(tmp_path):
     assert "Uleselig TFM" in html
     rad = next(r for r in re.findall(r"<tr.*?</tr>", html, re.S) if "m.ifc" in r and "<td>" in r)
     assert ">3<" in rad
+
+
+def test_toppen_bruker_entall_ved_ett_funn(tmp_path):
+    """«1 advarsler» sto i toppen av rapporten, ved siden av tallet.
+
+    Ordene kommer fra `modell.py`, ikke fra malen, nettopp fordi konsollen sier
+    det samme: to steder som skriver det samme blir før eller siden uenige.
+    """
+    funn = [
+        Funn(kontroll="K4", alvorlighet=Alvorlighet.ADVARSEL, melding="én advarsel"),
+        Funn(kontroll="K1", alvorlighet=Alvorlighet.FEIL, melding="a"),
+        Funn(kontroll="K1", alvorlighet=Alvorlighet.FEIL, melding="b"),
+    ]
+    sti = skriv_html(funn, tmp_path / "rapport.html", "m.ifc", 3)
+    tekst = sti.read_text(encoding="utf-8")
+
+    # Bare talltoppen: ordet «advarsler» står også i en CSS-kommentar.
+    toppen = tekst.split('<div class="tall">', 1)[1].split("<table", 1)[0]
+    toppen = "".join(toppen.split())
+
+    assert "<b>1</b>advarsel<" in toppen, toppen
+    assert "advarsler" not in toppen
+    assert "<b>2</b>feil<" in toppen
