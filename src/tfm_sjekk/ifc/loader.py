@@ -342,19 +342,43 @@ def _finn(
     Steg 3 leser alle feltene, ikke bare det første. Ellers ville utfallet
     avgjøres av rekkefølgen egenskapene tilfeldigvis har i IFC-fila.
     """
-    for pset in pset_navn:
-        if pset not in egenskaper:
-            continue
-        for navn in egenskapsnavn:
-            verdi = (egenskaper[pset].get(navn) or "").strip()
-            if verdi:
-                return verdi, Verdikilde(kilde=Kilde.KONFIGURERT, pset=pset, felt=navn)
+    # Alle settene som har et gjenkjent feltnavn, samlet én gang. Sortert på
+    # settnavn, så rekkefølgen i IFC-fila ikke avgjør noe: to eksporter av
+    # samme modell kan sortere ulikt, og da ville samme modell gitt ulik TFM
+    # fra én kjøring til den neste. Samme resonnement som steg 3 gjør for
+    # felter innen ett sett, anvendt på tvers av sett.
+    kandidater = [
+        (pset, navn, verdi)
+        for pset in sorted(egenskaper)
+        for navn in egenskapsnavn
+        if (verdi := (egenskaper[pset].get(navn) or "").strip())
+    ]
 
-    for pset, verdier in egenskaper.items():
-        for navn in egenskapsnavn:
-            verdi = (verdier.get(navn) or "").strip()
-            if verdi:
-                return verdi, Verdikilde(kilde=Kilde.GJENKJENT_FELT, pset=pset, felt=navn)
+    def med_uenige(pset: str, navn: str, verdi: str, kilde: Kilde) -> Verdikilde:
+        """Kilden, med de kandidatene som IKKE er enige.
+
+        Bare ulike bæres. Samme verdi i to sett er normalt etter en runde
+        gjennom Revit — kartleggingsfila skriver den ene, importen legger igjen
+        den andre — og en melding om det ville stått på hvert eneste objekt.
+        """
+        return Verdikilde(
+            kilde=kilde,
+            pset=pset,
+            felt=navn,
+            uenige=tuple(dict.fromkeys((p, v) for p, _, v in kandidater if v != verdi)),
+        )
+
+    # Steg 1: konfigurert sett og konfigurert felt. Rekkefølgen her er
+    # BRUKERENS egen liste i tfm-sjekk.toml, ikke filas, så den skal avgjøre.
+    for pset in pset_navn:
+        for kandidat_pset, navn, verdi in kandidater:
+            if kandidat_pset == pset:
+                return verdi, med_uenige(pset, navn, verdi, Kilde.KONFIGURERT)
+
+    # Steg 2: et gjenkjent feltnavn i et hvilket som helst sett.
+    if kandidater:
+        pset, navn, verdi = kandidater[0]
+        return verdi, med_uenige(pset, navn, verdi, Kilde.GJENKJENT_FELT)
 
     for pset in pset_navn:
         if pset not in egenskaper:

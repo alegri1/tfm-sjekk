@@ -50,6 +50,14 @@ class Verdikilde(BaseModel):
     forkastet_verdi: str | None = Field(
         default=None, description="Verdien som ble forkastet, til bruk i meldingen"
     )
+    uenige: tuple[tuple[str, str], ...] = Field(
+        default=(),
+        description=(
+            "Kandidater som ble funnet med samme styrke og som IKKE er like den "
+            "valgte: (egenskapssett, verdi). Bare ulike bæres — samme verdi i to "
+            "sett er normalt etter en runde gjennom Revit."
+        ),
+    )
 
     @property
     def sikker(self) -> bool:

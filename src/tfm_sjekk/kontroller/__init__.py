@@ -27,6 +27,7 @@ from tfm_sjekk.kontroller import k9_mmi  # noqa: F401  isort:skip
 # D1 kontrollerer kjøringen, ikke modellen, og står derfor utenfor
 # K-serien i §4. Sist, så den leses etter det den kommenterer.
 from tfm_sjekk.kontroller import t1_komponenttype  # noqa: F401  isort:skip
+from tfm_sjekk.kontroller import t2_uenige_verdier  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import d1_dekning  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import d2_lesbarhet  # noqa: F401  isort:skip
 from tfm_sjekk.kontroller import d3_identitet  # noqa: F401  isort:skip

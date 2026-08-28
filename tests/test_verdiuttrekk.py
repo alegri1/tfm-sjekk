@@ -342,3 +342,105 @@ def test_begge_skjemaene(tmp_path):
     for schema in ("IFC4", "IFC2X3"):
         sti = typemodell(tmp_path / schema, typeverdier={"TFM": TYPE_TFM}, schema=schema)
         assert les_modell(sti)[0].tfm_forekomst == TYPE_TFM, schema
+
+
+# --- To verdier som ikke er enige ---
+
+A = "++115080=4310.001.11-QLF111"
+B = "++115080=4310.001.99-QLF999"
+
+
+def kilde_for(sti, psets, felt="forekomst"):
+    """`lag` gir ETT ferdig lest objekt, ikke en sti."""
+    return lag(sti, psets).kilder.get(felt)
+
+
+def t2_funn(sti, psets):
+    funn, _ = kjor_alle(Kontekst.bygg([lag(sti, psets)], Konfigurasjon()))
+    return [f for f in funn if f.kontroll == "T2"]
+
+
+def test_rekkefolgen_i_fila_avgjor_ikke_hvilken_verdi_som_leses(tmp_path):
+    """To eksporter av samme modell kan sortere egenskapssettene ulikt.
+
+    Gjor rekkefolgen utslaget, gir samme modell ulikt svar fra en kjoring til
+    den neste — og et funn kan forsvinne uten at noe i modellen er endret.
+    Fanget ved aa bygge de to filene og sammenligne.
+    """
+    ab = lag(tmp_path / "ab.ifc", {"Pset_A": [("TFM", A)], "Pset_B": [("TFM", B)]})
+    ba = lag(tmp_path / "ba.ifc", {"Pset_B": [("TFM", B)], "Pset_A": [("TFM", A)]})
+
+    assert ab.tfm_forekomst == ba.tfm_forekomst
+
+
+def test_konfigurert_sett_vinner_fortsatt_over_ukjent(tmp_path):
+    """Steg 1 skal ikke roeres: rekkefolgen der er BRUKERENS egen liste."""
+    o = lag(
+        tmp_path / "k.ifc",
+        {"AAA_Forst_Alfabetisk": [("TFM", B)], "TFM11_Forekomst": [("TFM", A)]},
+    )
+
+    assert o.tfm_forekomst == A
+    assert o.kilder["forekomst"].kilde is Kilde.KONFIGURERT
+
+
+def test_uenige_kandidater_baeres_med(tmp_path):
+    kilde = kilde_for(
+        tmp_path / "u.ifc",
+        {"TFM11_Forekomst": [("TFM", A)], "Pset_Revit_Data": [("TFM", B)]},
+    )
+
+    assert kilde.uenige == (("Pset_Revit_Data", B),)
+
+
+def test_like_verdier_i_to_sett_er_ikke_uenighet(tmp_path):
+    """Normalt etter en runde gjennom Revit: kartleggingsfila skriver den ene,
+    importen legger igjen den andre. En melding om det ville staatt paa hvert
+    eneste objekt.
+    """
+    kilde = kilde_for(
+        tmp_path / "l.ifc",
+        {"TFM11_Forekomst": [("TFM", A)], "Pset_Revit_Data": [("TFM", A)]},
+    )
+
+    assert kilde.uenige == ()
+
+
+def test_en_verdi_gir_ingen_uenighet(tmp_path):
+    assert kilde_for(tmp_path / "e.ifc", {"TFM11_Forekomst": [("TFM", A)]}).uenige == ()
+
+
+def test_t2_melder_uenige_verdier(tmp_path):
+    funn = t2_funn(
+        tmp_path / "t2.ifc",
+        {"TFM11_Forekomst": [("TFM", A)], "Pset_Revit_Data": [("TFM", B)]},
+    )
+
+    assert len(funn) == 1
+    assert funn[0].alvorlighet.value == "feil"
+    assert A in funn[0].melding and B in funn[0].melding
+    assert "TFM11_Forekomst" in funn[0].melding and "Pset_Revit_Data" in funn[0].melding
+
+
+def test_t2_melder_ikke_like_verdier(tmp_path):
+    assert not t2_funn(
+        tmp_path / "t2l.ifc",
+        {"TFM11_Forekomst": [("TFM", A)], "Pset_Revit_Data": [("TFM", A)]},
+    )
+
+
+def test_t2_melder_ikke_en_enkelt_verdi(tmp_path):
+    assert not t2_funn(tmp_path / "t2e.ifc", {"TFM11_Forekomst": [("TFM", A)]})
+
+
+def test_kontrollene_kjorer_paa_den_valgte_verdien(tmp_path):
+    """Verktoyet velger en for aa kunne kontrollere noe. «Vi vet ikke» ville
+    vaert et daarligere svar enn «vi valgte denne, og her er den andre».
+    """
+    o = lag(
+        tmp_path / "v.ifc",
+        {"TFM11_Forekomst": [("TFM", A)], "Pset_Revit_Data": [("TFM", B)]},
+    )
+    k = Kontekst.bygg([o], Konfigurasjon())
+
+    assert k.parsede[o.global_id].raa == A
