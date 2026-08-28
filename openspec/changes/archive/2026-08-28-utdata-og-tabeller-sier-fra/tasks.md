@@ -61,6 +61,10 @@
 
 - [ ] 6.1 Lås `funn.xlsx` med et ekte program — åpne rapporten i Excel — og kjør
       runden på nytt. Les det som kommer ut. Krever prosjekteieren.
+      IKKE GJORT. Låsen er prøvd med `msvcrt.locking` — samme mekanisme Excel
+      bruker, og utfallet er verifisert: exit 2, melding, fire uendrede filer.
+      Men Excel låser på sin egen måte, og det er den låsen som betyr noe.
+      Prosjekteieren valgte å arkivere uten den.
 - [x] 6.2 Kjør i cp1252-konsoll. De nye meldingene har æøå og anførselstegn.
 - [x] 6.3 Kjør demoen og se at 17 funn og exit 1 er uendret.
 - [x] 6.4 Oppdater README: exit-kodetabellen fra 0.9.3 nevner ikke tabeller
