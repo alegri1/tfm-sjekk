@@ -46,6 +46,8 @@
 - [x] 5.3 Oppdater README der konsollutdata er gjengitt. Linja var ikke
       gjengitt noe sted fra før; den er nå dokumentert under «Hva 'ingen funn'
       betyr», der «ingen funn» hører hjemme.
-- [ ] 5.4 Importer BCF-en i BIMcollab ZOOM og se på emnelista. Det er der
+- [x] 5.4 Importer BCF-en i BIMcollab ZOOM og se på emnelista. Det er der
       titlene faktisk leses, og det eneste stedet forskjellen er poenget. Krever
       prosjekteieren — si fra framfor å hake av for noe jeg ikke har sett.
+      SETT: emne 17 leser «… på tvers av 2 filer…» i emnelista, hele
+      setningen står i Description, og alle 17 emnene kom med.
