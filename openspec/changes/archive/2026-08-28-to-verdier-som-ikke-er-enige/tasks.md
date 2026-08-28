@@ -39,4 +39,4 @@
 - [x] 4.4 Den federerte Snowdon-kjøringen: 24 456 objekter. Kommer det T2-funn,
       har modellen dobbeltmerking vi ikke visste om — og da er tallet i seg selv
       et funn verdt å se på
-- [ ] 4.5 **Åpne HTML-rapporten** hvis noe fyrer
+- [ ] 4.5 IKKE GJORT, bevisst. Ingenting fyrte i de faste kjøringene, så det finnes ingen rapport med T2 å åpne — det ville krevd en modell laget for formålet. Prosjekteieren valgte å hoppe over
