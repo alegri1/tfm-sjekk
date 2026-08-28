@@ -84,6 +84,29 @@ krever at en fil låses i vinduet mellom to flyttinger.
 Den siste setningen er halve poenget. Uten den vet ikke brukeren om mappa er til
 å stole på.
 
+### Rettet under bygging: feilen måtte ut av `ifc/`
+
+Designet sa «gjenbruk `ModellFeil`». Den ligger i `ifc/loader.py`, og en import
+derfra i `tabeller/` ville dratt ifcopenshell inn i en modul som leser CSV — mot
+regelen om at `ifc/` er eneste sted som vet om det biblioteket. `les_kodetabell`
+ville i praksis krevd ifcopenshell installert.
+
+Klassen ligger nå i `tfm_sjekk/feil.py`, fri for avhengigheter, og heter
+**`FilFeil`**: «en fil verktøyet skulle lese eller skrive, og ikke kunne».
+Navnet `ModellFeil` sto seg ikke når den samme typen skulle bære en kodetabell
+og en rapportfil. Den er én utgave gammel og ikke en del av noe API andre
+bruker.
+
+Argumentet fra designet står: **én type, ikke tre.** Cli-en har nøyaktig én
+utgang for dem, og tre typer med samme håndtering ville vært tre steder å
+glemme én.
+
+### Rettet under bygging: to `ValueError` til i mastera
+
+`les_master` reiser to feil med gode meldinger — «fant ingen gjenkjennelig
+kolonneoverskrift», «fant kolonneoverskriftene, men ingen verdier under dem».
+Begge nådde brukeren som traceback med exit 1, akkurat som de andre. De er med.
+
 ### Tabellene leses først, og feilen er `ModellFeil`
 
 Lesingen flyttes opp foran `les_modeller`, dit tidsstempelet allerede

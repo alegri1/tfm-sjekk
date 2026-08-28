@@ -8,7 +8,8 @@ import pytest
 from fixtures.syntetisk import GYLDIG, lag_elektromodell, lag_modell
 
 from tfm_sjekk.config import Konfigurasjon
-from tfm_sjekk.ifc import ModellFeil, les_modell, les_modeller
+from tfm_sjekk.feil import FilFeil
+from tfm_sjekk.ifc import les_modell, les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import kjor_alle
 
@@ -309,7 +310,7 @@ def odelagt(tmp_path, navn: str, innhold: bytes):
 
 
 def test_tom_fil_sier_at_den_er_tom(tmp_path):
-    with pytest.raises(ModellFeil, match="tom"):
+    with pytest.raises(FilFeil, match="tom"):
         les_modell(odelagt(tmp_path, "tom.ifc", b""))
 
 
@@ -320,7 +321,7 @@ def test_fil_som_ikke_er_ifc_sier_det(tmp_path):
     BIM-koordinator som skal finne ut om det er modellen eller maskinen som er
     problemet.
     """
-    with pytest.raises(ModellFeil, match="ikke lese som IFC"):
+    with pytest.raises(FilFeil, match="ikke lese som IFC"):
         les_modell(odelagt(tmp_path, "sopp.ifc", b"dette er ikke IFC i det hele tatt\n"))
 
 
@@ -333,7 +334,7 @@ def test_zip_med_feil_endelse_far_et_hint(tmp_path):
     with zipfile.ZipFile(buffer, "w") as arkiv:
         arkiv.writestr("modell.ifc", "ISO-10303-21;")
 
-    with pytest.raises(ModellFeil, match="zip-arkiv"):
+    with pytest.raises(FilFeil, match="zip-arkiv"):
         les_modell(odelagt(tmp_path, "pakket.ifc", buffer.getvalue()))
 
 
@@ -351,7 +352,7 @@ def test_zip_meldes_ikke_som_avkuttet(tmp_path):
     with zipfile.ZipFile(buffer, "w") as arkiv:
         arkiv.writestr("modell.ifc", "ISO-10303-21;\nENDSEC;\n")
 
-    with pytest.raises(ModellFeil) as feil:
+    with pytest.raises(FilFeil) as feil:
         les_modell(odelagt(tmp_path, "pakket.ifc", buffer.getvalue()))
     assert "avkuttet" not in str(feil.value)
 
@@ -368,7 +369,7 @@ def test_avkuttet_fil_leses_ikke_som_en_hel(tmp_path):
     bytes_ = hel.read_bytes()
     assert b"END-ISO-10303-21;" in bytes_, "fiksturen skriver ikke avslutningen"
 
-    with pytest.raises(ModellFeil, match="avkuttet"):
+    with pytest.raises(FilFeil, match="avkuttet"):
         les_modell(odelagt(tmp_path, "halv.ifc", bytes_[: len(bytes_) // 2]))
 
 
@@ -380,16 +381,16 @@ def test_hel_fil_leses_som_for(tmp_path):
 def test_modellfeil_overlever_pickle():
     """Unntaket krysser prosessgrensen fra en arbeider i federeringen.
 
-    Standard oppførsel ville kalt `ModellFeil(meldingen)` med ett argument ved
+    Standard oppførsel ville kalt `FilFeil(meldingen)` med ett argument ved
     utpakking — altså en TypeError i stedet for feilen den skulle bære. Den
     slags virker sekvensielt og ryker i pool-en.
     """
     import pickle
 
-    original = ModellFeil(Path("a") / "b.ifc", "er tom.")
+    original = FilFeil(Path("a") / "b.ifc", "er tom.")
     kopi = pickle.loads(pickle.dumps(original))
 
-    assert isinstance(kopi, ModellFeil)
+    assert isinstance(kopi, FilFeil)
     assert kopi.sti == original.sti
     assert str(kopi) == str(original)
 
@@ -406,7 +407,7 @@ def test_federert_lesing_navngir_fila_som_feilet(tmp_path):
         lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "tre.ifc"),
     ]
 
-    with pytest.raises(ModellFeil) as feil:
+    with pytest.raises(FilFeil) as feil:
         les_modeller(stier, Konfigurasjon())
 
     assert "to.ifc" in str(feil.value)

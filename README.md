@@ -222,8 +222,23 @@ Verktøyet står som port i en leveranseprosess, og exit-koden har tre verdier:
 **2 er ikke en dårligere 1.** «Fagmodellen har 40 K1-feil» og «fila lot seg ikke
 åpne» stopper begge leveransen, men bare den ene er noe entreprenøren kan rette.
 Koden er 2 når en sti peker feil, når oppsettet ikke lar seg lese, når en rute
-ikke treffer noen fil — og når en modellfil er tom, ikke er IFC, eller ser
-avkuttet ut.
+ikke treffer noen fil, når en modellfil er tom, ikke er IFC eller ser avkuttet
+ut, når en kodetabell eller TFM-master ikke lar seg lese — og når en rapportfil
+ikke lar seg skrive.
+
+Det siste er hyppigere enn det høres ut som. Rettingsrunden er: kjør, åpne
+rapporten, rett modellen, kjør igjen — og på Windows nekter Excel andre å skrive
+til fila den har åpen. **Da endres ingen av rapportfilene.** Enten er alle fire
+fra denne runden, eller så er alle fra den forrige; mappa står aldri igjen med
+en fersk HTML ved siden av en BCF fra sist.
+
+```
+«funn.xlsx» kunne ikke skrives: Access is denied. Er fila åpen i et annet
+program? Lukk den og kjør på nytt. Ingen av rapportfilene er endret.
+```
+
+Tabellene leses **før** modellene, så en skrivefeil i en tabellsti koster ikke
+en full federert kjøring før den oppdages.
 
 En avbrutt eksport er den viktigste av dem. Fila åpner seg fint og inneholder en
 brøkdel av modellen, så en kjøring på den ville rapportert sant om det den så og

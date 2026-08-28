@@ -6,6 +6,6 @@ testes uten en eneste IFC-fil, og isolerer et bytte til IFC5 til denne mappa.
 """
 
 from tfm_sjekk.ifc.federering import les_modeller
-from tfm_sjekk.ifc.loader import ModellFeil, les_modell
+from tfm_sjekk.ifc.loader import les_modell
 
-__all__ = ["ModellFeil", "les_modell", "les_modeller"]
+__all__ = ["les_modell", "les_modeller"]

@@ -13,6 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from conftest import uten_ansi
 from fixtures.syntetisk import GYLDIG, lag_modell, lag_modell_pa_avveie
 
@@ -40,6 +41,19 @@ def kjor(
         env=miljo,
         cwd=str(mappe) if mappe else None,
     )
+
+
+def melding(r) -> str:
+    """Panelteksten fra rich, uten rammer og linjebrudd.
+
+    Rich bryter en lang melding over flere linjer og setter «│» i hver ende.
+    En `in`-sjekk mot rå stdout finner derfor ikke en setning som er delt — og
+    testen går grønt eller rødt av hvordan terminalen er bred, ikke av hva
+    verktøyet sa.
+    """
+    tekst = uten_ansi(r.stdout + r.stderr)
+    tekst = "".join(" " if c in "│┌┐└┘─╭╮╰╯" else c for c in tekst)
+    return " ".join(tekst.split())
 
 
 def test_ren_modell_gir_exit_0(tmp_path):
@@ -542,7 +556,7 @@ def test_meldingen_navngir_fila_og_sier_hva_som_er_galt(tmp_path):
 
     for fil, ord in ((tom, "tom"), (sopp, "ikke lese som IFC"), (halv, "avkuttet")):
         r = kjor(["sjekk", str(fil), "--ut", str(tmp_path / "ut")])
-        tekst = uten_ansi(r.stdout + r.stderr).replace("\n", " ")
+        tekst = melding(r)
 
         assert fil.name in tekst, tekst
         assert ord in tekst, tekst
@@ -581,7 +595,7 @@ def test_federert_kjoring_navngir_fila_og_skriver_ingen_rapport(tmp_path):
     ut = tmp_path / "ut"
 
     r = kjor(["sjekk", *stier, "--ut", str(ut)])
-    tekst = uten_ansi(r.stdout + r.stderr).replace("\n", " ")
+    tekst = melding(r)
 
     assert r.returncode == 2, tekst
     assert "to.ifc" in tekst, tekst
@@ -597,3 +611,138 @@ def test_en_ulesbar_fil_overlever_cp1252(tmp_path):
 
     assert r.returncode == 2, r.stdout + r.stderr
     assert "UnicodeEncodeError" not in r.stderr
+
+
+# --- Tabellene sier fra, og de sier det først ---
+
+
+def tabell(tmp_path: Path, navn: str, innhold: bytes) -> Path:
+    sti = tmp_path / navn
+    sti.write_bytes(innhold)
+    return sti
+
+
+def test_tom_kodetabell_gir_exit_2_med_melding(tmp_path):
+    """Sto som `splitlines()[0]` og ga IndexError — en traceback fra en
+    tabellfil, med exit 1, som betyr at modellen er underkjent."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "m.ifc")
+    tom = tabell(tmp_path, "tom.csv", b"")
+
+    r = kjor(["sjekk", str(modell), "--systemtabell", str(tom), "--ut", str(tmp_path / "ut")])
+    tekst = melding(r)
+
+    assert r.returncode == 2, tekst
+    assert "tom.csv" in tekst
+    assert "Traceback" not in r.stdout + r.stderr
+
+
+def test_kodetabell_uten_kodekolonne_sier_hvilken(tmp_path):
+    """Meldingen var god fra før — den nådde bare aldri fram som en melding."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "m.ifc")
+    feil = tabell(tmp_path, "feil.csv", b"noe;annet\n1;2\n")
+
+    r = kjor(["sjekk", str(modell), "--systemtabell", str(feil), "--ut", str(tmp_path / "ut")])
+    tekst = melding(r)
+
+    assert r.returncode == 2, tekst
+    assert "kode" in tekst
+    assert "Traceback" not in r.stdout + r.stderr
+
+
+def test_falsk_regneark_gir_melding_ikke_badzipfile(tmp_path):
+    """BadZipFile gjennom seksti linjer openpyxl og zipfile er ikke en melding."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "m.ifc")
+    falsk = tabell(tmp_path, "falsk.xlsx", b"ikke et regneark")
+
+    r = kjor(["sjekk", str(modell), "--master", str(falsk), "--ut", str(tmp_path / "ut")])
+    tekst = melding(r)
+
+    assert r.returncode == 2, tekst
+    assert "falsk.xlsx" in tekst
+    assert "regneark" in tekst
+    assert "BadZipFile" not in tekst
+
+
+def test_ubrukelig_tabell_stopper_for_modellene_leses(tmp_path):
+    """En federert runde bruker førtisju sekunder på 24 456 objekter. En
+    skrivefeil i en tabellsti skal ikke koste den tiden før den oppdages."""
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "m.ifc")
+    tom = tabell(tmp_path, "tom.csv", b"")
+
+    r = kjor(["sjekk", str(modell), "--systemtabell", str(tom), "--ut", str(tmp_path / "ut")])
+
+    assert "Leser 1 modell" not in uten_ansi(r.stdout)
+
+
+# --- Utmappa er enten helt ny eller helt urørt ---
+
+
+def test_ut_som_peker_pa_en_fil_gir_melding(tmp_path):
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "m.ifc")
+    en_fil = tabell(tmp_path, "erfil", b"jeg er en fil")
+
+    r = kjor(["sjekk", str(modell), "--ut", str(en_fil)])
+    tekst = melding(r)
+
+    assert r.returncode == 2, tekst
+    assert "ikke en mappe" in tekst
+    assert "FileExistsError" not in tekst
+
+
+def test_vellykket_kjoring_etterlater_fire_filer_og_ingen_arbeidsmappe(tmp_path):
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "m.ifc")
+    ut = tmp_path / "ut"
+
+    kjor(["sjekk", str(modell), "--ut", str(ut)])
+
+    assert sorted(p.name for p in ut.iterdir()) == [
+        "funn.bcfzip",
+        "funn.csv",
+        "funn.xlsx",
+        "rapport.html",
+    ]
+    assert not [p for p in tmp_path.iterdir() if "skriver" in p.name]
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="fillåsing: Linux og macOS lar en åpen fil overskrives, så det er "
+    "ingenting å prøve der. Hoppes over framfor å late som noe ble prøvd.",
+)
+def test_last_rapportfil_lar_ingen_av_filene_endres(tmp_path):
+    """Rettingsrunden: kjør, åpne rapporten, rett modellen, kjør igjen.
+
+    Med regnearket åpent i Excel ble HTML-en og CSV-en nye, regnearket
+    nullstilt, og BCF-en sto igjen fra forrige runde — byte for byte. Fire filer
+    fra to generasjoner, og ingenting sa fra. BCF-en er den som importeres i en
+    viewer og tildeles folk.
+    """
+    import hashlib
+    import msvcrt
+
+    rie = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "rie.ifc")
+    riv = lag_modell([("IfcFlowTerminal", None)], tmp_path / "riv.ifc")
+    ut = tmp_path / "ut"
+
+    kjor(["sjekk", str(rie), "--ut", str(ut)])
+    for_ = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in ut.iterdir()}
+    assert len(for_) == 4
+
+    lås = (ut / "funn.xlsx").open("r+b")
+    msvcrt.locking(lås.fileno(), msvcrt.LK_NBLCK, 1)
+    try:
+        # En ANNEN modell, som om den var rettet og eksportert på nytt.
+        r = kjor(["sjekk", str(riv), "--ut", str(ut)])
+    finally:
+        msvcrt.locking(lås.fileno(), msvcrt.LK_UNLCK, 1)
+        lås.close()
+
+    etter = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in ut.iterdir()}
+    tekst = melding(r)
+
+    assert r.returncode == 2, tekst
+    assert "funn.xlsx" in tekst
+    assert "åpen i et annet program" in tekst
+    assert "Ingen av rapportfilene er endret" in tekst
+    assert "Traceback" not in r.stdout + r.stderr
+    assert etter == for_, "filene ble endret av en kjøring som ikke kom i mål"

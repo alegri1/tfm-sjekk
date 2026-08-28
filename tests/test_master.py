@@ -12,6 +12,7 @@ import pytest
 from openpyxl import Workbook
 
 from tfm_sjekk.config import MasterOppsett
+from tfm_sjekk.feil import FilFeil
 from tfm_sjekk.tabeller import les_master, normaliser
 
 
@@ -69,19 +70,19 @@ def test_finner_overskrift_under_tittelrader(tmp_path):
 def test_feiler_hoylytt_uten_gjenkjennelig_kolonne(tmp_path):
     """En tom master ville fått K7 til å flagge hele modellen."""
     sti = skriv_csv(tmp_path, "kolonneA;kolonneB\nnoe;annet\n")
-    with pytest.raises(ValueError, match="gjenkjennelig kolonneoverskrift"):
+    with pytest.raises(FilFeil, match="gjenkjennelig kolonneoverskrift"):
         les_master(sti)
 
 
 def test_feiler_pa_overskrift_uten_verdier(tmp_path):
     sti = skriv_csv(tmp_path, "systemforekomst;komponenttype\n;\n")
-    with pytest.raises(ValueError, match="ingen verdier"):
+    with pytest.raises(FilFeil, match="ingen verdier"):
         les_master(sti)
 
 
 def test_kolonnenavn_kan_konfigureres(tmp_path):
     sti = skriv_csv(tmp_path, "anlegg;\n3600.001.04;\n")
-    with pytest.raises(ValueError):
+    with pytest.raises(FilFeil):
         les_master(sti)
     oppsett = MasterOppsett(kolonne_system=["anlegg"])
     assert les_master(sti, oppsett).systemer == {"3600.001.04"}

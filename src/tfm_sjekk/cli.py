@@ -12,6 +12,7 @@ from __future__ import annotations
 import atexit
 import contextlib
 import os
+import shutil
 import sys
 from collections import Counter
 from pathlib import Path
@@ -20,7 +21,8 @@ from typing import Annotated
 import typer
 
 from tfm_sjekk.config import Konfigurasjon, OppsettFeil, finn_oppsett
-from tfm_sjekk.ifc import ModellFeil, les_modeller
+from tfm_sjekk.feil import FilFeil
+from tfm_sjekk.ifc import les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import Hoppgrunn, alle_kontroller, kjor_alle
 from tfm_sjekk.modell import GRADSORD, Alvorlighet, gradsord
@@ -93,6 +95,107 @@ def _demp_ifcopenshells_opprydning() -> None:
         forrige(arg)
 
     sys.unraisablehook = hook
+
+
+# Rekkefølgen filene flyttes på plass i, MOTSATT av hvor sannsynlig det er at
+# de er låst: regnearket står åpent i Excel, BCF-en er importert i en viewer.
+# Det gjør vinduet der en halv flytting kan skje minst mulig.
+FLYTTEREKKEFOLGE = ("funn.xlsx", "funn.bcfzip", "funn.csv", "rapport.html")
+
+
+def _skriv_rapportene(ut: Path, skriv) -> list[Path]:
+    """Skriver alle rapportene, eller ingen av dem.
+
+    Rapportene skrives til en midlertidig mappe ved siden av utmappa, og
+    flyttes på plass først når alle fire er ferdige. Feiler skrivingen, ryddes
+    mappa bort og utmappa er urørt.
+
+    VED SIDEN AV, IKKE I SYSTEMETS TEMP. `Path.replace` er atomisk innenfor
+    samme filsystem og faller tilbake på kopier-og-slett over filsystemgrenser
+    — og på Windows ligger temp ofte på en annen stasjon enn prosjektmappa.
+
+    Bakgrunnen er rettingsrunden: kjør, åpne rapporten, rett modellen, kjør
+    igjen. Med regnearket åpent i Excel ble HTML-en og CSV-en nye, regnearket
+    nullstilt, og BCF-en sto igjen fra forrige runde — byte for byte. BCF-en er
+    den som importeres i en viewer og tildeles folk.
+    """
+    if ut.exists() and not ut.is_dir():
+        raise FilFeil(ut, "er ikke en mappe. «--ut» skal peke på mappa rapportene legges i.")
+
+    ut.mkdir(parents=True, exist_ok=True)
+    midlertidig = ut.parent / f".{ut.name}.tfm-sjekk-skriver"
+    shutil.rmtree(midlertidig, ignore_errors=True)
+    midlertidig.mkdir(parents=True)
+    try:
+        try:
+            skrevet = skriv(midlertidig)
+        except OSError as feil:
+            raise FilFeil(
+                Path(getattr(feil, "filename", None) or midlertidig),
+                f"kunne ikke skrives: {feil.strerror or feil}. Ingen av rapportfilene er endret.",
+            ) from feil
+        return _flytt_pa_plass(skrevet, ut)
+    finally:
+        # Navnet sier hva mappa er, for tilfellet der prosessen drepes før
+        # dette kjører.
+        shutil.rmtree(midlertidig, ignore_errors=True)
+
+
+def _flytt_pa_plass(skrevet: list[Path], ut: Path) -> list[Path]:
+    """Flytter de ferdige filene inn i utmappa.
+
+    FLYTTINGEN ER IKKE ATOMISK OVER FIRE FILER. Er `funn.xlsx` låst, feiler
+    ikke skrivingen til den midlertidige mappa — den feiler her, og da kan
+    andre filer allerede være flyttet. Rekkefølgen gjør vinduet lite, ikke
+    null. Ingen enkel mekanisme gir mer på Windows uten et transaksjonslag
+    dette verktøyet ikke skal ha.
+
+    Skjer det, sier meldingen det rett ut. Det ene tilfellet der løftet ikke
+    holder, skal ikke være taust.
+    """
+    rekkefolge = sorted(
+        skrevet,
+        key=lambda p: (
+            FLYTTEREKKEFOLGE.index(p.name) if p.name in FLYTTEREKKEFOLGE else len(FLYTTEREKKEFOLGE)
+        ),
+    )
+    for flyttet, kilde in enumerate(rekkefolge):
+        mal = ut / kilde.name
+        try:
+            kilde.replace(mal)
+        except OSError as feil:
+            raise FilFeil(mal, _skrivefeil(feil, flyttet)) from feil
+    return [ut / p.name for p in skrevet]
+
+
+def _skrivefeil(feil: OSError, flyttet: int) -> str:
+    grunn = feil.strerror or feil
+    raad = "Er fila åpen i et annet program? Lukk den og kjør på nytt."
+    if not flyttet:
+        return f"kunne ikke skrives: {grunn}. {raad} Ingen av rapportfilene er endret."
+    return (
+        f"kunne ikke skrives: {grunn}. {raad} "
+        f"MERK: {flyttet} av rapportfilene er allerede skrevet fra denne runden, "
+        f"og resten er fra en tidligere. Mappa inneholder nå to generasjoner."
+    )
+
+
+@contextlib.contextmanager
+def _som_brukerfeil(hint: str):
+    """En fil som ikke lot seg lese eller skrive er ikke en krasj.
+
+    Samme utgang som et oppsett som ikke lar seg lese: exit 2, en melding, og
+    ingen rapport. Exit 1 er porten i leveranseprosessen (§5) og betyr at
+    modellen er underkjent; en fil som ikke lot seg åpne krever en helt annen
+    handling, og to slike utfall må ikke være samme tall.
+
+    Én utgang for alle tre — modeller, tabeller og rapporter. Tre steder med
+    samme håndtering ville vært tre steder å glemme én.
+    """
+    try:
+        yield
+    except FilFeil as feil:
+        raise typer.BadParameter(str(feil), param_hint=hint) from feil
 
 
 def _les_oppsett(
@@ -251,27 +354,25 @@ def sjekk(
     except ValueError as feil:
         raise typer.BadParameter(str(feil), param_hint="--opprettet") from feil
 
+    # TABELLENE FØR MODELLENE. En federert runde bruker førtisju sekunder på
+    # 24 456 objekter, og en skrivefeil i en tabellsti skal ikke koste den tiden
+    # før den oppdages — samme grunn som at tidsstempelet valideres først.
+    with _som_brukerfeil("--systemtabell/--komponenttabell/--master"):
+        systemkoder = les_kodetabell(systemtabell, "NS 3451 tabell 8") if systemtabell else None
+        komponentkoder = les_kodetabell(komponenttabell, "NS 3457-8") if komponenttabell else None
+        tfm_master = les_master(master, oppsett.master) if master else None
+
     typer.echo(f"Leser {len(modeller)} modell(er)…")
-    try:
+    with _som_brukerfeil("modeller"):
         objekter = les_modeller(list(modeller), oppsett, parallelt=not sekvensielt)
-    except ModellFeil as feil:
-        # Samme utgang som et oppsett som ikke lar seg lese: exit 2, og ingen
-        # rapport. Exit 1 er porten i leveranseprosessen (§5) og betyr at
-        # modellen er underkjent; en fil som ikke lot seg åpne krever en helt
-        # annen handling, og to slike utfall må ikke være samme tall.
-        #
-        # Ingenting skrives før dette punktet, så utmappa er urørt. Hadde en
-        # halv rapport ligget igjen, ville den sett ut som enhver annen — og
-        # blitt delt.
-        raise typer.BadParameter(str(feil), param_hint="modeller") from feil
     typer.echo(f"  {len(objekter)} objekter")
 
     kontekst = Kontekst.bygg(
         objekter,
         oppsett,
-        systemtabell=les_kodetabell(systemtabell, "NS 3451 tabell 8") if systemtabell else None,
-        komponenttabell=les_kodetabell(komponenttabell, "NS 3457-8") if komponenttabell else None,
-        master=les_master(master, oppsett.master) if master else None,
+        systemtabell=systemkoder,
+        komponenttabell=komponentkoder,
+        master=tfm_master,
     )
 
     funn, hoppet_over = kjor_alle(kontekst)
@@ -325,21 +426,25 @@ def sjekk(
     # ville den kunne komme i utakt med hva som faktisk ble skrevet, og det er
     # nøyaktig den utakten linja under fantes for å rette: den navnga to av de
     # fire filene, så den som ikke visste at et regneark fantes lette ikke.
-    skrevet = [
-        skriv_html(
-            funn,
-            ut / "rapport.html",
-            tittel,
-            len(objekter),
-            hoppet,
-            dekning,
-            sorted(unntatt),
-            uleselige,
-        ),
-        skriv_csv(funn, ut / "funn.csv"),
-        skriv_xlsx(funn, ut / "funn.xlsx"),
-        skriv_bcf(funn, ut / "funn.bcfzip", opprettet),
-    ]
+    def skriv(mappe: Path) -> list[Path]:
+        return [
+            skriv_html(
+                funn,
+                mappe / "rapport.html",
+                tittel,
+                len(objekter),
+                hoppet,
+                dekning,
+                sorted(unntatt),
+                uleselige,
+            ),
+            skriv_csv(funn, mappe / "funn.csv"),
+            skriv_xlsx(funn, mappe / "funn.xlsx"),
+            skriv_bcf(funn, mappe / "funn.bcfzip", opprettet),
+        ]
+
+    with _som_brukerfeil("--ut"):
+        skrevet = _skriv_rapportene(ut, skriv)
 
     # ALLE gradene som har funn, ikke bare de to som avgjør exit-koden. Linja
     # er det første og ofte det eneste som leses, og sa den «13 feil, 1

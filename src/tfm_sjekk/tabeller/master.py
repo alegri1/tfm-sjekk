@@ -26,6 +26,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from tfm_sjekk.config import MasterOppsett
+from tfm_sjekk.feil import FilFeil
 
 # Excel og Word setter dette inn av seg selv; det ser ut som mellomrom,
 # men str.strip() rører det ikke.
@@ -73,13 +74,25 @@ def les_master(sti: Path, oppsett: MasterOppsett | None = None) -> TfmMaster:
     `MasterOppsett`.
     """
     oppsett = oppsett or MasterOppsett()
-    ark = _les_xlsx(sti) if sti.suffix.lower() in (".xlsx", ".xlsm") else _les_csv(sti)
+    regneark = sti.suffix.lower() in (".xlsx", ".xlsm")
+    ark = _les_xlsx(sti) if regneark else _les_csv(sti)
 
     master = TfmMaster(kilde=sti.name)
     gjenkjente_ark = 0
-    for rader in ark:
-        if _les_ark(rader, oppsett, master):
-            gjenkjente_ark += 1
+    try:
+        for rader in ark:
+            if _les_ark(rader, oppsett, master):
+                gjenkjente_ark += 1
+    except FilFeil:
+        raise
+    except OSError as feil:
+        raise FilFeil(sti, f"kunne ikke leses: {feil.strerror or feil}.") from feil
+    except Exception as feil:
+        # BadZipFile fra openpyxl gjennom seksti linjer zipfile er ikke en
+        # melding. Den vanligste årsaken er at fila ikke er det endelsen lover
+        # — en CSV eller en HTML-tabell døpt om til .xlsx.
+        hva = "regneark" if regneark else "CSV"
+        raise FilFeil(sti, f"lot seg ikke lese som {hva}: {feil}") from feil
 
     if gjenkjente_ark == 0:
         forventet = ", ".join(
@@ -91,15 +104,17 @@ def les_master(sti: Path, oppsett: MasterOppsett | None = None) -> TfmMaster:
                 }
             )
         )
-        raise ValueError(
-            f"{sti}: fant ingen gjenkjennelig kolonneoverskrift i de "
+        raise FilFeil(
+            sti,
+            f"har ingen gjenkjennelig kolonneoverskrift i de "
             f"{oppsett.maks_overskriftsrader} første radene. Forventet én av: "
-            f"{forventet}. Sett kolonnenavnene under [master] i tfm-sjekk.toml."
+            f"{forventet}. Sett kolonnenavnene under [master] i tfm-sjekk.toml.",
         )
     if master.tom:
-        raise ValueError(
-            f"{sti}: fant kolonneoverskriftene, men ingen verdier under dem. "
-            f"En tom master ville fått K7 til å flagge hele modellen."
+        raise FilFeil(
+            sti,
+            "har kolonneoverskriftene, men ingen verdier under dem. En tom "
+            "master ville fått K7 til å flagge hele modellen.",
         )
     return master
 
@@ -157,7 +172,7 @@ def _les_csv(sti: Path) -> Iterator[list[list[str]]]:
     tekst = sti.read_text(encoding="utf-8-sig")
     linjer = tekst.splitlines()
     if not linjer:
-        raise ValueError(f"{sti}: tom fil")
+        raise FilFeil(sti, "er tom. TFM-mastera skal ha minst en overskriftsrad.")
     skilletegn = ";" if linjer[0].count(";") > linjer[0].count(",") else ","
     yield [list(rad) for rad in csv.reader(linjer, delimiter=skilletegn)]
 

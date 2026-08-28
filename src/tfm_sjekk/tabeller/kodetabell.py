@@ -7,6 +7,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from tfm_sjekk.feil import FilFeil
+
 
 class Kodetabell(BaseModel):
     """Kode → beskrivelse, med nok hierarkiforståelse til K4."""
@@ -48,19 +50,34 @@ def les_kodetabell(sti: Path, navn: str | None = None) -> Kodetabell:
     Aksepterer både komma og semikolon som skilletegn — norske Excel-eksporter
     bruker semikolon.
     """
-    tekst = sti.read_text(encoding="utf-8-sig")
-    skilletegn = ";" if tekst.splitlines()[0].count(";") > tekst.splitlines()[0].count(",") else ","
+    try:
+        tekst = sti.read_text(encoding="utf-8-sig")
+    except OSError as feil:
+        raise FilFeil(sti, f"kunne ikke leses: {feil.strerror or feil}.") from feil
+
+    linjer = tekst.splitlines()
+    if not linjer:
+        # Sto som `splitlines()[0]` og ga IndexError — en traceback fra en
+        # tabellfil, med exit 1, som betyr at modellen er underkjent.
+        raise FilFeil(sti, "er tom. Kodetabellen skal ha en overskriftsrad med «kode».")
+
+    skilletegn = ";" if linjer[0].count(";") > linjer[0].count(",") else ","
 
     koder: dict[str, str] = {}
-    leser = csv.DictReader(tekst.splitlines(), delimiter=skilletegn)
+    leser = csv.DictReader(linjer, delimiter=skilletegn)
     if leser.fieldnames is None:
-        raise ValueError(f"{sti}: tom fil")
+        raise FilFeil(sti, "er tom. Kodetabellen skal ha en overskriftsrad med «kode».")
 
     felt = {f.strip().lower(): f for f in leser.fieldnames}
     kode_felt = felt.get("kode")
     beskr_felt = felt.get("beskrivelse") or felt.get("navn")
     if kode_felt is None:
-        raise ValueError(f"{sti}: mangler kolonnen «kode» (fant {leser.fieldnames})")
+        # Meldingen var god fra før — den nådde bare aldri fram som en melding.
+        raise FilFeil(
+            sti,
+            f"mangler kolonnen «kode». Fant {leser.fieldnames}. "
+            f"Kodetabellen skal ha «kode» og gjerne «beskrivelse».",
+        )
 
     for rad in leser:
         kode = (rad.get(kode_felt) or "").strip()
