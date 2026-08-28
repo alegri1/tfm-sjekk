@@ -85,6 +85,41 @@ skriving gir. En fil der noe mangler i midten, men slutten er intakt, går
 gjennom. Det er greit: den varianten krever at noen har redigert fila, ikke at
 en overføring stoppet.
 
+### Rettet under bygging: header-sjekken må være `startswith`, ikke `in`
+
+Første forsøk lette etter `ISO-10303-21;` hvor som helst i de første bytene. Et
+zip-arkiv som inneholder en IFC bærer den teksten inne i seg, så en `.ifcZIP`
+med feil endelse gikk gjennom header-sjekken og ble meldt som **avkuttet** —
+altså «eksporter på nytt» framfor «se på hvilken fil du plukket». To helt ulike
+handlinger, og vi sendte brukeren til feil av dem.
+
+En BOM foran headeren tas av først. Da står headeren der, den har bare tre byte
+foran seg, og «begynner ikke med ISO-10303-21;» ville vært usant. Fila er
+likevel ikke gyldig — ifcopenshell avviser en BOM — men da er det ifcopenshell
+som sier hvorfor, og det er riktig fordeling av hvem som svarer på hva.
+
+### Rettet under bygging: opprydningsstøyen etter en fil som ikke åpnet seg
+
+Meldingen ble riktig, og så kom dette under den:
+
+    Exception ignored in: <function file.__del__ at 0x0000024AB331C860>
+    Traceback (most recent call last):
+      File "...ifcopenshell/file.py", line 649, in __del__
+    KeyError: 2519860503440
+
+Feiler `ifcopenshell.open`, står objektet igjen halvbygget, og `__del__` kaster
+når søppelsamleren tar det. Fem linjer traceback etter vår egen melding, som det
+siste brukeren ser — og kravet sier at meldingen skal være verktøyets egen.
+
+Løst med en `sys.unraisablehook` som slipper alt annet videre. Prosessvid, i
+`cli.py` ved siden av kodeside-håndteringen og av samme grunn: `__del__` kjører
+når søppelsamleren vil, ikke mens vi står i kallet, så en innsnevret variant
+ville vært av igjen før støyen kom.
+
+Dette lå utenfor oppgavene. Det er tatt med fordi kravet «meldingen skal være
+verktøyets egen» ellers ikke er oppfylt — meldingen var riktig, men den var ikke
+det siste som sto på skjermen.
+
 ### Meldingen sier hva slags feil, ikke bare at det er en
 
 Tre tekster, fordi de krever tre ulike handlinger:

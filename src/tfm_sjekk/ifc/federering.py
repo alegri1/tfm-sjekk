@@ -12,7 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from tfm_sjekk.config import Konfigurasjon
-from tfm_sjekk.ifc.loader import les_modell
+from tfm_sjekk.ifc.loader import ModellFeil, les_modell
 from tfm_sjekk.modell import IfcObjekt
 
 
@@ -40,4 +40,13 @@ def les_modeller(
 def _les_en(argument: tuple[Path, Konfigurasjon]) -> list[IfcObjekt]:
     """Toppnivåfunksjon — kreves for at pickle skal nå den i arbeiderprosessen."""
     sti, config = argument
-    return les_modell(sti, config)
+    try:
+        return les_modell(sti, config)
+    except ModellFeil:
+        # Bærer allerede stien; den skal ikke pakkes inn en gang til.
+        raise
+    except Exception as feil:
+        # Stien legges på HER, i arbeideren. Utledet i hovedprosessen måtte den
+        # kommet av rekkefølgen på resultatene fra `pool.map` — og den
+        # rekkefølgen finnes ikke når kartet avbrytes av et unntak.
+        raise ModellFeil(sti, f"lot seg ikke lese: {feil}") from feil

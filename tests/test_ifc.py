@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fixtures.syntetisk import GYLDIG, lag_elektromodell, lag_modell
 
 from tfm_sjekk.config import Konfigurasjon
-from tfm_sjekk.ifc import les_modell, les_modeller
+from tfm_sjekk.ifc import ModellFeil, les_modell, les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import kjor_alle
 
@@ -295,3 +297,117 @@ def test_geometrimodellen_bruker_coordinationview(tmp_path):
     hode = sti.read_text(encoding="utf-8").splitlines()[2]
     assert "CoordinationView_V2.0" in hode
     assert "ReferenceView" not in hode
+
+
+# --- En fil som ikke lar seg lese ---
+
+
+def odelagt(tmp_path, navn: str, innhold: bytes):
+    sti = tmp_path / navn
+    sti.write_bytes(innhold)
+    return sti
+
+
+def test_tom_fil_sier_at_den_er_tom(tmp_path):
+    with pytest.raises(ModellFeil, match="tom"):
+        les_modell(odelagt(tmp_path, "tom.ifc", b""))
+
+
+def test_fil_som_ikke_er_ifc_sier_det(tmp_path):
+    """«Unable to parse IFC SPF header» fra ifcopenshell er ikke en melding.
+
+    Den peker på en linje i et bibliotek, og den som leser den er en
+    BIM-koordinator som skal finne ut om det er modellen eller maskinen som er
+    problemet.
+    """
+    with pytest.raises(ModellFeil, match="ikke lese som IFC"):
+        les_modell(odelagt(tmp_path, "sopp.ifc", b"dette er ikke IFC i det hele tatt\n"))
+
+
+def test_zip_med_feil_endelse_far_et_hint(tmp_path):
+    """En .ifcZIP som har fått endelsen .ifc er en ekte hendelse."""
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as arkiv:
+        arkiv.writestr("modell.ifc", "ISO-10303-21;")
+
+    with pytest.raises(ModellFeil, match="zip-arkiv"):
+        les_modell(odelagt(tmp_path, "pakket.ifc", buffer.getvalue()))
+
+
+def test_zip_meldes_ikke_som_avkuttet(tmp_path):
+    """Substrengsjekk framfor startswith meldte en .ifcZIP som avkuttet.
+
+    Arkivet bærer teksten «ISO-10303-21;» inne i seg. Meldingen sendte da
+    brukeren til å eksportere på nytt framfor til å se på hvilken fil de
+    plukket — to helt ulike handlinger.
+    """
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as arkiv:
+        arkiv.writestr("modell.ifc", "ISO-10303-21;\nENDSEC;\n")
+
+    with pytest.raises(ModellFeil) as feil:
+        les_modell(odelagt(tmp_path, "pakket.ifc", buffer.getvalue()))
+    assert "avkuttet" not in str(feil.value)
+
+
+def test_avkuttet_fil_leses_ikke_som_en_hel(tmp_path):
+    """Det farligste utfallet av de tre, fordi det ikke ser ut som en feil.
+
+    En avbrutt eksport gir en fil som åpner seg fint og inneholder en brøkdel
+    av modellen. Verktøyet rapporterte da sant om det det så — «1 av 1 objekter
+    i omfanget, alle TFM-verdiene lot seg tolke» — og hver linje var
+    misvisende.
+    """
+    hel = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "hel.ifc")
+    bytes_ = hel.read_bytes()
+    assert b"END-ISO-10303-21;" in bytes_, "fiksturen skriver ikke avslutningen"
+
+    with pytest.raises(ModellFeil, match="avkuttet"):
+        les_modell(odelagt(tmp_path, "halv.ifc", bytes_[: len(bytes_) // 2]))
+
+
+def test_hel_fil_leses_som_for(tmp_path):
+    modell = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "hel.ifc")
+    assert len(les_modell(modell)) == 1
+
+
+def test_modellfeil_overlever_pickle():
+    """Unntaket krysser prosessgrensen fra en arbeider i federeringen.
+
+    Standard oppførsel ville kalt `ModellFeil(meldingen)` med ett argument ved
+    utpakking — altså en TypeError i stedet for feilen den skulle bære. Den
+    slags virker sekvensielt og ryker i pool-en.
+    """
+    import pickle
+
+    original = ModellFeil(Path("a") / "b.ifc", "er tom.")
+    kopi = pickle.loads(pickle.dumps(original))
+
+    assert isinstance(kopi, ModellFeil)
+    assert kopi.sti == original.sti
+    assert str(kopi) == str(original)
+
+
+def test_federert_lesing_navngir_fila_som_feilet(tmp_path):
+    """TRE filer, ikke to.
+
+    `les_modeller` går sekvensielt under to filer, så en test med færre ville
+    aldri nådd prosesspoolen — nettopp den veien feilen skal overleve.
+    """
+    stier = [
+        lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "en.ifc"),
+        odelagt(tmp_path, "to.ifc", b"ikke IFC"),
+        lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "tre.ifc"),
+    ]
+
+    with pytest.raises(ModellFeil) as feil:
+        les_modeller(stier, Konfigurasjon())
+
+    assert "to.ifc" in str(feil.value)
+    assert "en.ifc" not in str(feil.value)

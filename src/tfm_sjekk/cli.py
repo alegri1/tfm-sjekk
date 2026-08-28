@@ -20,7 +20,7 @@ from typing import Annotated
 import typer
 
 from tfm_sjekk.config import Konfigurasjon, OppsettFeil, finn_oppsett
-from tfm_sjekk.ifc import les_modeller
+from tfm_sjekk.ifc import ModellFeil, les_modeller
 from tfm_sjekk.kontekst import Kontekst
 from tfm_sjekk.kontroller import Hoppgrunn, alle_kontroller, kjor_alle
 from tfm_sjekk.modell import GRADSORD, Alvorlighet, gradsord
@@ -44,6 +44,7 @@ app = typer.Typer(
 def _for_hver_kommando() -> None:
     """Kjøres før kommandoene under."""
     _tal_konsollens_kodeside()
+    _demp_ifcopenshells_opprydning()
 
 
 def _tal_konsollens_kodeside() -> None:
@@ -64,6 +65,34 @@ def _tal_konsollens_kodeside() -> None:
             continue
         with contextlib.suppress(OSError, ValueError):
             rekonfigurer(encoding="utf-8", errors="replace")
+
+
+def _demp_ifcopenshells_opprydning() -> None:
+    """Fjerner opprydningsstøyen etter en fil som ikke lot seg åpne.
+
+    Feiler `ifcopenshell.open`, står objektet igjen halvbygget, og `__del__`
+    kaster KeyError når søppelsamleren tar det. Python skriver da fem linjer
+    traceback fra `ifcopenshell/file.py` — etter vår egen melding, som det
+    siste brukeren ser.
+
+    Meldingen skal være verktøyets egen. En BIM-koordinator som leser
+    «KeyError: 2519860503440» under en ellers klar beskjed, må gjette på om
+    verktøyet virket eller ikke.
+
+    Prosessvid, som kodesida over, og av samme grunn: `__del__` kjører når
+    søppelsamleren vil, ikke mens vi står i kallet. En innsnevret variant ville
+    vært av igjen før støyen kom.
+
+    Bare denne ene: alt annet uhåndterbart går videre til Pythons egen hook.
+    """
+    forrige = sys.unraisablehook
+
+    def hook(arg) -> None:
+        if arg.exc_type is KeyError and getattr(arg.object, "__qualname__", "") == "file.__del__":
+            return
+        forrige(arg)
+
+    sys.unraisablehook = hook
 
 
 def _les_oppsett(
@@ -223,7 +252,18 @@ def sjekk(
         raise typer.BadParameter(str(feil), param_hint="--opprettet") from feil
 
     typer.echo(f"Leser {len(modeller)} modell(er)…")
-    objekter = les_modeller(list(modeller), oppsett, parallelt=not sekvensielt)
+    try:
+        objekter = les_modeller(list(modeller), oppsett, parallelt=not sekvensielt)
+    except ModellFeil as feil:
+        # Samme utgang som et oppsett som ikke lar seg lese: exit 2, og ingen
+        # rapport. Exit 1 er porten i leveranseprosessen (§5) og betyr at
+        # modellen er underkjent; en fil som ikke lot seg åpne krever en helt
+        # annen handling, og to slike utfall må ikke være samme tall.
+        #
+        # Ingenting skrives før dette punktet, så utmappa er urørt. Hadde en
+        # halv rapport ligget igjen, ville den sett ut som enhver annen — og
+        # blitt delt.
+        raise typer.BadParameter(str(feil), param_hint="modeller") from feil
     typer.echo(f"  {len(objekter)} objekter")
 
     kontekst = Kontekst.bygg(

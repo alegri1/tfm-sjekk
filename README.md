@@ -209,8 +209,26 @@ finnes, stopper kjøringen — den hopper ikke over kontrollen som om du hadde
 valgt å kjøre uten.
 
 Flere filer federeres og kontrolleres samlet — det er slik K6 finner duplikater
-på tvers av fagmodeller. Exit-kode 0 ved ingen feil, 1 ved feil, slik at verktøyet
-kan stå som port i en leveranseprosess.
+på tvers av fagmodeller.
+
+Verktøyet står som port i en leveranseprosess, og exit-koden har tre verdier:
+
+| Kode | Betyr | Hva du gjør |
+|---|---|---|
+| 0 | ingen feil | ingenting |
+| 1 | modellen har feil | rett merkingen |
+| 2 | kjøringen kunne ikke gjennomføres | rett kommandoen eller skaff en hel fil |
+
+**2 er ikke en dårligere 1.** «Fagmodellen har 40 K1-feil» og «fila lot seg ikke
+åpne» stopper begge leveransen, men bare den ene er noe entreprenøren kan rette.
+Koden er 2 når en sti peker feil, når oppsettet ikke lar seg lese, når en rute
+ikke treffer noen fil — og når en modellfil er tom, ikke er IFC, eller ser
+avkuttet ut.
+
+En avbrutt eksport er den viktigste av dem. Fila åpner seg fint og inneholder en
+brøkdel av modellen, så en kjøring på den ville rapportert sant om det den så og
+misvisende om modellen. Mangler avslutningen `END-ISO-10303-21;`, stopper
+kjøringen framfor å svare på en halv fil, og ingen rapport skrives.
 
 Hver kjøring skriver fire filer til `--ut`:
 

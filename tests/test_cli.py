@@ -495,3 +495,105 @@ def test_stien_er_skrevet_i_plattformens_form(tmp_path):
     stier = linje.split("→", 1)[1]
     assert str(ut / "rapport.html") in stier
     assert B + "/" not in stier and "/" + B not in stier
+
+
+# --- En fil som ikke lar seg lese, sett fra kommandolinja ---
+
+
+def odelagt_fil(tmp_path: Path, navn: str, innhold: bytes) -> Path:
+    sti = tmp_path / navn
+    sti.write_bytes(innhold)
+    return sti
+
+
+def halv_modell(tmp_path: Path) -> Path:
+    hel = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "hel.ifc")
+    b = hel.read_bytes()
+    hel.unlink()
+    return odelagt_fil(tmp_path, "halv.ifc", b[: len(b) // 2])
+
+
+def de_tre_odelagte(tmp_path: Path) -> list[Path]:
+    return [
+        odelagt_fil(tmp_path, "tom.ifc", b""),
+        odelagt_fil(tmp_path, "sopp.ifc", b"dette er ikke IFC"),
+        halv_modell(tmp_path),
+    ]
+
+
+def test_ulesbar_fil_gir_exit_2_og_ingen_rapport(tmp_path):
+    """Exit 1 er porten i leveranseprosessen (§5) og betyr at modellen er
+    underkjent. En fil som ikke lot seg åpne krever en helt annen handling — en
+    CI-jobb må kunne skille de to.
+
+    En rapport fra en kjøring som ikke kom i mål ser ut som enhver annen, og
+    den blir delt.
+    """
+    for fil in de_tre_odelagte(tmp_path):
+        ut = tmp_path / f"ut-{fil.stem}"
+        r = kjor(["sjekk", str(fil), "--ut", str(ut)])
+
+        assert r.returncode == 2, f"{fil.name}: {r.stdout}{r.stderr}"
+        assert not ut.exists(), f"{fil.name} etterlot en rapport"
+
+
+def test_meldingen_navngir_fila_og_sier_hva_som_er_galt(tmp_path):
+    tom, sopp, halv = de_tre_odelagte(tmp_path)
+
+    for fil, ord in ((tom, "tom"), (sopp, "ikke lese som IFC"), (halv, "avkuttet")):
+        r = kjor(["sjekk", str(fil), "--ut", str(tmp_path / "ut")])
+        tekst = uten_ansi(r.stdout + r.stderr).replace("\n", " ")
+
+        assert fil.name in tekst, tekst
+        assert ord in tekst, tekst
+
+
+def test_ingen_traceback_naar_fila_ikke_lar_seg_lese(tmp_path):
+    """Feiler ifcopenshell.open, kaster `__del__` KeyError når søppelsamleren
+    tar det halvbygde objektet — fem linjer traceback ETTER vår egen melding,
+    som det siste brukeren ser.
+    """
+    # BOM foran en ellers hel modell: header-sjekken slipper den gjennom, og
+    # det er ifcopenshell selv som avviser den. Den eneste veien fram til
+    # opprydningsstøyen.
+    hel = lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "hel.ifc")
+    med_bom = odelagt_fil(tmp_path, "bom.ifc", b"\xef\xbb\xbf" + hel.read_bytes())
+
+    r = kjor(["sjekk", str(med_bom), "--ut", str(tmp_path / "ut")])
+
+    assert r.returncode == 2
+    assert "Traceback" not in r.stdout + r.stderr
+    assert "KeyError" not in r.stdout + r.stderr
+
+
+def test_federert_kjoring_navngir_fila_og_skriver_ingen_rapport(tmp_path):
+    """Tre filer: prosesspoolen brukes først fra to og opp.
+
+    Kjøringen stopper framfor å svare på de to som gikk bra. K6 og D3 ser på
+    tvers av fagmodellene, og et svar der én modell mangler er feil uten å se
+    feil ut.
+    """
+    stier = [
+        str(lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "en.ifc")),
+        str(odelagt_fil(tmp_path, "to.ifc", b"ikke IFC")),
+        str(lag_modell([("IfcFlowTerminal", GYLDIG)], tmp_path / "tre.ifc")),
+    ]
+    ut = tmp_path / "ut"
+
+    r = kjor(["sjekk", *stier, "--ut", str(ut)])
+    tekst = uten_ansi(r.stdout + r.stderr).replace("\n", " ")
+
+    assert r.returncode == 2, tekst
+    assert "to.ifc" in tekst, tekst
+    assert not ut.exists(), "skrev rapport for de to som gikk bra"
+
+
+def test_en_ulesbar_fil_overlever_cp1252(tmp_path):
+    """Meldingene har æøå og anførselstegn, og det er nettopp den avsluttende
+    utskriften som har ryket på en cp1252-konsoll før."""
+    fil = odelagt_fil(tmp_path, "sopp.ifc", b"ikke IFC")
+
+    r = kjor(["sjekk", str(fil), "--ut", str(tmp_path / "ut")], koding="cp1252")
+
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "UnicodeEncodeError" not in r.stderr

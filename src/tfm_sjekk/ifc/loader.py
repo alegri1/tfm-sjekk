@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from codecs import BOM_UTF8
 from collections import defaultdict
 from collections.abc import Callable
 from functools import lru_cache
@@ -15,6 +17,106 @@ from tfm_sjekk.config import Konfigurasjon
 from tfm_sjekk.modell import IfcObjekt, Kilde, Krets, Verdikilde
 from tfm_sjekk.parser import ligner_komponenttype, ligner_tfm_id, mmi_niva
 
+# ISO 10303-21 krever begge. Starten sier at dette er en SPF-fil i det hele
+# tatt; slutten sier at skrivingen kom i mål.
+START = b"ISO-10303-21;"
+SLUTT = b"END-ISO-10303-21;"
+
+# Nok til å fange begge markørene med god margin, uten å lese en fil på 200 MB
+# for å svare på et spørsmål som gjelder de ytterste bytene.
+KIKKHULL = 64
+
+
+class ModellFeil(Exception):
+    """En modellfil som ikke lar seg lese.
+
+    Ved siden av `OppsettFeil`, og av samme grunn: begge betyr at kjøringen
+    ikke kan gjennomføres, ikke at modellen er underkjent. Cli-en gjør begge
+    til exit 2 — den samme koden som en sti som peker feil — framfor exit 1,
+    som er porten i leveranseprosessen (§5).
+
+    OVERSETTELSEN SKJER HER. Å la ifcopenshells egne unntak boble opp til
+    cli.py ville krevd at cli-en kjente igjen unntakstypene til et bibliotek
+    den ikke importerer, mot regelen om at denne mappa er eneste sted som vet
+    om ifcopenshell.
+
+    `__reduce__` er ikke pynt. Unntaket krysser prosessgrensen fra en arbeider
+    i federeringen, og standard oppførsel ville kalt `ModellFeil(meldingen)`
+    med ett argument ved utpakking — altså en TypeError i stedet for feilen den
+    skulle bære. Det er den slags som virker sekvensielt og ryker i pool-en.
+    """
+
+    def __init__(self, sti: Path | str, forklaring: str) -> None:
+        self.sti = Path(sti)
+        self.forklaring = forklaring
+        super().__init__(f"«{self.sti.name}» {forklaring}")
+
+    def __reduce__(self):
+        return (ModellFeil, (self.sti, self.forklaring))
+
+
+def _kikk(sti: Path) -> tuple[bytes, bytes]:
+    """Første og siste bytene i fila."""
+    with sti.open("rb") as f:
+        forste = f.read(KIKKHULL)
+        f.seek(0, os.SEEK_END)
+        storrelse = f.tell()
+        f.seek(max(0, storrelse - KIKKHULL))
+        return forste, f.read(KIKKHULL)
+
+
+def _apne(sti: Path):
+    """Åpner fila, eller sier hvorfor den ikke lot seg åpne.
+
+    Rekkefølgen er meningen. «Er dette IFC i det hele tatt» må spørres før «er
+    den hel»: en tekstfil som ikke er IFC mangler også avslutningen, og å melde
+    den som avkuttet ville sendt brukeren til å eksportere på nytt framfor til å
+    se på hvilken fil de plukket.
+    """
+    try:
+        forste, siste = _kikk(sti)
+    except OSError as feil:
+        raise ModellFeil(sti, f"kunne ikke åpnes: {feil.strerror or feil}.") from feil
+
+    if not forste:
+        raise ModellFeil(
+            sti,
+            "er tom (0 byte). En fil på null byte er som regel en skriving som "
+            "aldri kom i gang — finn eksporten igjen.",
+        )
+
+    # startswith, ikke «in». Et zip-arkiv som inneholder en IFC bærer teksten
+    # «ISO-10303-21;» inne i seg, og en substrengsjekk meldte derfor en
+    # .ifcZIP som avkuttet — altså «eksporter på nytt» framfor «se på hvilken
+    # fil du plukket». BOM og innledende blanke tegn tas av først; noen
+    # eksportører legger på en BOM, og da STÅR headeren der — den har bare tre
+    # byte foran seg. Fila er ikke gyldig for det: ifcopenshell avviser en BOM,
+    # og sier det selv. Poenget med å ta den av er å ikke gi feil svar på feil
+    # spørsmål — «begynner ikke med ISO-10303-21;» ville vært usant her.
+    hode = forste.removeprefix(BOM_UTF8).lstrip()
+    if not hode.startswith(START):
+        hint = (
+            " Fila ser ut som et zip-arkiv — er dette en .ifcZIP som har fått endelsen .ifc?"
+            if forste.startswith(b"PK")
+            else ""
+        )
+        raise ModellFeil(
+            sti,
+            f"lot seg ikke lese som IFC: fila begynner ikke med «ISO-10303-21;».{hint}",
+        )
+
+    if SLUTT not in siste:
+        raise ModellFeil(
+            sti,
+            "ser avkuttet ut: avslutningen «END-ISO-10303-21;» mangler. Eksporten "
+            "ble sannsynligvis avbrutt — eksporter på nytt.",
+        )
+
+    try:
+        return ifcopenshell.open(str(sti))
+    except Exception as feil:
+        raise ModellFeil(sti, f"lot seg ikke lese som IFC: {feil}") from feil
+
 
 def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[IfcObjekt]:
     """Åpner IFC 2x3 eller IFC4 og returnerer picklebare `IfcObjekt`.
@@ -23,7 +125,7 @@ def les_modell(sti: Path | str, config: Konfigurasjon | None = None) -> list[Ifc
     """
     sti = Path(sti)
     config = config or Konfigurasjon()
-    fil = ifcopenshell.open(str(sti))
+    fil = _apne(sti)
 
     naboer = _koblingsgraf(fil)
     kretser = _kretser(fil, config)
