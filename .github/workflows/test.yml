@@ -72,8 +72,13 @@ jobs:
           # skrives helt til slutt, så den beviser at kjøringen kom i mål.
           # (Den gikk faktisk i stykker på cp1252-konsoll en gang — se
           # tests/test_cli.py.)
+          #
+          # Det SISTE filnavnet på linja, ikke et ord fra teksten. Her sto
+          # «advarsler», og da linja begynte å skrive «1 advarsel» i entall
+          # falt steget — uten at noe var galt med verktøyet. Et filnavn er
+          # det linja er til for; ordene i den er formuleringer.
           case "$utdata" in
-            *advarsler*) ;;
+            *funn.bcfzip*) ;;
             *) echo "Fant ikke oppsummeringslinja — kjøringen kom aldri i mål"; exit 1 ;;
           esac
 
