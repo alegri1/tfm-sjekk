@@ -9,7 +9,7 @@ from __future__ import annotations
 from conftest import objekt
 
 from tfm_sjekk.config import Konfigurasjon, KontrollOppsett
-from tfm_sjekk.kontekst import Kontekst
+from tfm_sjekk.kontekst import DeltIdentitet, Kontekst
 from tfm_sjekk.kontroller import kjor_alle
 from tfm_sjekk.modell import Alvorlighet
 
@@ -383,7 +383,7 @@ def test_samme_identitet_i_to_filer_finnes():
     festes til en vilkaarlig av filene."""
     k = Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "kopi.ifc")], Konfigurasjon())
 
-    assert k.delt_identitet() == {"a": ["kopi.ifc", "rie.ifc"]}
+    assert k.delt_identitet() == {"a": DeltIdentitet(("kopi.ifc", "rie.ifc"), 2)}
 
 
 def test_delt_identitet_utenfor_omfanget_meldes_ikke():
@@ -400,12 +400,20 @@ def test_delt_identitet_utenfor_omfanget_meldes_ikke():
     assert k.delt_identitet() == {}
 
 
-def test_samme_identitet_i_samme_fil_er_noe_annet():
-    """IFC krever unikhet i EN fil. Bryter en fil det, er det en annen sak enn
-    to filer som overlapper."""
+def test_samme_identitet_i_samme_fil_meldes_ogsaa():
+    """Sto her som «en annen sak», og ble derfor ikke meldt.
+
+    Det stemte ikke: `parsede` og `_etter_id` er begge noeklet paa GlobalId
+    alene, saa to objekter i samme fil kollapser like stille som to i hver sin.
+    Verre, faktisk — objekt nummer en arver nummer tos parseresultat, og K6
+    meldte da et duplikat som ikke fantes i modellen.
+
+    `filer` er kortere enn `antall`, og det er nettopp det som skiller de to
+    tilfellene.
+    """
     k = Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "rie.ifc")], Konfigurasjon())
 
-    assert k.delt_identitet() == {}
+    assert k.delt_identitet() == {"a": DeltIdentitet(("rie.ifc",), 2)}
 
 
 def test_d3_melder_med_advarsel_og_navngir_filene():
@@ -456,3 +464,91 @@ def test_ett_funn_per_filkombinasjon_ikke_per_objekt():
 
     assert len(d3) == 1
     assert "5 objekt(er)" in d3[0].melding
+
+
+# --- Samme identitet to ganger i samme fil ---
+
+
+def med_tfm_verdi(gid: str, fil: str, tfm: str):
+    from tfm_sjekk.modell import IfcObjekt
+
+    return IfcObjekt(
+        global_id=gid,
+        ifc_klasse="IfcFlowTerminal",
+        ifc_supertyper=["IfcDistributionFlowElement"],
+        kildefil=fil,
+        tfm_forekomst=tfm,
+    )
+
+
+def test_d3_melder_duplikat_identitet_i_en_fil():
+    funn, _ = kjor_alle(
+        Kontekst.bygg([i_fil("a", "rie.ifc"), i_fil("a", "rie.ifc")], Konfigurasjon())
+    )
+    d3 = [f for f in funn if f.kontroll == "D3"]
+
+    assert len(d3) == 1
+    assert d3[0].alvorlighet is Alvorlighet.ADVARSEL
+    assert "rie.ifc" in d3[0].melding
+    assert "unik innenfor" in d3[0].melding
+
+
+def test_k6_dikter_ikke_opp_et_duplikat():
+    """DET FUNNET VAR USANT.
+
+    `parsede` er noeklet paa GlobalId, saa objekt nummer en arvet nummer tos
+    TfmId. K6 meldte da at «...QLF002» var brukt paa to objekter — om to
+    objekter som hadde hver sin verdi. Koordinatoren ville lett etter et
+    duplikat som ikke finnes, og QLF001 sto ukontrollert.
+    """
+    en = med_tfm_verdi("a", "rie.ifc", "++115080=4310.001.12-QLF001")
+    to = med_tfm_verdi("a", "rie.ifc", "++115080=4310.001.12-QLF002")
+
+    funn, _ = kjor_alle(Kontekst.bygg([en, to], Konfigurasjon()))
+
+    assert not [f for f in funn if f.kontroll == "K6"], [f.melding for f in funn]
+    assert [f for f in funn if f.kontroll == "D3"]
+
+
+def test_et_ekte_duplikat_i_samme_fil_meldes_fortsatt():
+    """Det er kontrollen dette ikke skal koste: to objekter med HVER SIN
+    identitet og samme TFM er et ekte duplikat."""
+    en = med_tfm_verdi("a", "rie.ifc", "++115080=4310.001.12-QLF001")
+    to = med_tfm_verdi("b", "rie.ifc", "++115080=4310.001.12-QLF001")
+
+    funn, _ = kjor_alle(Kontekst.bygg([en, to], Konfigurasjon()))
+
+    k6 = [f for f in funn if f.kontroll == "K6"]
+    assert len(k6) == 2
+    assert "QLF001" in k6[0].melding
+
+
+def test_de_to_tilfellene_ser_ulike_ut():
+    """To ulike handlinger: fjern den ene fila, eller eksporter paa nytt.
+
+    En felles melding ville tvunget leseren til aa finne ut selv hvilken av dem
+    som gjelder — samme jobb som «hoppet over» med tre aarsaker og ett ord.
+    """
+    objekter = [
+        i_fil("delt", "rie.ifc"),
+        i_fil("delt", "kopi.ifc"),
+        i_fil("dobbel", "riv.ifc"),
+        i_fil("dobbel", "riv.ifc"),
+    ]
+
+    funn, _ = kjor_alle(Kontekst.bygg(objekter, Konfigurasjon()))
+    meldinger = [f.melding for f in funn if f.kontroll == "D3"]
+
+    assert len(meldinger) == 2
+    assert len(set(meldinger)) == 2
+    assert any("sendt inn to ganger" in m for m in meldinger)
+    assert any("eksporter den på nytt" in m for m in meldinger)
+
+
+def test_uten_duplikater_melder_d3_ingenting():
+    """Saa testene over ikke gaar groenne fordi D3 alltid fyrer."""
+    objekter = [i_fil("a", "rie.ifc"), i_fil("b", "rie.ifc"), i_fil("c", "riv.ifc")]
+
+    funn, _ = kjor_alle(Kontekst.bygg(objekter, Konfigurasjon()))
+
+    assert not [f for f in funn if f.kontroll == "D3"]

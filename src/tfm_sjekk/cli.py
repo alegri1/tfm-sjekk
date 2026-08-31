@@ -493,7 +493,10 @@ def oppsett(
     gjeldende = _les_oppsett(config, list(modeller), til_stderr=True)
 
     typer.echo(f"Leser {len(modeller)} modell(er)…", err=True)
-    objekter = les_modeller(list(modeller), gjeldende, parallelt=not sekvensielt)
+    # Samme utgang som i «sjekk». Ble glemt der fordi 0.9.3 rettet stedet feilen
+    # viste seg framfor alle stedene `les_modeller` kalles.
+    with _som_brukerfeil("modeller"):
+        objekter = les_modeller(list(modeller), gjeldende, parallelt=not sekvensielt)
     kontekst = Kontekst.bygg(objekter, gjeldende)
     forslag = utled(kontekst)
     innhold = til_toml(forslag, gjeldende)

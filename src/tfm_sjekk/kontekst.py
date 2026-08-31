@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from functools import cached_property
+from typing import NamedTuple
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,19 @@ from tfm_sjekk.config import Konfigurasjon
 from tfm_sjekk.modell import IfcObjekt, TfmId
 from tfm_sjekk.parser import ParseFeil, parse
 from tfm_sjekk.tabeller import Kodetabell, TfmMaster, normaliser
+
+
+class DeltIdentitet(NamedTuple):
+    """En identitet som sitter på flere objekter.
+
+    `antall` er objekter, `filer` er filene de ligger i. Er de to like, ligger
+    objektene i hver sin fil; er `filer` kortere, går identitetene igjen
+    innenfor én av dem. Det skillet avgjør hvilken handling som skal foreslås,
+    og derfor bæres begge tallene framfor bare filnavnene.
+    """
+
+    filer: tuple[str, ...]
+    antall: int
 
 
 class Kontekst(BaseModel):
@@ -204,27 +218,36 @@ class Kontekst(BaseModel):
     def objekt(self, global_id: str) -> IfcObjekt | None:
         return self._etter_id.get(global_id)
 
-    def delt_identitet(self) -> dict[str, list[str]]:
-        """Identiteter i omfanget som går igjen i flere fagmodeller.
+    def delt_identitet(self) -> dict[str, DeltIdentitet]:
+        """Identiteter i omfanget som sitter på mer enn ett objekt.
 
-        IFC krever unik GlobalId i én fil. På tvers av filer krever ingen det,
-        og Revit eksporterer delte objekter — rutenett, romlig struktur — inn i
-        hver lenke. Den federerte Snowdon-kjøringen har 24 456 objekter og
-        24 452 unike.
+        TO TILFELLER, OG DE KREVER ULIK HANDLING. På tvers av filer krever
+        ingen at GlobalId er unik, og Revit eksporterer delte objekter —
+        rutenett, romlig struktur — inn i hver lenke; den vanligste årsaken er
+        at samme modell er sendt inn to ganger, og da fjernes den ene fila.
+        Innenfor én fil krever IFC unikhet, så en fil som bryter det må
+        eksporteres på nytt.
+
+        Her sto det at det siste var «en annen sak». Det stemte da det ble
+        skrevet, og gjorde det ikke: `parsede` og `_etter_id` er begge nøklet på
+        GlobalId alene, så to objekter i samme fil kollapser like stille som to
+        i hver sin. Verre, faktisk — objekt nummer én arver nummer tos
+        parseresultat, og K6 meldte da et duplikat som ikke fantes i modellen.
 
         Bare objekter i omfanget teller. Et delt rutenett kontrolleres ikke,
         ingen funn festes til det, og en advarsel om det ville stått i hver
         eneste federerte kjøring — og en advarsel som alltid står der, leses
-        ikke.
-
-        Samme identitet flere ganger i SAMME fil er ikke dette. IFC krever
-        unikhet der; bryter en fil det, er det en annen sak enn to filer som
-        overlapper.
+        ikke. Den federerte Snowdon-kjøringen har 24 456 objekter og 24 452
+        unike, alle fire utenfor omfanget.
         """
-        filer: dict[str, set[str]] = defaultdict(set)
+        per_id: dict[str, list[str]] = defaultdict(list)
         for objekt in self.relevante_objekter():
-            filer[objekt.global_id].add(objekt.kildefil)
-        return {gid: sorted(f) for gid, f in filer.items() if len(f) > 1}
+            per_id[objekt.global_id].append(objekt.kildefil)
+        return {
+            gid: DeltIdentitet(tuple(sorted(set(filer))), len(filer))
+            for gid, filer in per_id.items()
+            if len(filer) > 1
+        }
 
     @cached_property
     def _etter_id(self) -> dict[str, IfcObjekt]:

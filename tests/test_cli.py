@@ -746,3 +746,20 @@ def test_last_rapportfil_lar_ingen_av_filene_endres(tmp_path):
     assert "Ingen av rapportfilene er endret" in tekst
     assert "Traceback" not in r.stdout + r.stderr
     assert etter == for_, "filene ble endret av en kjøring som ikke kom i mål"
+
+
+def test_oppsett_svarer_som_sjekk_pa_en_odelagt_fil(tmp_path):
+    """`sjekk` fikk denne håndteringen i 0.9.3. `oppsett` kaller de samme
+    funksjonene og ble glemt — jeg rettet stedet feilen viste seg framfor alle
+    stedene `les_modeller` kalles.
+
+    En kommando som leser de samme filene og svarer annerledes på den samme
+    fila, er en kommando som lyver om verktøyet.
+    """
+    fil = odelagt_fil(tmp_path, "sopp.ifc", b"dette er ikke IFC")
+
+    r = kjor(["oppsett", str(fil)])
+
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "sopp.ifc" in melding(r)
+    assert "Traceback" not in r.stdout + r.stderr

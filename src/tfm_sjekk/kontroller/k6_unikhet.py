@@ -23,8 +23,21 @@ class K6Unikhet(Kontroll):
     standard_alvorlighet = Alvorlighet.FEIL
 
     def kjor(self, k: Kontekst) -> list[Funn]:
+        # Objekter som deler identitet hoppes over. `med_tfm()` parer objekt
+        # med parseresultat på GlobalId, og der to objekter deler identitet er
+        # den paringen feil: det ene arver det andres TfmId. K6 meldte da et
+        # duplikat som ikke fantes i modellen — «komponentforekomsten X er brukt
+        # på 2 objekter», om to objekter som hadde hver sin verdi.
+        #
+        # Et FEIL-funn med en oppdiktet TFM-verdi er ikke noe D3-advarselen
+        # lenger nede redder. Den som leser rapporten leser feilene først, og de
+        # skal være sanne. D3 sier at objektene ikke ble undersøkt.
+        delt = k.delt_identitet()
+
         etter_id: dict[str, list[tuple[str, str]]] = defaultdict(list)
         for objekt, tfm in k.med_tfm():
+            if objekt.global_id in delt:
+                continue
             etter_id[tfm.global_forekomst].append((objekt.global_id, objekt.kildefil))
 
         funn = []

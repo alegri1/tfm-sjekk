@@ -22,6 +22,13 @@ Den vanligste årsaken er at samme modell er sendt inn to ganger, og da er
 handlingen å fjerne den ene fila. Verktøyet velger ikke selv: hvilket av to like
 objekter som er det rette, kan bare den som sendte inn filene svare på.
 
+FORBEHOLD OM DEN ENE FILA. Tilfellet «samme identitet to ganger i én fil» er
+konstruert her, ved å redigere en GUID i en fikstur for hånd. Snowdon har ingen
+slike, og ingen ekte eksport i dette prosjektet har vist det. At det forekommer
+i praksis er lest, ikke sett — feilen i koden var ekte og konsekvensen alvorlig
+(K6 meldte et duplikat som ikke fantes), men hvor ofte utløseren opptrer, vet vi
+ikke.
+
 GRAD ADVARSEL, og grunnen er praktisk. Sendes samme modell inn to ganger, fyrer
 K6 på hvert eneste merkede objekt, og exit-koden er 1 uansett fra dem. D3 trenger
 ikke å endre porten — den trenger å forklare hvorfor porten stengte. En advarsel
@@ -51,25 +58,48 @@ class D3Identitet(Kontroll):
         # Gruppert per filkombinasjon, ikke per objekt. Deler to filer tusen
         # objekter, er det ETT problem — og tusen like funn ville skjult det.
         per_filsett: dict[tuple[str, ...], int] = defaultdict(int)
-        for filer in delt.values():
-            per_filsett[tuple(filer)] += 1
+        for id_ in delt.values():
+            per_filsett[id_.filer] += 1
 
         funn = []
         for filer, antall in sorted(per_filsett.items()):
+            melding = _flere_filer(filer, antall) if len(filer) > 1 else _en_fil(filer[0], antall)
             funn.append(
                 Funn(
                     kontroll=self.id,
                     alvorlighet=self.alvorlighet(k),
-                    melding=(
-                        f"{antall} objekt(er) i omfanget har samme IFC-identitet i "
-                        f"{len(filer)} fagmodeller ({', '.join(filer)}). "
-                        f"Vanligvis betyr det at samme modell er sendt inn to ganger. "
-                        f"Funnene og tallene i rapporten er riktige, men for disse "
-                        f"objektene er det tilfeldig hvilken av filene et funn "
-                        f"tilskrives — og K6 kan melde duplikat på det som er ett "
-                        f"objekt talt to ganger."
-                    ),
+                    melding=melding,
                     kildefil=filer[0],
                 )
             )
         return funn
+
+
+def _flere_filer(filer: tuple[str, ...], antall: int) -> str:
+    """Samme identitet i flere fagmodeller.
+
+    Handlingen er å fjerne den ene fila fra kjøringen.
+    """
+    return (
+        f"{antall} objekt(er) i omfanget har samme IFC-identitet i "
+        f"{len(filer)} fagmodeller ({', '.join(filer)}). "
+        f"Vanligvis betyr det at samme modell er sendt inn to ganger — fjern "
+        f"den ene fila fra kjøringen. Funnene og tallene i rapporten er "
+        f"riktige, men for disse objektene er det tilfeldig hvilken av filene "
+        f"et funn tilskrives, og K6 er slått av for dem."
+    )
+
+
+def _en_fil(fil: str, antall: int) -> str:
+    """Samme identitet flere ganger i én fil.
+
+    Handlingen er en helt annen: fila må eksporteres på nytt. En felles melding
+    ville tvunget leseren til å finne ut selv hvilken av de to som gjelder.
+    """
+    return (
+        f"{antall} identitet(er) i omfanget sitter på flere objekter i {fil}. "
+        f"IFC krever at GlobalId er unik innenfor én fil, så fila er ødelagt av "
+        f"eksporten — eksporter den på nytt. Objektene deler ett parseresultat "
+        f"her, så K6 er slått av for dem, og de øvrige funnene om dem kan gjelde "
+        f"feil objekt."
+    )
