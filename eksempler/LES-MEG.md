@@ -1,5 +1,4 @@
 # Eksempeltabeller — IKKE NORMATIVE
-# TEST
 
 Filene i denne mappa er **fiktive**. De inneholder ikke innhold fra
 NS 3451 eller NS 3457-serien, og de kan ikke brukes til å validere et
